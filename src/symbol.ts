@@ -39,10 +39,10 @@ export class Symbol {
     kind: SymbolKind;
     name: string;
     uri: string;
-    range: Range;
+    start: number;
+    end: number;
     scope: string;
     modifiers: SymbolModifier;
-    aliasOf: string;
     description: string;
 
     constructor(symbolKind: SymbolKind, symbolName: string) {
@@ -96,6 +96,115 @@ export class VariableSymbol extends Symbol {
     constructor(symbolKind: SymbolKind, symbolName: string) {
         super(symbolKind, symbolName);
     }
+}
+
+export interface ImportRule {
+    kind: SymbolKind;
+    name: string;
+    fqn: string;
+}
+
+export class ImportRuleTable {
+
+    private _rules: ImportRule[];
+    private _uri: string;
+
+    constructor(uri: string, importRules: ImportRule[] = []) {
+        this._uri = uri;
+        this._rules = importRules;
+    }
+
+    get uri() {
+        return this._uri;
+    }
+
+    addRule(rule: ImportRule) {
+        this._rules.push(rule);
+    }
+
+    match(text: string, kind: SymbolKind) {
+        let r: ImportRule;
+        for (let n = 0; n < this._rules.length; ++n) {
+            r = this._rules[n];
+            if (r.kind === kind && text === r.name) {
+                return r;
+            }
+        }
+        return null;
+    }
+
+}
+
+export class NameResolver {
+
+    private _ruleTable: ImportRuleTable;
+    private _namespaceStack: string[];
+
+    constructor(ruleTable: ImportRuleTable) {
+        this._ruleTable = ruleTable;
+        this._namespaceStack = [];
+    }
+
+    pushNamespace(name: string) {
+        this._namespaceStack.push(name);
+    }
+
+    popNamespace() {
+        this._namespaceStack.pop();
+    }
+
+    resolveRelative(relativeName: string) {
+        let ns = this._namespace();
+        return ns ? ns + '\\' + relativeName : relativeName;
+    }
+
+    resolveNotFullyQualified(notFqName: string, kind: SymbolKind) {
+        let pos = notFqName.indexOf('\\');
+        if (pos === -1) {
+            return this._resolveUnqualified(notFqName, kind);
+        } else {
+            this._resolveQualified(name, pos);
+        }
+    }
+
+    private _resolveQualified(name: string, pos: number) {
+
+        let rule = this._ruleTable.match(name.slice(0, pos), SymbolKind.Class);
+        if (rule) {
+            return rule.fqn + name.slice(pos);
+        } else {
+            return this.resolveRelative(name);
+        }
+
+    }
+
+    private _resolveUnqualified(name: string, kind: SymbolKind) {
+
+        let rule = this._ruleTable.match(name, kind);
+        if (rule) {
+            return rule.fqn;
+        } else {
+            
+            /*
+                http://php.net/manual/en/language.namespaces.rules.php
+                For unqualified names, if no import rule applies and the name refers to a 
+                function or constant and the code is outside the global namespace, the name is 
+                resolved at runtime. Assuming the code is in namespace A\B, here is how a call 
+                to function foo() is resolved:
+
+                It looks for a function from the current namespace: A\B\foo().
+                It tries to find and call the global function foo().
+            */
+
+            return this.resolveRelative(name);
+        }
+
+    }
+
+    private _namespace() {
+        return this._namespaceStack.length ? this._namespaceStack[this._namespaceStack.length - 1] : '';
+    }
+
 }
 
 export class SymbolTree extends Tree<Symbol> {
@@ -172,7 +281,7 @@ function symbolSuffixes(symbol: Symbol) {
             ++n;
             suffixes.push(lcText.slice(n));
             acronym += lcText[n];
-        } else if (c !== lcText[n]) {
+        } else if (n > 0 && c !== lcText[n] && text[n - 1] === lcText[n - 1]) {
             //uppercase
             suffixes.push(lcText.slice(n));
             acronym += lcText[n];
@@ -226,14 +335,14 @@ export class SymbolStore {
     match(text: string) {
         let symbols = this._index.match(text);
         let map: { [index: string]: Symbol } = {};
-        let uid:string;
-        let uniqueSymbols:Symbol[] = [];
-        let s:Symbol;
+        let uid: string;
+        let uniqueSymbols: Symbol[] = [];
+        let s: Symbol;
 
         for (let n = 0; n < symbols.length; ++n) {
             s = symbols[n];
             uid = s.uid;
-            if(!map[uid]){
+            if (!map[uid]) {
                 map[uid] = s;
                 uniqueSymbols.push(s);
             }

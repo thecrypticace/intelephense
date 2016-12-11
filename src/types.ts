@@ -18,13 +18,51 @@ export interface Predicate<T> {
     (t: T): boolean;
 }
 
+export interface DebugLogger {
+    debug(message: string): void;
+}
 
 export interface TreeVisitor<T> {
 
     preOrder(t: T): void;
-    inOrder(t: T): void;
-    postOrder(t: T): void;
+    inOrder(t: T, afterChild: number): void;
+    postOrder(t: T, childCount: number): void;
     shouldDescend(t: T): boolean;
+
+}
+
+export class Debounce<T> {
+
+    private _handler: (e: T) => void;
+    private _lastEvent: T;
+    private _timer: number;
+    private _wait: number;
+
+    constructor(handler: (e: T) => void, wait: number) {
+        this._handler = handler;
+        this._wait = wait;
+    }
+
+    handle(event: T) {
+        this._lastEvent = event;
+        this.interupt();
+        let later = () => {
+            this._handler.apply(this, this._lastEvent);
+        };
+        this._timer = setTimeout(later, this._wait);
+    }
+
+    interupt() {
+        clearTimeout(this._timer);
+        this._timer = 0;
+    }
+
+    flush() {
+        if (this._timer) {
+            this.interupt();
+            this._handler.apply(this, this._lastEvent);
+        }
+    }
 
 }
 
@@ -50,15 +88,14 @@ export class Tree<T> {
         return n < this._children.length ? this._children[n] : null;
     }
 
-    addChild(childValue: T) {
-        let node = new Tree<T>(childValue);
-        this._children.push(node);
-        return node;
+    addChild(child: Tree<T>) {
+        this._children.push(child);
+        return child;
     }
 
-    addChildren(valueArray: T[]) {
-        for (let n = 0; n < valueArray.length; ++n) {
-            this.addChild(valueArray[n]);
+    addChildren(children: Tree<T>[]) {
+        for (let n = 0; n < children.length; ++n) {
+            this.addChild(children[n]);
         }
     }
 
@@ -74,14 +111,9 @@ export class Tree<T> {
      * Pre-order flatten of tree
      */
     toArray() {
-        let values: T[] = [];
-        let visitor: TreeVisitor<T> = (v, d) => {
-            values.push(v);
-            return true;
-        };
-
-        this.preOrderTraverse(visitor);
-        return values;
+        let visitor = new ToArrayVisitor<T>();
+        this.traverse(visitor);
+        return visitor.array;
     }
 
     toString() {
@@ -96,14 +128,38 @@ export class Tree<T> {
 
             for (let n = 0, l = this._children.length; n < l; ++n) {
                 this._children[n].traverse(visitor);
+                visitor.inOrder(this.value, n);
             }
 
         } else {
-            visitor.inOrder(this.value);
+            visitor.inOrder(this.value, 0);
         }
 
-        visitor.postOrder(this.value);
+        visitor.postOrder(this.value, this._children.length);
 
+    }
+
+}
+
+class ToArrayVisitor<T> implements TreeVisitor<T>{
+
+    private _array: T[];
+
+    constructor() {
+        this._array = [];
+    }
+
+    get array() {
+        return this._array;
+    }
+
+    preOrder(t: T) {
+        this._array.push(t);
+    }
+    inOrder(t: T, afterChild: number) { }
+    postOrder(t: T, childCount: number) { }
+    shouldDescend(t: T) {
+        return true;
     }
 
 }
