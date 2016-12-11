@@ -4,7 +4,7 @@
 
 'use strict';
 
-import {TreeNode} from './types';
+import {Tree} from './types';
 import {Token, AstNode} from 'php7parser';
 
 export class ParsedDocument {
@@ -26,6 +26,6 @@ export class ParsedDocument {
     }
 }
 
-export class ParseTree extends TreeNode<AstNode|Token> {
+export class ParseTree extends Tree<AstNode|Token> {
 
 }

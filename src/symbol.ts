@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Position, Range, Predicate, TreeNode, TreeVisitor, BinarySearch, SuffixArray } from './types';
+import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray } from './types';
 
 export enum SymbolKind {
     None = 0,
@@ -98,7 +98,7 @@ export class VariableSymbol extends Symbol {
     }
 }
 
-export class SymbolTree extends TreeNode<Symbol> {
+export class SymbolTree extends Tree<Symbol> {
 
     private _uri: string;
 

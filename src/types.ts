@@ -28,9 +28,9 @@ export interface TreeVisitor<T> {
 
 }
 
-export class TreeNode<T> {
+export class Tree<T> {
 
-    private _children: TreeNode<T>[];
+    private _children: Tree<T>[];
     private _value: T;
 
     constructor(value: T) {
@@ -51,7 +51,7 @@ export class TreeNode<T> {
     }
 
     addChild(childValue: T) {
-        let node = new TreeNode<T>(childValue);
+        let node = new Tree<T>(childValue);
         this._children.push(node);
         return node;
     }
@@ -62,7 +62,7 @@ export class TreeNode<T> {
         }
     }
 
-    removeChild(child: TreeNode<T>) {
+    removeChild(child: Tree<T>) {
         let i = this._children.indexOf(child);
         if (i !== -1) {
             return this._children.splice(i, 1)[0];
