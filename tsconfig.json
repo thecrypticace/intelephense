@@ -4,9 +4,10 @@
 		"module": "commonjs",
 		"moduleResolution": "node",
 		"sourceMap": true,
-		"outDir": "out"
+		"outDir": "lib"
 	},
 	"exclude": [
-		"node_modules"
+		"node_modules",
+		"test"
 	]
 }

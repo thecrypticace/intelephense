@@ -1,8 +1,8 @@
 {
-  "name": "elephense",
+  "name": "intelephant",
   "version": "0.9.0",
   "description": "PHP Static Code Analysis",
-  "main": "elephense.js",
+  "main": "./lib/intelephant.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
