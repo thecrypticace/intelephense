@@ -5,6 +5,8 @@
 'use strict';
 
 import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray } from './types';
+import { AstNode, AstNodeType, AstNodeFlag, Token } from 'php7parser';
+import {DocBlockParser, DocBlock, Tag, MethodTagParam, TypeTag} from './parse';
 
 export enum SymbolKind {
     None = 0,
@@ -31,8 +33,7 @@ export enum SymbolModifier {
     ReadOnly = 1 << 6,
     WriteOnly = 1 << 7,
     Magic = 1 << 8,
-    Use = 1 << 9,
-    Anonymous = 1 << 10
+    Anonymous = 1 << 9
 }
 
 export class Symbol {
@@ -83,7 +84,6 @@ export class TypeSymbol extends Symbol {
 
 export class CallableSymbol extends Symbol {
     returnTypes: string[];
-    signature: string;
 
     constructor(symbolKind: SymbolKind, symbolName: string) {
         super(symbolKind, symbolName);
@@ -104,7 +104,7 @@ export interface ImportRule {
     fqn: string;
 }
 
-export class ImportRuleTable {
+export class ImportTable {
 
     private _rules: ImportRule[];
     private _uri: string;
@@ -122,6 +122,10 @@ export class ImportRuleTable {
         this._rules.push(rule);
     }
 
+    addRuleMany(rules: ImportRule[]) {
+        Array.prototype.push.apply(this._rules, rules);
+    }
+
     match(text: string, kind: SymbolKind) {
         let r: ImportRule;
         for (let n = 0; n < this._rules.length; ++n) {
@@ -137,11 +141,11 @@ export class ImportRuleTable {
 
 export class NameResolver {
 
-    private _ruleTable: ImportRuleTable;
+    private _importTable: ImportTable;
     private _namespaceStack: string[];
 
-    constructor(ruleTable: ImportRuleTable) {
-        this._ruleTable = ruleTable;
+    constructor(importTable: ImportTable) {
+        this._importTable = importTable;
         this._namespaceStack = [];
     }
 
@@ -169,7 +173,7 @@ export class NameResolver {
 
     private _resolveQualified(name: string, pos: number) {
 
-        let rule = this._ruleTable.match(name.slice(0, pos), SymbolKind.Class);
+        let rule = this._importTable.match(name.slice(0, pos), SymbolKind.Class);
         if (rule) {
             return rule.fqn + name.slice(pos);
         } else {
@@ -180,11 +184,11 @@ export class NameResolver {
 
     private _resolveUnqualified(name: string, kind: SymbolKind) {
 
-        let rule = this._ruleTable.match(name, kind);
+        let rule = this._importTable.match(name, kind);
         if (rule) {
             return rule.fqn;
         } else {
-            
+
             /*
                 http://php.net/manual/en/language.namespaces.rules.php
                 For unqualified names, if no import rule applies and the name refers to a 
@@ -220,39 +224,28 @@ export class SymbolTree extends Tree<Symbol> {
         return this._uri;
     }
 
-    first(predicate: Predicate<Symbol>) {
-        let symbol: Symbol;
-        let visitor: TreeVisitor<Symbol> = (s, d) => {
-            if (s && predicate(s)) {
-                symbol = s;
-                return false;
-            }
-            return true;
-        };
-        this.breadthFirstTraverse(visitor);
-        return symbol;
-    }
-
-    match(predicate: Predicate<Symbol>, maxDepth = Infinity) {
-        let symbols: Symbol[] = [];
-        let visitor: TreeVisitor<Symbol> = (s, d) => {
-            if (d > maxDepth) {
-                return false;
-            }
-            if (s && predicate(s)) {
-                symbols.push(s);
-            }
-            return true;
-        };
-
-        this.breadthFirstTraverse(visitor);
-        return symbols;
-    }
-
     toArray() {
         let symbols = super.toArray();
         symbols.shift(); //root has null value
         return symbols;
+    }
+
+}
+
+export class DocumentSymbols {
+
+    private _importTable: ImportTable;
+    private _symbolTree: SymbolTree;
+    private _uri: string;
+
+    constructor(uri: string, importTable: ImportTable, symbolTree: SymbolTree) {
+        this._uri = uri;
+        this._importTable = importTable;
+        this._symbolTree = symbolTree;
+    }
+
+    get uri() {
+        return this._uri;
     }
 
 }
@@ -300,7 +293,7 @@ function symbolSuffixes(symbol: Symbol) {
 
 export class SymbolStore {
 
-    private _map: { [uri: string]: SymbolTree };
+    private _map: { [uri: string]: DocumentSymbols };
     private _index: SuffixArray<Symbol>;
 
     constructor() {
@@ -308,25 +301,25 @@ export class SymbolStore {
         this._index = new SuffixArray<Symbol>(symbolSuffixes);
     }
 
-    getTree(uri: string) {
+    getDocumentSymbols(uri: string) {
         return this._map[uri];
     }
 
-    add(symbolTree: SymbolTree) {
-        if (this.getTree(symbolTree.uri)) {
-            throw new Error(`Duplicate key ${symbolTree.uri}`);
+    add(documentSymbols: DocumentSymbols) {
+        if (this.getDocumentSymbols(documentSymbols.uri)) {
+            throw new Error(`Duplicate key ${documentSymbols.uri}`);
         }
-        this._map[symbolTree.uri] = symbolTree;
-        this._index.addMany(this._externalSymbols(symbolTree));
+        this._map[documentSymbols.uri] = documentSymbols;
+        this._index.addMany(this._externalSymbols(documentSymbols));
     }
 
-    remove(symbolTree: SymbolTree) {
-        let tree = this.getTree(symbolTree.uri);
-        if (!tree) {
+    remove(uri: string) {
+        let doc = this.getDocumentSymbols(uri);
+        if (!doc) {
             return;
         }
-        this._index.removeMany(this._externalSymbols(tree));
-        delete this._map[tree.uri];
+        this._index.removeMany(this._externalSymbols(doc));
+        delete this._map[uri];
     }
 
     /**
@@ -365,3 +358,238 @@ export class SymbolStore {
     }
 
 }
+
+export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
+
+    private _stack: any[];
+    private _importTable: ImportTable;
+    private _nameResolver: NameResolver;
+    private _docBlockParser:DocBlockParser;
+
+    constructor(importTable: ImportTable, nameResolver: NameResolver, docBlockParser:DocBlockParser) {
+        this._importTable = importTable;
+        this._nameResolver = nameResolver;
+        this._docBlockParser = docBlockParser;
+        this._stack = [];
+    }
+
+
+    preOrder(node) {
+
+    }
+
+    inOrder(node, childIndex) {
+
+        if (node && node.astNodeType === AstNodeType.Namespace && childIndex === 0) {
+            let ns = this._top();
+            if (ns) {
+                this._nameResolver.pushNamespace(ns);
+            }
+        }
+
+    }
+
+    postOrder(node, childCount) {
+
+        if (!node) {
+            this._stack.push(null);
+        }
+
+        switch (node.astNodeType) {
+            case AstNodeType.NamespaceName:
+                this._stack.push(this._popMany(childCount).join('\\'));
+                break;
+            case AstNodeType.Namespace:
+                this._postOrderNamespace(node, childCount);
+                break;
+            case AstNodeType.UseElement:
+                this._postOrderUseElement(node, childCount);
+                break;
+            case AstNodeType.UseList:
+                this._postOrderUseList(node, childCount);
+                break;
+            case AstNodeType.UseStatement:
+                this._postOrderUseStatement(node, childCount);
+                break;
+            case AstNodeType.UseGroup:
+                this._postOrderUseGroup(node, childCount);
+                break;
+            case AstNodeType.FunctionDeclaration:
+                this._postOrderFunctionDeclaration(node,childCount);
+                break;
+            case undefined:
+                //Token
+                this._stack.push((<Token>node).text);
+            default:
+                this._popMany(childCount);
+                this._stack.push(null);
+                break;
+        }
+
+    }
+
+    shouldDescend(node) {
+
+        if (!node) {
+            return false;
+        }
+
+        switch (node.astNodeType) {
+            case AstNodeType.NamespaceName:
+            case AstNodeType.Namespace:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private _postOrderFunctionDeclaration(node:AstNode, childCount:number){
+
+        let name:string, params:Tree<Symbol>[], returnType:string, body:null;
+        [name, params, returnType, body] = this._popMany(4);
+        if(!name){
+            this._stack.push(null);
+            return;
+        }
+        let s = new CallableSymbol(SymbolKind.Function, this._nameResolver.resolveRelative(name));
+        if(returnType){
+            s.returnTypes = [returnType];
+        }
+
+        let tree = new Tree<Symbol>(s);
+        tree.addChildren(params);
+        let doc = node.doc ? this._docBlockParser.parse(node.doc.text) : null;
+
+        if(!node.doc){
+            this._stack.push(tree);
+            return;
+        }
+
+        
+
+    }
+
+    private _assignDocBlockInfoToCallableSymbol(func:CallableSymbol, params:Tree<VariableSymbol>[], doc:DocBlock){
+
+        func.description = doc.text;
+        let tag:TypeTag;
+        let paramMap:{[name:string]:VariableSymbol} = {};
+        let s:VariableSymbol;
+
+        for(let n = 0; n < params.length; ++n){
+            s = params[n].value;
+            paramMap[s.name] = s;
+        }
+
+        for(let n = 0; n < doc.tags.length; ++n){
+            tag = doc.tags[n] as TypeTag;
+            if(tag.tagName === '@param'){
+                if(paramMap[tag.name])
+            } else if(tag.tagName === '@return'){
+                if(!func.returnTypes){
+                    func.returnTypes = tag.types;
+                } else {
+                    Array.prototype.push.apply(func.returnTypes, tag.types);
+                }
+            }
+        }
+
+    }
+
+    private _postOrderUseGroup(node: AstNode, childCount) {
+        let prefix: string, list: ImportRule[];
+        let kind = this._useFlagToSymbolKind(node.flag);
+        [prefix, list] = this._popMany(2);
+        let rule: ImportRule;
+
+        for (let n = 0; n < list.length; ++n) {
+            rule = list[n];
+            if (prefix) {
+                rule.fqn = prefix + '\\' + rule.fqn;
+            }
+            if (kind) {
+                rule.kind = kind;
+            }
+        }
+        this._importTable.addRuleMany(list);
+        this._stack.push(null);
+    }
+
+    private _postOrderUseStatement(node: AstNode, childCount) {
+        let list = this._stack.pop() as ImportRule[];
+        let kind = this._useFlagToSymbolKind(node.flag);
+        for (let n = 0; n < list.length; ++n) {
+            list[n].kind = kind;
+        }
+        this._importTable.addRuleMany(list);
+        this._stack.push(null);
+    }
+
+    private _postOrderUseList(node: AstNode, childCount: number) {
+        this._stack.push(this._popMany(childCount).filter((v, i, a) => { return v; }));
+    }
+
+    private _postOrderUseElement(node: AstNode, childCount: number) {
+        let fqn: string, name: string;
+        [fqn, name] = this._popMany(2);
+        if (fqn) {
+            this._stack.push({
+                kind: this._useFlagToSymbolKind(node.flag),
+                fqn: fqn,
+                name: name
+            });
+        } else {
+            this._stack.push(null);
+        }
+    }
+
+    private _postOrderNamespace(node: AstNode, childCount: number) {
+        let name: string, list: Tree<Symbol>[];
+        [name, list] = this._popMany(2);
+        let nodes: Tree<Symbol>[] = [];
+
+        if (name) {
+            let s = new Symbol(SymbolKind.Namespace, name);
+            s.start = s.end = node.range.start.line;
+            nodes.push(new Tree<Symbol>(s));
+        }
+
+        if (list) {
+            Array.prototype.push.apply(nodes, list);
+            if (name) {
+                this._nameResolver.popNamespace();
+            }
+        }
+
+        this._stack.push(nodes);
+    }
+
+    private _useFlagToSymbolKind(flag: AstNodeFlag) {
+        switch (flag) {
+            case AstNodeFlag.UseClass:
+                return SymbolKind.Class;
+            case AstNodeFlag.UseConstant:
+                return SymbolKind.Constant;
+            case AstNodeFlag.UseFunction:
+                return SymbolKind.Function;
+            default:
+                return 0;
+        }
+    }
+
+    private _popMany(n: number) {
+
+        let popped: any[] = [];
+        while (n--) {
+            popped.push(this._stack.pop());
+        }
+        return popped.reverse();
+    }
+
+    private _top() {
+        return this._stack.length ? this._stack[this._stack.length - 1] : null;
+    }
+
+}
+
+
