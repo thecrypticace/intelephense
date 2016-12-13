@@ -6,7 +6,7 @@
 
 import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray } from './types';
 import { AstNode, AstNodeType, AstNodeFlag, Token } from 'php7parser';
-import {DocBlockParser, DocBlock, Tag, MethodTagParam, TypeTag} from './parse';
+import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag } from './parse';
 
 export enum SymbolKind {
     None = 0,
@@ -211,6 +211,139 @@ export class NameResolver {
 
 }
 
+export class PhpDocTypeString {
+
+    private static _classNamePattern: RegExp = /([\\a-zA-Z_\x7f-\xff][\\a-zA-Z0-9_\x7f-\xff])*/g;
+
+    private static _keywords: string[] = [
+        'string', 'integer', 'int', 'boolean', 'bool', 'float',
+        'double', 'object', 'mixed', 'array', 'resource',
+        'void', 'null', 'callback', 'false', 'true', 'self'
+    ];
+
+    static atomicClassArray(typeString: string) {
+
+        let n = 0;
+        let types: string[] = [];
+        let parentheses = 0;
+        let skipUntilPipe = false;
+        let type: string = '';
+
+        while (n < typeString.length) {
+
+            switch (typeString[n]) {
+                case '|':
+                    if (parentheses) {
+                        break;
+                    }
+                    skipUntilPipe = false;
+                    if (type && PhpDocTypeString._keywords.indexOf(type) === -1) {
+                        types.push(type);
+                        type = '';
+                    }
+                    break;
+                case '(':
+                    skipUntilPipe = true;
+                    ++parentheses;
+                    break;
+                case ')':
+                    --parentheses;
+                    break;
+                case '[':
+                    type = '';
+                    skipUntilPipe = true;
+                    break;
+                default:
+                    if (!skipUntilPipe) {
+                        type += typeString[n];
+                    }
+                    break;
+            }
+
+            ++n;
+        }
+
+        if (type && PhpDocTypeString._keywords.indexOf(type) === -1) {
+            types.push(type);
+        }
+
+        return types;
+
+    }
+
+    static arrayDereference(typeString: string) {
+
+        let n = 0;
+        let parentheses = 0;
+        let text = '';
+        let c: string;
+        let parts: string[] = [];
+
+        while (n < typeString.length) {
+
+            c = typeString[n];
+
+            switch (c) {
+                case '|':
+                    if (parentheses) {
+                        text += c;
+                        break;
+                    }
+
+                    text = PhpDocTypeString._arrayDereferenceType(text);
+                    if (text) {
+                        parts.push(text);
+                        text = '';
+                    }
+                    break;
+                case '(':
+                    ++parentheses;
+                    text += c;
+                    break;
+                case ')':
+                    --parentheses;
+                    text += c;
+                    break;
+                default:
+                    text += c;
+                    break;
+            }
+
+            ++n;
+        }
+
+        text = PhpDocTypeString._arrayDereferenceType(text);
+        if (text) {
+            parts.push(text);
+        }
+
+        return parts.join('|');
+
+    }
+
+    private static _arrayDereferenceType(typeString: string) {
+        if (typeString.slice(-2) === '[]') {
+            typeString = typeString.slice(0, -2);
+            if (typeString.slice(-1) === ')') {
+                typeString = typeString.slice(1, -1);
+            }
+            return typeString;
+        }
+        return '';
+    }
+
+    static concat(prefix: string, suffix: string) {
+        return prefix + '|' + suffix;
+    }
+
+    static nameResolve(typeString: string, nameResolver: NameResolver) {
+        return typeString.replace(PhpDocTypeString._classNamePattern, (match, offset, text) => {
+            return match[0] === '\\' ? match.slice(1) : nameResolver.resolveNotFullyQualified(match, SymbolKind.Class);
+        });
+    }
+
+}
+
 export class SymbolTree extends Tree<Symbol> {
 
     private _uri: string;
@@ -364,9 +497,9 @@ export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
     private _stack: any[];
     private _importTable: ImportTable;
     private _nameResolver: NameResolver;
-    private _docBlockParser:DocBlockParser;
+    private _docBlockParser: PhpDocParser;
 
-    constructor(importTable: ImportTable, nameResolver: NameResolver, docBlockParser:DocBlockParser) {
+    constructor(importTable: ImportTable, nameResolver: NameResolver, docBlockParser: PhpDocParser) {
         this._importTable = importTable;
         this._nameResolver = nameResolver;
         this._docBlockParser = docBlockParser;
@@ -415,7 +548,7 @@ export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
                 this._postOrderUseGroup(node, childCount);
                 break;
             case AstNodeType.FunctionDeclaration:
-                this._postOrderFunctionDeclaration(node,childCount);
+                this._postOrderFunctionDeclaration(node, childCount);
                 break;
             case undefined:
                 //Token
@@ -443,16 +576,16 @@ export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
         }
     }
 
-    private _postOrderFunctionDeclaration(node:AstNode, childCount:number){
+    private _postOrderFunctionDeclaration(node: AstNode, childCount: number) {
 
-        let name:string, params:Tree<Symbol>[], returnType:string, body:null;
+        let name: string, params: Tree<Symbol>[], returnType: string, body: null;
         [name, params, returnType, body] = this._popMany(4);
-        if(!name){
+        if (!name) {
             this._stack.push(null);
             return;
         }
         let s = new CallableSymbol(SymbolKind.Function, this._nameResolver.resolveRelative(name));
-        if(returnType){
+        if (returnType) {
             s.returnTypes = [returnType];
         }
 
@@ -460,36 +593,36 @@ export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
         tree.addChildren(params);
         let doc = node.doc ? this._docBlockParser.parse(node.doc.text) : null;
 
-        if(!node.doc){
+        if (!node.doc) {
             this._stack.push(tree);
             return;
         }
 
-        
+
 
     }
 
-    private _assignDocBlockInfoToCallableSymbol(func:CallableSymbol, params:Tree<VariableSymbol>[], doc:DocBlock){
+    private _assignDocBlockInfoToCallableSymbol(func: CallableSymbol, params: Tree<VariableSymbol>[], doc: PhpDoc) {
 
-        func.description = doc.text;
-        let tag:TypeTag;
-        let paramMap:{[name:string]:VariableSymbol} = {};
-        let s:VariableSymbol;
+        func.description = doc.summary;
+        let tag: TypeTag;
+        let paramMap: { [name: string]: VariableSymbol } = {};
+        let s: VariableSymbol;
 
-        for(let n = 0; n < params.length; ++n){
+        for (let n = 0; n < params.length; ++n) {
             s = params[n].value;
             paramMap[s.name] = s;
         }
 
-        for(let n = 0; n < doc.tags.length; ++n){
+        for (let n = 0; n < doc.tags.length; ++n) {
             tag = doc.tags[n] as TypeTag;
-            if(tag.tagName === '@param'){
-                if(paramMap[tag.name])
-            } else if(tag.tagName === '@return'){
-                if(!func.returnTypes){
-                    func.returnTypes = tag.types;
+            if (tag.tagName === '@param') {
+                if (paramMap[tag.name])
+            } else if (tag.tagName === '@return') {
+                if (!func.returnTypes) {
+                    func.returnTypes = tag.typeString;
                 } else {
-                    Array.prototype.push.apply(func.returnTypes, tag.types);
+                    Array.prototype.push.apply(func.returnTypes, tag.typeString);
                 }
             }
         }
