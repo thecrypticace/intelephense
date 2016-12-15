@@ -164,6 +164,77 @@ class ToArrayVisitor<T> implements TreeVisitor<T>{
 
 }
 
+class MultiVisitor<T> implements TreeVisitor<T> {
+
+    private _visitors:[TreeVisitor<T>, T][];
+
+    constructor(visitors:TreeVisitor<T>[] = []){
+        for(let n = 0; n < visitors.length; ++n){
+            this.add(visitors[n]);
+        } 
+    }
+
+    add(v:TreeVisitor<T>){
+        this._visitors.push([v, null]);
+    }
+
+    preOrder(t:T){
+        let v:[TreeVisitor<T>, T];
+        for(let n = 0; n < this._visitors.length; ++n){
+            v = this._visitors[n];
+            if(!v[1]){
+                v[0].preOrder(t);
+            }
+        }
+    }
+
+    inOrder(t:T, index:number){
+        let v:[TreeVisitor<T>, T];
+        for(let n = 0; n < this._visitors.length; ++n){
+            v = this._visitors[n];
+            if(!v[1]){
+                v[0].inOrder(t, index);
+            }
+        }
+    }
+
+    postOrder(t:T, count:number){
+        let v:[TreeVisitor<T>, T];
+        for(let n = 0; n < this._visitors.length; ++n){
+            v = this._visitors[n];
+            if(v[1] === t){
+                v[1] = null;
+            }
+            if(!v[1]){
+                v[0].postOrder(t, count);
+            }
+        }
+    }
+
+    shouldDescend(t:T){
+        
+        let v:[TreeVisitor<T>, T];
+        let descend = false;
+
+        for(let n = 0; n < this._visitors.length; ++n){
+            v = this._visitors[n];
+            if(v[1]){
+                continue;
+            }
+            if(v[0].shouldDescend(t)){
+                descend = true;
+            } else {
+                v[1] = t;
+            }
+        }
+
+        return descend;
+
+    }
+
+
+}
+
 export class BinarySearch<T> {
 
     private _sortedArray: T[];

@@ -7,6 +7,7 @@
 import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray } from './types';
 import { NonTerminal, NonTerminalType, NonTerminalFlag, Token } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag } from './parse';
+import * as util from './util';
 
 export enum SymbolKind {
     None = 0,
@@ -117,9 +118,9 @@ export class VariableSymbol extends Symbol {
 }
 
 interface RangedTypes {
-    types:string;
-    start:number;
-    end:number;
+    types: string;
+    start: number;
+    end: number;
 }
 
 export interface ImportRule {
@@ -173,6 +174,10 @@ export class NameResolver {
         this._namespaceStack = [];
     }
 
+    namespace() {
+        return util.top(this._namespaceStack);
+    }
+
     pushNamespace(name: string) {
         this._namespaceStack.push(name);
     }
@@ -182,7 +187,7 @@ export class NameResolver {
     }
 
     resolveRelative(relativeName: string) {
-        let ns = this._namespace();
+        let ns = this.namespace();
         return ns ? ns + '\\' + relativeName : relativeName;
     }
 
@@ -227,10 +232,6 @@ export class NameResolver {
             return this.resolveRelative(name);
         }
 
-    }
-
-    private _namespace() {
-        return this._namespaceStack.length ? this._namespaceStack[this._namespaceStack.length - 1] : '';
     }
 
 }
@@ -516,6 +517,198 @@ export class SymbolStore {
 
 }
 
+
+
+export class ImportTableReader implements TreeVisitor<NonTerminal | Token> {
+
+    private _stack: any[];
+
+    constructor(public importTable: ImportTable) {
+        this._stack = [];
+    }
+
+    preOrder(node) { }
+
+    inOrder(node, childIndex) { }
+
+    postOrder(node, childCount) {
+
+        if (!node) {
+            this._stack.push(null);
+        }
+
+        switch (node.nonTerminalType) {
+            case NonTerminalType.NamespaceName:
+                this._stack.push(util.popMany(this._stack, childCount).join('\\'));
+                break;
+            case NonTerminalType.UseElement:
+                this._postOrderUseElement(node, childCount);
+                break;
+            case NonTerminalType.UseList:
+                this._postOrderUseList(node, childCount);
+                break;
+            case NonTerminalType.UseStatement:
+                this._postOrderUseStatement(node, childCount);
+                break;
+            case NonTerminalType.UseGroup:
+                this._postOrderUseGroup(node, childCount);
+                break;
+            default:
+                break;
+        }
+    }
+
+    shouldDescend(node) {
+
+        if (!node) {
+            return false;
+        }
+
+        switch (node.nonTerminalType) {
+            case NonTerminalType.TopStatementList:
+            case NonTerminalType.UseElement:
+            case NonTerminalType.UseList:
+            case NonTerminalType.UseStatement:
+            case NonTerminalType.UseGroup:
+            case NonTerminalType.NamespaceName:
+            case NonTerminalType.Namespace:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private _postOrderUseGroup(node: NonTerminal, childCount) {
+        let prefix: string, list: ImportRule[];
+        let kind = this._useFlagToSymbolKind(node.flag);
+        [prefix, list] = util.popMany(this._stack, 2);
+        let rule: ImportRule;
+
+        for (let n = 0; n < list.length; ++n) {
+            rule = list[n];
+            if (prefix) {
+                rule.fqn = prefix + '\\' + rule.fqn;
+            }
+            if (kind) {
+                rule.kind = kind;
+            }
+        }
+        this.importTable.addRuleMany(list);
+    }
+
+    private _postOrderUseStatement(node: NonTerminal, childCount) {
+        let list = this._stack.pop() as ImportRule[];
+        let kind = this._useFlagToSymbolKind(node.flag);
+        for (let n = 0; n < list.length; ++n) {
+            list[n].kind = kind;
+        }
+        this.importTable.addRuleMany(list);
+    }
+
+    private _postOrderUseList(node: NonTerminal, childCount: number) {
+        this._stack.push(util.popMany(this._stack, childCount).filter((v, i, a) => { return v; }));
+    }
+
+    private _postOrderUseElement(node: NonTerminal, childCount: number) {
+        let fqn: string, name: string;
+        [fqn, name] = util.popMany(this._stack, 2);
+        if (fqn) {
+            this._stack.push({
+                kind: this._useFlagToSymbolKind(node.flag),
+                fqn: fqn,
+                name: name
+            });
+        } else {
+            this._stack.push(null);
+        }
+    }
+
+    private _useFlagToSymbolKind(flag: NonTerminalFlag) {
+        switch (flag) {
+            case NonTerminalFlag.UseClass:
+                return SymbolKind.Class;
+            case NonTerminalFlag.UseConstant:
+                return SymbolKind.Constant;
+            case NonTerminalFlag.UseFunction:
+                return SymbolKind.Function;
+            default:
+                return 0;
+        }
+    }
+
+}
+
+export class NamespaceReader implements TreeVisitor<NonTerminal | Token> {
+
+    private _stack: any[];
+
+    constructor(public nameResolver: NameResolver) {
+        this._stack = [];
+    }
+
+    preOrder(node) { }
+
+    inOrder(node, childIndex) {
+        if (node && node.nonTerminalType === NonTerminalType.Namespace && childIndex === 0) {
+            let ns = util.top(this._stack);
+            if (ns) {
+                let currentNs = this.nameResolver.namespace();
+                if (currentNs) {
+                    ns = currentNs + '\\' + ns;
+                }
+                this.nameResolver.pushNamespace(ns);
+            }
+        }
+    }
+
+    postOrder(node, childCount) {
+
+        if (!node) {
+            this._stack.push(null);
+        }
+
+        switch (node.nonTerminalType) {
+            case NonTerminalType.NamespaceName:
+                this._stack.push(util.popMany(this._stack, childCount).join('\\'));
+                break;
+            case NonTerminalType.Namespace:
+                let name: string, list: boolean;
+                [name, list] = util.popMany(this._stack, 2);
+                if (name && list) {
+                    this.nameResolver.popNamespace();
+                }
+                break;
+            case NonTerminalType.TopStatementList:
+                this._stack.push(true);
+                break;
+            case undefined:
+                //Token
+                this._stack.push((<Token>node).text);
+            default:
+                break;
+
+        }
+
+    }
+
+    shouldDescend(node) {
+
+        if (!node) {
+            return false;
+        }
+
+        switch (node.nonTerminalType) {
+            case NonTerminalType.TopStatementList:
+            case NonTerminalType.Namespace:
+            case NonTerminalType.NamespaceName:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+}
+
 export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     private _stack: any[];
@@ -531,20 +724,9 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
     }
 
 
-    preOrder(node) {
+    preOrder(node) { }
 
-    }
-
-    inOrder(node, childIndex) {
-
-        if (node && node.astNodeType === NonTerminalType.Namespace && childIndex === 0) {
-            let ns = this._top();
-            if (ns) {
-                this._nameResolver.pushNamespace(ns);
-            }
-        }
-
-    }
+    inOrder(node, childIndex) { }
 
     postOrder(node, childCount) {
 
@@ -553,24 +735,6 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         }
 
         switch (node.nonTerminalType) {
-            case NonTerminalType.NamespaceName:
-                this._stack.push(this._popMany(childCount).join('\\'));
-                break;
-            case NonTerminalType.Namespace:
-                this._postOrderNamespace(node, childCount);
-                break;
-            case NonTerminalType.UseElement:
-                this._postOrderUseElement(node, childCount);
-                break;
-            case NonTerminalType.UseList:
-                this._postOrderUseList(node, childCount);
-                break;
-            case NonTerminalType.UseStatement:
-                this._postOrderUseStatement(node, childCount);
-                break;
-            case NonTerminalType.UseGroup:
-                this._postOrderUseGroup(node, childCount);
-                break;
             case NonTerminalType.FunctionDeclaration:
                 this._postOrderFunctionDeclaration(node, childCount);
                 break;
@@ -578,7 +742,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
                 //Token
                 this._stack.push((<Token>node).text);
             default:
-                this._popMany(childCount);
+                util.popMany(this._stack, childCount);
                 this._stack.push(null);
                 break;
         }
@@ -641,14 +805,14 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         for (let n = 0; n < doc.tags.length; ++n) {
             tag = doc.tags[n] as TypeTag;
             if (tag.tagName === '@param') {
-                s  = paramMap[tag.name]; 
-                if (paramMap[tag.name]){
+                s = paramMap[tag.name];
+                if (paramMap[tag.name]) {
                     s.description = tag.description;
-                    if(!s.types) {
+                    if (!s.types) {
                         s.types = [];
                     }
-                    if(!s.types.length){
-                        s.types.push({types:'', start:func.start, end:func.end});
+                    if (!s.types.length) {
+                        s.types.push({ types: '', start: func.start, end: func.end });
                     }
                     s.types[0].types = PhpDocTypeString.concat(s.types[0].types, tag.typeString);
                 }
@@ -659,52 +823,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-    private _postOrderUseGroup(node: NonTerminal, childCount) {
-        let prefix: string, list: ImportRule[];
-        let kind = this._useFlagToSymbolKind(node.flag);
-        [prefix, list] = this._popMany(2);
-        let rule: ImportRule;
 
-        for (let n = 0; n < list.length; ++n) {
-            rule = list[n];
-            if (prefix) {
-                rule.fqn = prefix + '\\' + rule.fqn;
-            }
-            if (kind) {
-                rule.kind = kind;
-            }
-        }
-        this._importTable.addRuleMany(list);
-        this._stack.push(null);
-    }
-
-    private _postOrderUseStatement(node: NonTerminal, childCount) {
-        let list = this._stack.pop() as ImportRule[];
-        let kind = this._useFlagToSymbolKind(node.flag);
-        for (let n = 0; n < list.length; ++n) {
-            list[n].kind = kind;
-        }
-        this._importTable.addRuleMany(list);
-        this._stack.push(null);
-    }
-
-    private _postOrderUseList(node: NonTerminal, childCount: number) {
-        this._stack.push(this._popMany(childCount).filter((v, i, a) => { return v; }));
-    }
-
-    private _postOrderUseElement(node: NonTerminal, childCount: number) {
-        let fqn: string, name: string;
-        [fqn, name] = this._popMany(2);
-        if (fqn) {
-            this._stack.push({
-                kind: this._useFlagToSymbolKind(node.flag),
-                fqn: fqn,
-                name: name
-            });
-        } else {
-            this._stack.push(null);
-        }
-    }
 
     private _postOrderNamespace(node: NonTerminal, childCount: number) {
         let name: string, list: Tree<Symbol>[];
@@ -727,31 +846,6 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         this._stack.push(nodes);
     }
 
-    private _useFlagToSymbolKind(flag: NonTerminalFlag) {
-        switch (flag) {
-            case NonTerminalFlag.UseClass:
-                return SymbolKind.Class;
-            case NonTerminalFlag.UseConstant:
-                return SymbolKind.Constant;
-            case NonTerminalFlag.UseFunction:
-                return SymbolKind.Function;
-            default:
-                return 0;
-        }
-    }
-
-    private _popMany(n: number) {
-
-        let popped: any[] = [];
-        while (n--) {
-            popped.push(this._stack.pop());
-        }
-        return popped.reverse();
-    }
-
-    private _top() {
-        return this._stack.length ? this._stack[this._stack.length - 1] : null;
-    }
 
 }
 
