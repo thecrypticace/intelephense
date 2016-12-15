@@ -5,7 +5,7 @@
 'use strict';
 
 import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray } from './types';
-import { AstNode, AstNodeType, AstNodeFlag, Token } from 'php7parser';
+import { NonTerminal, NonTerminalType, NonTerminalFlag, Token } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag } from './parse';
 
 export enum SymbolKind {
@@ -72,6 +72,24 @@ export class Symbol {
     }
 }
 
+export class ClassSymbol extends Symbol {
+    extends: string;
+    implements: string[];
+    traits: string[];
+
+    constructor(symbolKind: SymbolKind, symbolName: string) {
+        super(symbolKind, symbolName);
+    }
+}
+
+export class InterfaceSymbol extends Symbol {
+    extends: string[];
+
+    constructor(symbolKind: SymbolKind, symbolName: string) {
+        super(symbolKind, symbolName);
+    }
+}
+
 export class TypeSymbol extends Symbol {
     extends: string[];
     implements: string[];
@@ -83,7 +101,7 @@ export class TypeSymbol extends Symbol {
 }
 
 export class CallableSymbol extends Symbol {
-    returnTypes: string[];
+    returnTypes: string;
 
     constructor(symbolKind: SymbolKind, symbolName: string) {
         super(symbolKind, symbolName);
@@ -91,11 +109,17 @@ export class CallableSymbol extends Symbol {
 }
 
 export class VariableSymbol extends Symbol {
-    types: string[];
+    types: RangedTypes[];
 
     constructor(symbolKind: SymbolKind, symbolName: string) {
         super(symbolKind, symbolName);
     }
+}
+
+interface RangedTypes {
+    types:string;
+    start:number;
+    end:number;
 }
 
 export interface ImportRule {
@@ -333,7 +357,7 @@ export class PhpDocTypeString {
     }
 
     static concat(prefix: string, suffix: string) {
-        return prefix + '|' + suffix;
+        return prefix ? prefix + '|' + suffix : suffix;
     }
 
     static nameResolve(typeString: string, nameResolver: NameResolver) {
@@ -492,7 +516,7 @@ export class SymbolStore {
 
 }
 
-export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
+export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     private _stack: any[];
     private _importTable: ImportTable;
@@ -513,7 +537,7 @@ export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
 
     inOrder(node, childIndex) {
 
-        if (node && node.astNodeType === AstNodeType.Namespace && childIndex === 0) {
+        if (node && node.astNodeType === NonTerminalType.Namespace && childIndex === 0) {
             let ns = this._top();
             if (ns) {
                 this._nameResolver.pushNamespace(ns);
@@ -528,26 +552,26 @@ export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
             this._stack.push(null);
         }
 
-        switch (node.astNodeType) {
-            case AstNodeType.NamespaceName:
+        switch (node.nonTerminalType) {
+            case NonTerminalType.NamespaceName:
                 this._stack.push(this._popMany(childCount).join('\\'));
                 break;
-            case AstNodeType.Namespace:
+            case NonTerminalType.Namespace:
                 this._postOrderNamespace(node, childCount);
                 break;
-            case AstNodeType.UseElement:
+            case NonTerminalType.UseElement:
                 this._postOrderUseElement(node, childCount);
                 break;
-            case AstNodeType.UseList:
+            case NonTerminalType.UseList:
                 this._postOrderUseList(node, childCount);
                 break;
-            case AstNodeType.UseStatement:
+            case NonTerminalType.UseStatement:
                 this._postOrderUseStatement(node, childCount);
                 break;
-            case AstNodeType.UseGroup:
+            case NonTerminalType.UseGroup:
                 this._postOrderUseGroup(node, childCount);
                 break;
-            case AstNodeType.FunctionDeclaration:
+            case NonTerminalType.FunctionDeclaration:
                 this._postOrderFunctionDeclaration(node, childCount);
                 break;
             case undefined:
@@ -567,16 +591,16 @@ export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
             return false;
         }
 
-        switch (node.astNodeType) {
-            case AstNodeType.NamespaceName:
-            case AstNodeType.Namespace:
+        switch (node.nonTerminalType) {
+            case NonTerminalType.NamespaceName:
+            case NonTerminalType.Namespace:
                 return true;
             default:
                 return false;
         }
     }
 
-    private _postOrderFunctionDeclaration(node: AstNode, childCount: number) {
+    private _postOrderFunctionDeclaration(node: NonTerminal, childCount: number) {
 
         let name: string, params: Tree<Symbol>[], returnType: string, body: null;
         [name, params, returnType, body] = this._popMany(4);
@@ -586,7 +610,7 @@ export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
         }
         let s = new CallableSymbol(SymbolKind.Function, this._nameResolver.resolveRelative(name));
         if (returnType) {
-            s.returnTypes = [returnType];
+            s.returnTypes = returnType;
         }
 
         let tree = new Tree<Symbol>(s);
@@ -602,7 +626,7 @@ export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
 
     }
 
-    private _assignDocBlockInfoToCallableSymbol(func: CallableSymbol, params: Tree<VariableSymbol>[], doc: PhpDoc) {
+    private _assignPhpDocToCallableSymbol(func: CallableSymbol, params: Tree<VariableSymbol>[], doc: PhpDoc) {
 
         func.description = doc.summary;
         let tag: TypeTag;
@@ -617,19 +641,25 @@ export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
         for (let n = 0; n < doc.tags.length; ++n) {
             tag = doc.tags[n] as TypeTag;
             if (tag.tagName === '@param') {
-                if (paramMap[tag.name])
-            } else if (tag.tagName === '@return') {
-                if (!func.returnTypes) {
-                    func.returnTypes = tag.typeString;
-                } else {
-                    Array.prototype.push.apply(func.returnTypes, tag.typeString);
+                s  = paramMap[tag.name]; 
+                if (paramMap[tag.name]){
+                    s.description = tag.description;
+                    if(!s.types) {
+                        s.types = [];
+                    }
+                    if(!s.types.length){
+                        s.types.push({types:'', start:func.start, end:func.end});
+                    }
+                    s.types[0].types = PhpDocTypeString.concat(s.types[0].types, tag.typeString);
                 }
+            } else if (tag.tagName === '@return') {
+                func.returnTypes = PhpDocTypeString.concat(func.returnTypes, tag.typeString);
             }
         }
 
     }
 
-    private _postOrderUseGroup(node: AstNode, childCount) {
+    private _postOrderUseGroup(node: NonTerminal, childCount) {
         let prefix: string, list: ImportRule[];
         let kind = this._useFlagToSymbolKind(node.flag);
         [prefix, list] = this._popMany(2);
@@ -648,7 +678,7 @@ export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
         this._stack.push(null);
     }
 
-    private _postOrderUseStatement(node: AstNode, childCount) {
+    private _postOrderUseStatement(node: NonTerminal, childCount) {
         let list = this._stack.pop() as ImportRule[];
         let kind = this._useFlagToSymbolKind(node.flag);
         for (let n = 0; n < list.length; ++n) {
@@ -658,11 +688,11 @@ export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
         this._stack.push(null);
     }
 
-    private _postOrderUseList(node: AstNode, childCount: number) {
+    private _postOrderUseList(node: NonTerminal, childCount: number) {
         this._stack.push(this._popMany(childCount).filter((v, i, a) => { return v; }));
     }
 
-    private _postOrderUseElement(node: AstNode, childCount: number) {
+    private _postOrderUseElement(node: NonTerminal, childCount: number) {
         let fqn: string, name: string;
         [fqn, name] = this._popMany(2);
         if (fqn) {
@@ -676,14 +706,14 @@ export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
         }
     }
 
-    private _postOrderNamespace(node: AstNode, childCount: number) {
+    private _postOrderNamespace(node: NonTerminal, childCount: number) {
         let name: string, list: Tree<Symbol>[];
         [name, list] = this._popMany(2);
         let nodes: Tree<Symbol>[] = [];
 
         if (name) {
             let s = new Symbol(SymbolKind.Namespace, name);
-            s.start = s.end = node.range.start.line;
+            s.start = s.end = node.startToken.range.start.line;
             nodes.push(new Tree<Symbol>(s));
         }
 
@@ -697,13 +727,13 @@ export class SymbolReaderFirstPass implements TreeVisitor<AstNode | Token> {
         this._stack.push(nodes);
     }
 
-    private _useFlagToSymbolKind(flag: AstNodeFlag) {
+    private _useFlagToSymbolKind(flag: NonTerminalFlag) {
         switch (flag) {
-            case AstNodeFlag.UseClass:
+            case NonTerminalFlag.UseClass:
                 return SymbolKind.Class;
-            case AstNodeFlag.UseConstant:
+            case NonTerminalFlag.UseConstant:
                 return SymbolKind.Constant;
-            case AstNodeFlag.UseFunction:
+            case NonTerminalFlag.UseFunction:
                 return SymbolKind.Function;
             default:
                 return 0;

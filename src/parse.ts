@@ -5,7 +5,7 @@
 'use strict';
 
 import { Tree } from './types';
-import { Token, AstNode, AstNodeFactory } from 'php7parser';
+import { Token, NonTerminal, AstNodeFactory } from 'php7parser';
 
 export class ParsedDocument {
 
@@ -26,7 +26,7 @@ export class ParsedDocument {
     }
 }
 
-export class ParseTree extends Tree<AstNode | Token> {
+export class ParseTree extends Tree<NonTerminal | Token> {
 
     private _uri;
 
@@ -40,8 +40,8 @@ export class ParseTree extends Tree<AstNode | Token> {
     }
 }
 
-export var astNodeFactory: AstNodeFactory<Tree<AstNode | Token>> = function (value, children) {
-    let tree = new Tree<AstNode | Token>(value);
+export var astNodeFactory: AstNodeFactory<Tree<NonTerminal | Token>> = function (value, children) {
+    let tree = new Tree<NonTerminal | Token>(value);
     tree.addChildren(children);
     return tree;
 }
