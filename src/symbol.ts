@@ -38,19 +38,17 @@ export enum SymbolModifier {
 }
 
 export class Symbol {
-    kind: SymbolKind;
-    name: string;
+
     uri: string;
     start: number;
     end: number;
     scope: string;
     modifiers: SymbolModifier;
     description: string;
+    associated: string[];
+    type: string;
 
-    constructor(symbolKind: SymbolKind, symbolName: string) {
-        this.kind = symbolKind;
-        this.name = symbolName;
-    }
+    constructor(public kind: SymbolKind, public name: string) { }
 
     get uid() {
         return [
@@ -70,50 +68,6 @@ export class Symbol {
 
     toString() {
         return this.name;
-    }
-}
-
-export class ClassSymbol extends Symbol {
-    extends: string;
-    implements: string[];
-    traits: string[];
-
-    constructor(symbolKind: SymbolKind, symbolName: string) {
-        super(symbolKind, symbolName);
-    }
-}
-
-export class InterfaceSymbol extends Symbol {
-    extends: string[];
-
-    constructor(symbolKind: SymbolKind, symbolName: string) {
-        super(symbolKind, symbolName);
-    }
-}
-
-export class TypeSymbol extends Symbol {
-    extends: string[];
-    implements: string[];
-    traits: string[];
-
-    constructor(symbolKind: SymbolKind, symbolName: string) {
-        super(symbolKind, symbolName);
-    }
-}
-
-export class CallableSymbol extends Symbol {
-    returnTypes: string;
-
-    constructor(symbolKind: SymbolKind, symbolName: string) {
-        super(symbolKind, symbolName);
-    }
-}
-
-export class VariableSymbol extends Symbol {
-    types: RangedTypes[];
-
-    constructor(symbolKind: SymbolKind, symbolName: string) {
-        super(symbolKind, symbolName);
     }
 }
 
@@ -196,13 +150,13 @@ export class NameResolver {
         if (pos === -1) {
             return this._resolveUnqualified(notFqName, kind);
         } else {
-            this._resolveQualified(name, pos);
+            this._resolveQualified(name, pos, kind);
         }
     }
 
-    private _resolveQualified(name: string, pos: number) {
+    private _resolveQualified(name: string, pos: number, kind:SymbolKind) {
 
-        let rule = this._importTable.match(name.slice(0, pos), SymbolKind.Class);
+        let rule = this._importTable.match(name.slice(0, pos), kind);
         if (rule) {
             return rule.fqn + name.slice(pos);
         } else {
@@ -652,10 +606,6 @@ export class NamespaceReader implements TreeVisitor<NonTerminal | Token> {
         if (node && node.nonTerminalType === NonTerminalType.Namespace && childIndex === 0) {
             let ns = util.top(this._stack);
             if (ns) {
-                let currentNs = this.nameResolver.namespace();
-                if (currentNs) {
-                    ns = currentNs + '\\' + ns;
-                }
                 this.nameResolver.pushNamespace(ns);
             }
         }
@@ -712,14 +662,9 @@ export class NamespaceReader implements TreeVisitor<NonTerminal | Token> {
 export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     private _stack: any[];
-    private _importTable: ImportTable;
-    private _nameResolver: NameResolver;
-    private _docBlockParser: PhpDocParser;
 
-    constructor(importTable: ImportTable, nameResolver: NameResolver, docBlockParser: PhpDocParser) {
-        this._importTable = importTable;
-        this._nameResolver = nameResolver;
-        this._docBlockParser = docBlockParser;
+    constructor(public uri: string, public importTable: ImportTable,
+        public nameResolver: NameResolver, public docBlockParser: PhpDocParser) {
         this._stack = [];
     }
 
@@ -735,8 +680,22 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         }
 
         switch (node.nonTerminalType) {
+            case NonTerminalType.NamespaceName:
+                this._stack.push(util.popMany(this._stack, childCount).join('\\'));
+                break;
+            case NonTerminalType.Namespace:
+                this._postOrderNamespace(node);
+                break;
             case NonTerminalType.FunctionDeclaration:
-                this._postOrderFunctionDeclaration(node, childCount);
+                this._postOrderFunctionDeclaration(node);
+                break;
+                case NonTerminalType.ConstantDeclaration:
+                break;
+            case NonTerminalType.ConstantDeclarationList:
+            case NonTerminalType.InnerStatementList:
+            case NonTerminalType.TopStatementList:
+            case NonTerminalType.ClassStatementList:
+                this._postOrderConsolidateList(node, childCount);
                 break;
             case undefined:
                 //Token
@@ -756,78 +715,100 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         }
 
         switch (node.nonTerminalType) {
-            case NonTerminalType.NamespaceName:
-            case NonTerminalType.Namespace:
-                return true;
-            default:
+            case NonTerminalType.UseStatement:
+            case NonTerminalType.UseGroup:
+            case NonTerminalType.HaltCompiler:
                 return false;
+            default:
+                return true;
         }
     }
 
-    private _postOrderFunctionDeclaration(node: NonTerminal, childCount: number) {
+    private _postOrderConstantDeclaration(node:NonTerminal){
 
-        let name: string, params: Tree<Symbol>[], returnType: string, body: null;
-        [name, params, returnType, body] = this._popMany(4);
+        let name:string, value:string;
+        [name, value] = util.popMany(this._stack, 2);
+        if(!name){
+            this._stack.push(null);
+        }
+        name = this.nameResolver.resolveRelative(name);
+        let s = new Symbol(SymbolKind.Constant, name);
+        s.start = node.startToken.range.start.line;
+        s.end = node.startToken.range.end.line;
+        this._stack.push(new Tree<Symbol>(s));
+
+    }
+
+    private _postOrderConsolidateList(node:NonTerminal, childCount:number){
+        
+    }
+
+    private _postOrderFunctionDeclaration(node: NonTerminal) {
+
+        let name: string, params: Tree<Symbol>[], returnType: string, body: Tree<Symbol>[];
+        [name, params, returnType, body] = util.popMany(this._stack, 4);
+
         if (!name) {
             this._stack.push(null);
             return;
         }
-        let s = new CallableSymbol(SymbolKind.Function, this._nameResolver.resolveRelative(name));
+
+        name = this.nameResolver.resolveRelative(name);
+        let s = new Symbol(SymbolKind.Function, this.nameResolver.resolveRelative(name));
+        s.uri = this.uri;
+
         if (returnType) {
-            s.returnTypes = returnType;
+            s.type = returnType;
         }
 
         let tree = new Tree<Symbol>(s);
         tree.addChildren(params);
-        let doc = node.doc ? this._docBlockParser.parse(node.doc.text) : null;
 
-        if (!node.doc) {
-            this._stack.push(tree);
-            return;
+        for (let n = 0; n < params.length; ++n) {
+            params[n].value.scope = name;
         }
 
+        let doc = node.doc ? this.docBlockParser.parse(node.doc.text) : null;
 
+        if (doc) {
+            this._assignPhpDocToCallableSymbol(s, params, doc);
+        }
+
+        this._stack.push(tree);
 
     }
 
-    private _assignPhpDocToCallableSymbol(func: CallableSymbol, params: Tree<VariableSymbol>[], doc: PhpDoc) {
+    private _assignPhpDocToCallableSymbol(s: Symbol, params: Tree<Symbol>[], doc: PhpDoc) {
 
-        func.description = doc.summary;
+        s.description = doc.summary;
         let tag: TypeTag;
-        let paramMap: { [name: string]: VariableSymbol } = {};
-        let s: VariableSymbol;
+        let paramMap: { [name: string]: Symbol } = {};
+        let param: Symbol;
 
         for (let n = 0; n < params.length; ++n) {
-            s = params[n].value;
-            paramMap[s.name] = s;
+            param = params[n].value;
+            paramMap[param.name] = param;
         }
 
         for (let n = 0; n < doc.tags.length; ++n) {
             tag = doc.tags[n] as TypeTag;
             if (tag.tagName === '@param') {
-                s = paramMap[tag.name];
+                param = paramMap[tag.name];
                 if (paramMap[tag.name]) {
-                    s.description = tag.description;
-                    if (!s.types) {
-                        s.types = [];
-                    }
-                    if (!s.types.length) {
-                        s.types.push({ types: '', start: func.start, end: func.end });
-                    }
-                    s.types[0].types = PhpDocTypeString.concat(s.types[0].types, tag.typeString);
+                    param.description = tag.description;
+
+                    param.type = PhpDocTypeString.concat(param.type, tag.typeString);
                 }
             } else if (tag.tagName === '@return') {
-                func.returnTypes = PhpDocTypeString.concat(func.returnTypes, tag.typeString);
+                s.type = PhpDocTypeString.concat(s.type, tag.typeString);
             }
         }
 
     }
 
-
-
-    private _postOrderNamespace(node: NonTerminal, childCount: number) {
+    private _postOrderNamespace(node: NonTerminal) {
         let name: string, list: Tree<Symbol>[];
-        [name, list] = this._popMany(2);
+        [name, list] = util.popMany(this._stack, 2);
         let nodes: Tree<Symbol>[] = [];
 
         if (name) {
@@ -838,9 +819,6 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
         if (list) {
             Array.prototype.push.apply(nodes, list);
-            if (name) {
-                this._nameResolver.popNamespace();
-            }
         }
 
         this._stack.push(nodes);

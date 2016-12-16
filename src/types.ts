@@ -24,10 +24,10 @@ export interface DebugLogger {
 
 export interface TreeVisitor<T> {
 
-    preOrder(t: T): void;
-    inOrder(t: T, afterChild: number): void;
-    postOrder(t: T, childCount: number): void;
-    shouldDescend(t: T): boolean;
+    preOrder(t: Tree<T>): void;
+    inOrder(t: Tree<T>, afterChildIndex: number): void;
+    postOrder(t: Tree<T>): void;
+    shouldDescend(t: Tree<T>): boolean;
 
 }
 
@@ -122,20 +122,20 @@ export class Tree<T> {
 
     traverse(visitor: TreeVisitor<T>) {
 
-        visitor.preOrder(this.value);
+        visitor.preOrder(this);
 
-        if (this._children.length && visitor.shouldDescend(this.value)) {
+        if (this._children.length && visitor.shouldDescend(this)) {
 
             for (let n = 0, l = this._children.length; n < l; ++n) {
                 this._children[n].traverse(visitor);
-                visitor.inOrder(this.value, n);
+                visitor.inOrder(this, n);
             }
 
         } else {
-            visitor.inOrder(this.value, 0);
+            visitor.inOrder(this, -1);
         }
 
-        visitor.postOrder(this.value, this._children.length);
+        visitor.postOrder(this);
 
     }
 
@@ -153,12 +153,12 @@ class ToArrayVisitor<T> implements TreeVisitor<T>{
         return this._array;
     }
 
-    preOrder(t: T) {
-        this._array.push(t);
+    preOrder(t) {
+        this._array.push(t.value);
     }
-    inOrder(t: T, afterChild: number) { }
-    postOrder(t: T, childCount: number) { }
-    shouldDescend(t: T) {
+    inOrder(t, afterChildIndex) { }
+    postOrder(t) { }
+    shouldDescend(t) {
         return true;
     }
 
@@ -166,7 +166,7 @@ class ToArrayVisitor<T> implements TreeVisitor<T>{
 
 class MultiVisitor<T> implements TreeVisitor<T> {
 
-    private _visitors:[TreeVisitor<T>, T][];
+    private _visitors:[TreeVisitor<T>, Tree<T>][];
 
     constructor(visitors:TreeVisitor<T>[] = []){
         for(let n = 0; n < visitors.length; ++n){
@@ -178,8 +178,8 @@ class MultiVisitor<T> implements TreeVisitor<T> {
         this._visitors.push([v, null]);
     }
 
-    preOrder(t:T){
-        let v:[TreeVisitor<T>, T];
+    preOrder(t){
+        let v:[TreeVisitor<T>, Tree<T>];
         for(let n = 0; n < this._visitors.length; ++n){
             v = this._visitors[n];
             if(!v[1]){
@@ -188,32 +188,32 @@ class MultiVisitor<T> implements TreeVisitor<T> {
         }
     }
 
-    inOrder(t:T, index:number){
-        let v:[TreeVisitor<T>, T];
+    inOrder(t, afterChildIndex){
+        let v:[TreeVisitor<T>, Tree<T>];
         for(let n = 0; n < this._visitors.length; ++n){
             v = this._visitors[n];
             if(!v[1]){
-                v[0].inOrder(t, index);
+                v[0].inOrder(t, afterChildIndex);
             }
         }
     }
 
-    postOrder(t:T, count:number){
-        let v:[TreeVisitor<T>, T];
+    postOrder(t){
+        let v:[TreeVisitor<T>, Tree<T>];
         for(let n = 0; n < this._visitors.length; ++n){
             v = this._visitors[n];
             if(v[1] === t){
                 v[1] = null;
             }
             if(!v[1]){
-                v[0].postOrder(t, count);
+                v[0].postOrder(t);
             }
         }
     }
 
-    shouldDescend(t:T){
+    shouldDescend(t){
         
-        let v:[TreeVisitor<T>, T];
+        let v:[TreeVisitor<T>, Tree<T>];
         let descend = false;
 
         for(let n = 0; n < this._visitors.length; ++n){
