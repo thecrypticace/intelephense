@@ -24,10 +24,10 @@ export interface DebugLogger {
 
 export interface TreeVisitor<T> {
 
-    preOrder(t: Tree<T>): void;
-    inOrder(t: Tree<T>, afterChildIndex: number): void;
-    postOrder(t: Tree<T>): void;
-    shouldDescend(t: Tree<T>): boolean;
+    preOrder?(t: Tree<T>): void;
+    inOrder?(t: Tree<T>, afterChildIndex: number): void;
+    postOrder?(t: Tree<T>): void;
+    shouldDescend?(t: Tree<T>): boolean;
 
 }
 
@@ -122,20 +122,26 @@ export class Tree<T> {
 
     traverse(visitor: TreeVisitor<T>) {
 
-        visitor.preOrder(this);
+        if(visitor.hasOwnProperty('preOrder')){
+            visitor.preOrder(this);
+        }
 
-        if (this._children.length && visitor.shouldDescend(this)) {
+        if (this._children.length && visitor.hasOwnProperty('shouldDescend') && visitor.shouldDescend(this)) {
 
             for (let n = 0, l = this._children.length; n < l; ++n) {
                 this._children[n].traverse(visitor);
-                visitor.inOrder(this, n);
+                if(visitor.hasOwnProperty('inOrder')){
+                    visitor.inOrder(this, n);
+                }
             }
 
-        } else {
+        } else if(visitor.hasOwnProperty('inOrder')){
             visitor.inOrder(this, -1);
         }
 
-        visitor.postOrder(this);
+        if(visitor.hasOwnProperty('postOrder')){
+            visitor.postOrder(this);
+        }
 
     }
 
