@@ -8,7 +8,7 @@ import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArra
 import { NonTerminal, NonTerminalType, NonTerminalFlag, Token } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag, MethodTag } from './parse';
 import * as util from './util';
-import { Symbol, NameResolver, ImportRule, ImportTable, SymbolKind, PhpDocTypeString, SymbolModifier, SymbolTree } from './symbol';
+import { Symbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString, SymbolModifier, SymbolTree } from './symbol';
 
 export class ImportTableReader implements TreeVisitor<NonTerminal | Token> {
 
@@ -330,9 +330,9 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         }
     }
 
-    private _postOrderUseTrait(node:Tree<NonTerminal>){
+    private _postOrderUseTrait(node: Tree<NonTerminal>) {
 
-        let nameList:string[], adaptationList:null;
+        let nameList: string[], adaptationList: null;
         [nameList, adaptationList] = util.popMany(this._stack, 2);
         this._stack.push(nameList);
 
@@ -638,10 +638,10 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
                 param = paramMap[tag.name];
                 if (paramMap[tag.name]) {
                     param.description = tag.description;
-                    param.type = PhpDocTypeString.concat(param.type, tag.typeString);
+                    param.type = TypeString.merge(param.type, tag.typeString);
                 }
             } else if (tag.tagName === '@return') {
-                s.type = PhpDocTypeString.concat(s.type, tag.typeString);
+                s.type = TypeString.merge(s.type, tag.typeString);
             }
         }
 
@@ -772,6 +772,48 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         return new Tree<Symbol>(s);
 
     }
+
+
+}
+
+export class PathReader implements TreeVisitor<NonTerminal | Token>{
+
+    private _path: Tree<NonTerminal>[];
+    private _position: Position;
+
+    constructor(position: Position) {
+        this._position = position;
+    }
+
+    preOrder(node: Tree<NonTerminal | Token>) {
+
+        if (node.value && node.value.hasOwnProperty('nonTerminalType') &&
+            util.isInRange(this._position,
+                (<NonTerminal>node.value).startToken.range.start,
+                (<NonTerminal>node.value).endToken.range.end)) {
+            this._path.push(<Tree<NonTerminal>>node);
+        }
+
+    }
+
+    shouldDescend(node: Tree<NonTerminal | Token>) {
+
+        if (!node.value || !node.value.hasOwnProperty('nonTerminalType')) {
+            return false;
+        }
+
+        return util.isInRange(this._position,
+            (<NonTerminal>node.value).startToken.range.start,
+            (<NonTerminal>node.value).endToken.range.end
+        );
+
+    }
+
+}
+
+export class VariableReader implements TreeVisitor<NonTerminal | Token>{
+
+
 
 
 }

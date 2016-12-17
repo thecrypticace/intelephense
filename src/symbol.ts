@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray } from './types';
+import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray, Map } from './types';
 import { NonTerminal, NonTerminalType, NonTerminalFlag, Token } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag } from './parse';
 import * as util from './util';
@@ -71,12 +71,6 @@ export class Symbol {
     }
 }
 
-interface RangedTypes {
-    types: string;
-    start: number;
-    end: number;
-}
-
 export interface ImportRule {
     kind: SymbolKind;
     name: string;
@@ -139,7 +133,7 @@ export class NameResolver {
     popNamespace() {
         this._namespaceStack.pop();
     }
-    
+
     resolveRelative(relativeName: string) {
         let ns = this.namespace();
         return ns ? ns + '\\' + relativeName : relativeName;
@@ -154,7 +148,7 @@ export class NameResolver {
         }
     }
 
-    private _resolveQualified(name: string, pos: number, kind:SymbolKind) {
+    private _resolveQualified(name: string, pos: number, kind: SymbolKind) {
 
         let rule = this._importTable.match(name.slice(0, pos), kind);
         if (rule) {
@@ -190,7 +184,7 @@ export class NameResolver {
 
 }
 
-export class PhpDocTypeString {
+export class TypeString {
 
     private static _classNamePattern: RegExp = /([\\a-zA-Z_\x7f-\xff][\\a-zA-Z0-9_\x7f-\xff])*/g;
 
@@ -200,63 +194,93 @@ export class PhpDocTypeString {
         'void', 'null', 'callback', 'false', 'true', 'self'
     ];
 
-    static atomicClassArray(typeString: string) {
+    private _parts: string[];
 
-        let n = 0;
-        let types: string[] = [];
-        let parentheses = 0;
-        let skipUntilPipe = false;
-        let type: string = '';
+    constructor(text: string) {
+        this._parts = text ? this._chunk(text) : [];
+    }
 
-        while (n < typeString.length) {
+    atomicClassArray() {
 
-            switch (typeString[n]) {
-                case '|':
-                    if (parentheses) {
-                        break;
-                    }
-                    skipUntilPipe = false;
-                    if (type && PhpDocTypeString._keywords.indexOf(type) === -1) {
-                        types.push(type);
-                        type = '';
-                    }
-                    break;
-                case '(':
-                    skipUntilPipe = true;
-                    ++parentheses;
-                    break;
-                case ')':
-                    --parentheses;
-                    break;
-                case '[':
-                    type = '';
-                    skipUntilPipe = true;
-                    break;
-                default:
-                    if (!skipUntilPipe) {
-                        type += typeString[n];
-                    }
-                    break;
+        let parts: string[] = [];
+        let part: string;
+
+        for (let n = 0; n < this._parts.length; ++n) {
+            part = this._parts[n];
+            if (part[part.length - 1] !== ']' && TypeString._keywords.indexOf(part) < 0) {
+                parts.push(part);
             }
-
-            ++n;
         }
 
-        if (type && PhpDocTypeString._keywords.indexOf(type) === -1) {
-            types.push(type);
-        }
-
-        return types;
+        return parts;
 
     }
 
-    static arrayDereference(typeString: string) {
+    arrayDereference() {
+
+        let parts: string[] = [];
+        let part: string;
+
+        for (let n = 0; n < this._parts.length; ++n) {
+            part = this._parts[n];
+
+            if (part.slice(-2) === '[]') {
+                part = part.slice(0, -2);
+                if (part.slice(-1) === ')') {
+                    part = part.slice(1, -1);
+                }
+                parts.push(part);
+            }
+
+        }
+
+        let typeString = new TypeString(null);
+        typeString._parts = parts;
+        return typeString;
+
+    }
+
+    merge(type: string) {
+
+        let parts = this._chunk(type);
+        Array.prototype.push.apply(parts, this._parts);
+        let map: Map<string> = {};
+        let part: string;
+
+        for (let n = 0; n < parts.length; ++n) {
+            part = parts[n];
+            map[part] = part;
+        }
+
+        let newTypeString = new TypeString(null);
+        newTypeString._parts = Object.keys(map);
+        return newTypeString;
+    }
+
+    nameResolve(nameResolver: NameResolver) {
+
+        let replacer = (match, offset, text) => {
+
+            if (TypeString._keywords.indexOf(match[0]) >= 0) {
+                return match[0];
+            } else if (match[0] === '\\') {
+                return match.slice(1);
+            } else {
+                return nameResolver.resolveNotFullyQualified(match, SymbolKind.Class);
+            }
+
+        };
+
+        return new TypeString(this._parts.join('|').replace(TypeString._classNamePattern, replacer));
+    }
+
+    private _chunk(typeString: string) {
 
         let n = 0;
         let parentheses = 0;
-        let text = '';
-        let c: string;
         let parts: string[] = [];
+        let part: string = '';
+        let c: string;
 
         while (n < typeString.length) {
 
@@ -265,61 +289,36 @@ export class PhpDocTypeString {
             switch (c) {
                 case '|':
                     if (parentheses) {
-                        text += c;
-                        break;
-                    }
-
-                    text = PhpDocTypeString._arrayDereferenceType(text);
-                    if (text) {
-                        parts.push(text);
-                        text = '';
+                        part += c;
+                    } else if (part) {
+                        parts.push(part);
+                        part = '';
                     }
                     break;
                 case '(':
                     ++parentheses;
-                    text += c;
+                    part += c;
                     break;
                 case ')':
                     --parentheses;
-                    text += c;
+                    part += c;
                     break;
                 default:
-                    text += c;
+                    part += c;
                     break;
             }
 
             ++n;
         }
 
-        text = PhpDocTypeString._arrayDereferenceType(text);
-        if (text) {
-            parts.push(text);
+        if (part) {
+            parts.push(part);
         }
 
-        return parts.join('|');
+        return parts;
 
     }
 
-    private static _arrayDereferenceType(typeString: string) {
-        if (typeString.slice(-2) === '[]') {
-            typeString = typeString.slice(0, -2);
-            if (typeString.slice(-1) === ')') {
-                typeString = typeString.slice(1, -1);
-            }
-            return typeString;
-        }
-        return '';
-    }
-
-    static concat(prefix: string, suffix: string) {
-        return prefix ? prefix + '|' + suffix : suffix;
-    }
-
-    static nameResolve(typeString: string, nameResolver: NameResolver) {
-        return typeString.replace(PhpDocTypeString._classNamePattern, (match, offset, text) => {
-            return match[0] === '\\' ? match.slice(1) : nameResolver.resolveNotFullyQualified(match, SymbolKind.Class);
-        });
-    }
 
 }
 
@@ -468,6 +467,48 @@ export class SymbolStore {
         return symbolTree.match(predicate, 2);
 
     }
+
+}
+
+export class TypeResolvedVariable {
+
+    private _typeStack: string[];
+
+    constructor(public symbol: Symbol, typeString: string) {
+        this._typeStack = [];
+        if (typeString) {
+            this._typeStack.push(typeString);
+        }
+    }
+
+    get typeString() {
+        return util.top(this._typeStack);
+    }
+
+    pushTypeString(typeString) {
+
+    }
+
+    popTypeString() {
+
+
+
+    }
+
+}
+
+
+
+export class VariableTable {
+
+    private _typeResolvedVariables: Map<Map<TypeResolvedVariable>>;
+
+    constructor() {
+        this._typeResolvedVariables = {};
+    }
+
+
+
 
 }
 
