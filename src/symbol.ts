@@ -139,7 +139,7 @@ export class NameResolver {
     popNamespace() {
         this._namespaceStack.pop();
     }
-
+    
     resolveRelative(relativeName: string) {
         let ns = this.namespace();
         return ns ? ns + '\\' + relativeName : relativeName;

@@ -15,3 +15,7 @@ export function popMany(array: any[], count: number) {
 export function top(array: any) {
     return array.length ? array[array.length - 1] : null;
 }
+
+export function isString(s:string){
+    return typeof(s) === 'string' || s instanceof String;
+}
