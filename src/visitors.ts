@@ -193,7 +193,6 @@ export class NamespaceReader implements TreeVisitor<NonTerminal | Token> {
 export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     private _stack: any[];
-    private _symbolStack: Symbol
 
     constructor(public uri: string, public importTable: ImportTable,
         public nameResolver: NameResolver, public docBlockParser: PhpDocParser,
@@ -258,11 +257,25 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             case NonTerminalType.UseTrait:
                 this._postOrderUseTrait(<Tree<NonTerminal>>node);
                 break;
+            case NonTerminalType.Parameter:
+                this._postOrderParameter(<Tree<NonTerminal>>node);
+                break;
+            case NonTerminalType.ParameterList:
+                this._stack.push(util.popMany(this._stack, node.children.length));
+                break;
+            case NonTerminalType.TypeExpression:
+                //stack top should be string
+                break;
+            case NonTerminalType.FunctionBody:
+            case NonTerminalType.MethodBody:
+            case NonTerminalType.TraitAdaptationList:
+                //not descended but expected on stack
+                this._stack.push(null);
             case undefined:
                 //Token
                 this._stack.push((<Token>node.value).text);
             default:
-                util.popMany(this._stack, node.children.length);
+                this._stack.push(null);
                 break;
         }
 
@@ -275,35 +288,93 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         }
 
         switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.UseStatement:
-            case NonTerminalType.UseGroup:
-            case NonTerminalType.HaltCompiler:
-                return false;
-            default:
+            case NonTerminalType.Block:
+            case NonTerminalType.Case:
+            case NonTerminalType.CaseList:
+            case NonTerminalType.Catch:
+            case NonTerminalType.CatchList:
+            case NonTerminalType.ClassConstantDeclaration:
+            case NonTerminalType.ClassConstantDeclarationList:
+            case NonTerminalType.ClassDeclaration:
+            case NonTerminalType.ClassStatementList:
+            case NonTerminalType.ConstantDeclaration:
+            case NonTerminalType.ConstantDeclarationList:
+            case NonTerminalType.DoWhile:
+            case NonTerminalType.Finally:
+            case NonTerminalType.For:
+            case NonTerminalType.Foreach:
+            case NonTerminalType.FunctionDeclaration:
+            case NonTerminalType.If:
+            case NonTerminalType.IfList:
+            case NonTerminalType.InnerStatementList:
+            case NonTerminalType.InterfaceDeclaration:
+            case NonTerminalType.MethodDeclaration:
+            case NonTerminalType.Name:
+            case NonTerminalType.NameList:
+            case NonTerminalType.Namespace:
+            case NonTerminalType.NamespaceName:
+            case NonTerminalType.Parameter:
+            case NonTerminalType.ParameterList:
+            case NonTerminalType.PropertyDeclaration:
+            case NonTerminalType.PropertyDeclarationList:
+            case NonTerminalType.Switch:
+            case NonTerminalType.TopStatementList:
+            case NonTerminalType.TraitDeclaration:
+            case NonTerminalType.Try:
+            case NonTerminalType.TypeExpression:
+            case NonTerminalType.UseTrait:
+            case NonTerminalType.While:
                 return true;
+            default:
+                return false;
         }
     }
 
-    private _filterNull(array:any[]){
+    private _postOrderUseTrait(node:Tree<NonTerminal>){
 
-        let filtered:any[] = [];
-        for(let n = 0; n < array.length; ++n){
-            if(array[n] !== null){
+        let nameList:string[], adaptationList:null;
+        [nameList, adaptationList] = util.popMany(this._stack, 2);
+        this._stack.push(nameList);
+
+    }
+
+    private _postOrderParameter(node: Tree<NonTerminal>) {
+
+        let type: string, name: string, expr: null;
+        [type, name, expr] = util.popMany(this._stack, 3);
+
+        if (!name) {
+            this._stack.push(null);
+            return;
+        }
+
+        let s = new Symbol(SymbolKind.Parameter, name);
+        s.type = type;
+        this._assignLocation(s, node.value);
+        this._stack.push(new Tree<Symbol>(s));
+
+    }
+
+    private _filterNull(array: any[]) {
+
+        let filtered: any[] = [];
+        for (let n = 0; n < array.length; ++n) {
+            if (array[n] !== null) {
                 filtered.push(array[n]);
             }
         }
         return filtered;
     }
 
-    private _postOrderName(node:Tree<NonTerminal>){
+    private _postOrderName(node: Tree<NonTerminal>) {
         let nsName = this._stack.pop() as string;
 
-        if(!nsName){
+        if (!nsName) {
             this._stack.push(null);
             return;
         }
-        
-        switch(node.value.flag){
+
+        switch (node.value.flag) {
             case NonTerminalFlag.NameFullyQualified:
                 this._stack.push(nsName);
                 break;
@@ -316,17 +387,6 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             default:
                 break;
         }
-    }
-
-    private _postOrderUseTrait(node: Tree<NonTerminal>) {
-
-        let nameList: string[], adaptationList: null;
-        [nameList, adaptationList] = util.popMany(this._stack, 2);
-
-        //todo trait aliases
-
-        this._stack.push(nameList);
-
     }
 
     private _postOrderInterfaceDeclaration(node: Tree<NonTerminal>) {
@@ -348,14 +408,14 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     private _postOrderTraitDeclaration(node: Tree<NonTerminal>) {
 
-        let name: string, body: Tree<Symbol>[];
+        let name: string, body: (Tree<Symbol>[] | Tree<Symbol> | string[])[];
         [name, body] = util.popMany(this._stack, 2);
 
         if (!name) {
             return;
         }
 
-        let s = new Symbol(SymbolKind.Trait, name);
+        let s = new Symbol(SymbolKind.Trait, this.nameResolver.resolveRelative(name));
         let t = new Tree<Symbol>(s);
         this._assignLocation(s, node.value);
         this._assignClassBody(t, body);
@@ -444,11 +504,6 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             return;
         }
         let child: Tree<Symbol> | Tree<Symbol>[] | string[];
-
-        let methodMap: { [index: string]: number } = {};
-        let traitMap: { [index: string]: number } = {};
-        let constMap: { [index: string]: number } = {};
-        let propertyMap: { [index: string]: number } = {};
         let gChild: Tree<Symbol> | string;
 
         for (let n = 0; n < body.length; ++n) {
@@ -459,7 +514,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
                     continue;
                 }
 
-                if (util.isString(<string>child[0])) {
+                if (util.isString(child[0])) {
                     //traits
                     if (!t.value.associated) {
                         t.value.associated = [];
@@ -497,7 +552,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     private _postOrderMethodDeclaration(node: Tree<NonTerminal>) {
 
-        let name: string, params: Tree<Symbol>[], returnType: string, body: Tree<Symbol>[];
+        let name: string, params: Tree<Symbol>[], returnType: string, body: null;
         [name, params, returnType, body] = util.popMany(this._stack, 4);
 
         if (!name) {
@@ -522,7 +577,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     private _postOrderFunctionDeclaration(node: Tree<NonTerminal>) {
 
-        let name: string, params: Tree<Symbol>[], returnType: string, body: Tree<Symbol>[];
+        let name: string, params: Tree<Symbol>[], returnType: string, body: null;
         [name, params, returnType, body] = util.popMany(this._stack, 4);
 
         if (!name) {
@@ -548,9 +603,14 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     private _assignFunctionOrMethodParameters(s: Tree<Symbol>, params: Tree<Symbol>[]) {
 
+        let param: Tree<Symbol>;
         for (let n = 0; n < params.length; ++n) {
-            params[n].value.scope = s.value.name;
-            s.addChild(params[n]);
+            param = params[n];
+            if (!param) {
+                continue;
+            }
+            param.value.scope = s.value.name;
+            s.addChild(param);
         }
 
     }

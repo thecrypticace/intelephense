@@ -27,7 +27,7 @@ export interface TreeVisitor<T> {
     preOrder?(t: Tree<T>): void;
     inOrder?(t: Tree<T>, afterChildIndex: number): void;
     postOrder?(t: Tree<T>): void;
-    shouldDescend?(t: Tree<T>): boolean;
+    shouldDescend(t: Tree<T>): boolean;
 
 }
 
@@ -162,8 +162,7 @@ class ToArrayVisitor<T> implements TreeVisitor<T>{
     preOrder(t) {
         this._array.push(t.value);
     }
-    inOrder(t, afterChildIndex) { }
-    postOrder(t) { }
+
     shouldDescend(t) {
         return true;
     }

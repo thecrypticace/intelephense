@@ -16,6 +16,6 @@ export function top(array: any) {
     return array.length ? array[array.length - 1] : null;
 }
 
-export function isString(s:string){
+export function isString(s:any){
     return typeof(s) === 'string' || s instanceof String;
 }
