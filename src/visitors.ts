@@ -349,7 +349,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         }
 
         let s = new Symbol(SymbolKind.Parameter, name);
-        s.type = type;
+        s.type = new TypeString(type);
         this._assignLocation(s, node.value);
         this._stack.push(new Tree<Symbol>(s));
 
@@ -470,7 +470,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             tag = doc.tags[n] as TypeTag;
             if (tag.tagName === '@var' && (!tag.name || tag.name === s.name)) {
                 s.description = tag.description;
-                s.type = tag.typeString;
+                s.type = new TypeString(tag.typeString);
                 break;
             }
         }
@@ -564,7 +564,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         s.modifiers = this._nonTerminalFlagToSymbolModifier(node.value.flag);
 
         if (returnType) {
-            s.type = returnType;
+            s.type = new TypeString(returnType);
         }
 
         let tree = new Tree<Symbol>(s);
@@ -588,7 +588,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         let s = new Symbol(SymbolKind.Function, name);
 
         if (returnType) {
-            s.type = returnType;
+            s.type = new TypeString(returnType);
         }
 
         let tree = new Tree<Symbol>(s);
@@ -638,10 +638,10 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
                 param = paramMap[tag.name];
                 if (paramMap[tag.name]) {
                     param.description = tag.description;
-                    param.type = TypeString.merge(param.type, tag.typeString);
+                    param.type = param.type === undefined ? new TypeString(tag.typeString) : param.type.merge(tag.typeString);
                 }
             } else if (tag.tagName === '@return') {
-                s.type = TypeString.merge(s.type, tag.typeString);
+                s.type = s.type === undefined ? new TypeString(tag.typeString) : s.type.merge(tag.typeString);
             }
         }
 
@@ -747,7 +747,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         let s = new Symbol(SymbolKind.Property, tag.name);
         s.description = tag.description;
         s.modifiers = modifiers;
-        s.type = tag.typeString;
+        s.type = new TypeString(tag.typeString);
         return new Tree<Symbol>(s);
     }
 
@@ -755,7 +755,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         let s = new Symbol(SymbolKind.Method, tag.name);
         s.modifiers = SymbolModifier.Public | SymbolModifier.Magic;
         s.description = tag.description;
-        s.type = tag.returnTypeString;
+        s.type = new TypeString(tag.returnTypeString);
         let t = new Tree<Symbol>(s);
 
         for (let n = 0; n < tag.parameters.length; ++n) {
@@ -768,7 +768,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
     private _methodTagParamToSymbol(methodTagParam: MethodTagParam): Tree<Symbol> {
 
         let s = new Symbol(SymbolKind.Parameter, methodTagParam.name);
-        s.type = methodTagParam.typeString;
+        s.type = new TypeString(methodTagParam.typeString);
         return new Tree<Symbol>(s);
 
     }

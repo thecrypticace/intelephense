@@ -46,7 +46,7 @@ export class Symbol {
     modifiers: SymbolModifier;
     description: string;
     associated: string[];
-    type: string;
+    type: TypeString;
 
     constructor(public kind: SymbolKind, public name: string) { }
 
