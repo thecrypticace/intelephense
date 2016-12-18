@@ -116,27 +116,16 @@ export class NameResolver {
 
     private _importTable: ImportTable;
     private _namespaceStack: string[];
+    namespace:string;
 
     constructor(importTable: ImportTable) {
         this._importTable = importTable;
         this._namespaceStack = [];
-    }
-
-    namespace() {
-        return util.top(this._namespaceStack);
-    }
-
-    pushNamespace(name: string) {
-        this._namespaceStack.push(name);
-    }
-
-    popNamespace() {
-        this._namespaceStack.pop();
+        this.namespace = '';
     }
 
     resolveRelative(relativeName: string) {
-        let ns = this.namespace();
-        return ns ? ns + '\\' + relativeName : relativeName;
+        return this.namespace ? this.namespace + '\\' + relativeName : relativeName;
     }
 
     resolveNotFullyQualified(notFqName: string, kind: SymbolKind) {
@@ -272,6 +261,10 @@ export class TypeString {
         };
 
         return new TypeString(this._parts.join('|').replace(TypeString._classNamePattern, replacer));
+    }
+
+    toString() {
+        return this._parts.join('|');
     }
 
     private _chunk(typeString: string) {
@@ -470,44 +463,55 @@ export class SymbolStore {
 
 }
 
-export class TypeResolvedVariable {
-
-    private _typeStack: string[];
-
-    constructor(public symbol: Symbol, typeString: string) {
-        this._typeStack = [];
-        if (typeString) {
-            this._typeStack.push(typeString);
-        }
-    }
-
-    get typeString() {
-        return util.top(this._typeStack);
-    }
-
-    pushTypeString(typeString) {
-
-    }
-
-    popTypeString() {
 
 
-
-    }
-
+interface ResolvedVariable {
+    name:string;
+    type:TypeString;
 }
 
+const enum ResolveVariableSetType {
+    None, Scope, Branch
+}
 
+interface ResolvedVariableSet {
+    type:ResolveVariableSetType;
+    vars:Map<ResolvedVariable>;
+}
 
 export class VariableTable {
 
-    private _typeResolvedVariables: Map<Map<TypeResolvedVariable>>;
+    private _path:Tree<ResolvedVariableSet>[];
+    private _root:Tree<ResolvedVariableSet>;
 
-    constructor() {
-        this._typeResolvedVariables = {};
+    constructor(public uri:string) {
+        this._path = [];
+        this._root = new Tree<ResolvedVariableSet>(null);
     }
 
+    addResolvedVariable(name:string, type:TypeString) {
 
+    }
+
+    pushBranch(){
+
+    }
+
+    popBranch(){
+
+    }
+
+    pushScope(){
+
+    }
+
+    popScope(){
+
+    }
+
+    getType(varName:string){
+
+    }
 
 
 }

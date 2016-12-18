@@ -8,50 +8,82 @@ import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArra
 import { NonTerminal, NonTerminalType, NonTerminalFlag, Token } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag, MethodTag } from './parse';
 import * as util from './util';
-import { Symbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString, SymbolModifier, SymbolTree } from './symbol';
+import {
+    Symbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString, SymbolModifier,
+    SymbolTree, TypeResolvedVariable, VariableTable
+} from './symbol';
 
 export class ImportTableReader implements TreeVisitor<NonTerminal | Token> {
 
     private _stack: any[];
+    private _active: number;
 
     constructor(public importTable: ImportTable) {
         this._stack = [];
+        this._active = 0;
     }
 
-    postOrder(node: Tree<NonTerminal>) {
+    preOrder(node: Tree<NonTerminal | Token>) {
+
+        if (node.value === null) {
+            return;
+        }
+
+        switch ((<NonTerminal>node.value).nonTerminalType) {
+            case NonTerminalType.UseStatement:
+            case NonTerminalType.UseGroup:
+                ++this._active;
+                break;
+            default:
+                break;
+        }
+
+    }
+
+    postOrder(node: Tree<NonTerminal | Token>) {
+
+        if (this._active < 1) {
+            return;
+        }
 
         if (!node.value) {
             this._stack.push(null);
         }
 
-        switch (node.value.nonTerminalType) {
+        switch ((<NonTerminal>node.value).nonTerminalType) {
             case NonTerminalType.NamespaceName:
                 this._stack.push(util.popMany(this._stack, node.children.length).join('\\'));
                 break;
             case NonTerminalType.UseElement:
-                this._postOrderUseElement(node);
+                this._postOrderUseElement(<Tree<NonTerminal>>node);
                 break;
             case NonTerminalType.UseList:
-                this._postOrderUseList(node);
+                this._postOrderUseList(<Tree<NonTerminal>>node);
                 break;
             case NonTerminalType.UseStatement:
-                this._postOrderUseStatement(node);
+                this._postOrderUseStatement(<Tree<NonTerminal>>node);
+                --this._active;
                 break;
             case NonTerminalType.UseGroup:
-                this._postOrderUseGroup(node);
+                this._postOrderUseGroup(<Tree<NonTerminal>>node);
+                --this._active;
                 break;
+            case undefined:
+                //Token
+                this._stack.push((<Token>node.value).text);
             default:
                 break;
         }
     }
 
-    shouldDescend(node) {
+    shouldDescend(node: Tree<NonTerminal | Token>) {
 
-        if (!node) {
+
+        if (node.value === null) {
             return false;
         }
 
-        switch (node.nonTerminalType) {
+        switch ((<NonTerminal>node.value).nonTerminalType) {
             case NonTerminalType.TopStatementList:
             case NonTerminalType.UseElement:
             case NonTerminalType.UseList:
@@ -128,23 +160,32 @@ export class ImportTableReader implements TreeVisitor<NonTerminal | Token> {
 export class NamespaceReader implements TreeVisitor<NonTerminal | Token> {
 
     private _stack: any[];
+    private _active: number;
 
     constructor(public nameResolver: NameResolver) {
         this._stack = [];
+        this._active = 0;
+    }
+
+    preOrder(node: Tree<NonTerminal | Token>) {
+        if (node.value !== null && (<NonTerminal>node.value).nonTerminalType === NonTerminalType.Namespace) {
+            ++this._active;
+        }
     }
 
     inOrder(node: Tree<NonTerminal | Token>, afterChildIndex) {
-        if (node.value && (<NonTerminal>node.value).nonTerminalType === NonTerminalType.Namespace && afterChildIndex === 0) {
-            let ns = util.top(this._stack);
-            if (ns) {
-                this.nameResolver.pushNamespace(ns);
-            }
+        if (node.value !== null && (<NonTerminal>node.value).nonTerminalType === NonTerminalType.Namespace && afterChildIndex === 0) {
+            this.nameResolver.namespace = util.top(this._stack);
         }
     }
 
     postOrder(node: Tree<NonTerminal | Token>) {
 
-        if (!node.value) {
+        if (this._active < 1) {
+            return;
+        }
+
+        if (node.value === null) {
             this._stack.push(null);
         }
 
@@ -156,8 +197,9 @@ export class NamespaceReader implements TreeVisitor<NonTerminal | Token> {
                 let name: string, list: boolean;
                 [name, list] = util.popMany(this._stack, 2);
                 if (name && list) {
-                    this.nameResolver.popNamespace();
+                    this.nameResolver.namespace = '';
                 }
+                --this._active;
                 break;
             case NonTerminalType.TopStatementList:
                 this._stack.push(true);
@@ -174,12 +216,13 @@ export class NamespaceReader implements TreeVisitor<NonTerminal | Token> {
 
     shouldDescend(node: Tree<NonTerminal | Token>) {
 
-        if (!node) {
+        if (node.value === null) {
             return false;
         }
 
         switch ((<NonTerminal>node.value).nonTerminalType) {
             case NonTerminalType.TopStatementList:
+                return this._active < 1;
             case NonTerminalType.Namespace:
             case NonTerminalType.NamespaceName:
                 return true;
@@ -193,20 +236,43 @@ export class NamespaceReader implements TreeVisitor<NonTerminal | Token> {
 export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     private _stack: any[];
+    private _active: number;
 
     constructor(public uri: string, public importTable: ImportTable,
         public nameResolver: NameResolver, public docBlockParser: PhpDocParser,
         public symbolTreeRoot: SymbolTree) {
         this._stack = [];
+        this._active = 0;
     }
 
-    get symbols() {
-        return this._stack;
+    preOrder(node: Tree<NonTerminal | Token>) {
+
+        if (node.value === null) {
+            return;
+        }
+
+        switch ((<NonTerminal>node.value).nonTerminalType) {
+            case NonTerminalType.Namespace:
+            case NonTerminalType.FunctionDeclaration:
+            case NonTerminalType.ClassDeclaration:
+            case NonTerminalType.TraitDeclaration:
+            case NonTerminalType.InterfaceDeclaration:
+            case NonTerminalType.ConstantDeclarationList:
+                ++this._active;
+                break;
+            default:
+                break;
+        }
+
     }
 
     postOrder(node: Tree<NonTerminal | Token>) {
 
-        if (!node.value) {
+        if (this._active < 1) {
+            return;
+        }
+
+        if (node.value === null) {
             this._stack.push(null);
         }
 
@@ -216,6 +282,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
                 break;
             case NonTerminalType.Namespace:
                 this._postOrderNamespace(<Tree<NonTerminal>>node);
+                --this._active;
                 break;
             case NonTerminalType.Name:
                 this._postOrderName(<Tree<NonTerminal>>node);
@@ -225,15 +292,19 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
                 break;
             case NonTerminalType.FunctionDeclaration:
                 this._postOrderFunctionDeclaration(<Tree<NonTerminal>>node);
+                --this._active;
                 break;
             case NonTerminalType.ClassDeclaration:
                 this._postOrderClassDeclaration(<Tree<NonTerminal>>node);
+                --this._active;
                 break;
             case NonTerminalType.TraitDeclaration:
                 this._postOrderTraitDeclaration(<Tree<NonTerminal>>node);
+                --this._active;
                 break;
             case NonTerminalType.InterfaceDeclaration:
                 this._postOrderInterfaceDeclaration(<Tree<NonTerminal>>node);
+                --this._active;
                 break;
             case NonTerminalType.ClassConstantDeclarationList:
             case NonTerminalType.PropertyDeclarationList:
@@ -244,6 +315,9 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
                 break;
             case NonTerminalType.ClassConstantDeclaration:
                 this._postOrderPropertyOrClassConstantDeclaration(<Tree<NonTerminal>>node, SymbolKind.Constant);
+                break;
+            case NonTerminalType.ConstantDeclarationList:
+                --this._active;
                 break;
             case NonTerminalType.ConstantDeclaration:
                 this._postOrderConstantDeclaration(<Tree<NonTerminal>>node);
@@ -266,11 +340,6 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             case NonTerminalType.TypeExpression:
                 //stack top should be string
                 break;
-            case NonTerminalType.FunctionBody:
-            case NonTerminalType.MethodBody:
-            case NonTerminalType.TraitAdaptationList:
-                //not descended but expected on stack
-                this._stack.push(null);
             case undefined:
                 //Token
                 this._stack.push((<Token>node.value).text);
@@ -773,7 +842,6 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-
 }
 
 export class PathReader implements TreeVisitor<NonTerminal | Token>{
@@ -787,7 +855,7 @@ export class PathReader implements TreeVisitor<NonTerminal | Token>{
 
     preOrder(node: Tree<NonTerminal | Token>) {
 
-        if (node.value && node.value.hasOwnProperty('nonTerminalType') &&
+        if (node.value !== null && node.value.hasOwnProperty('nonTerminalType') &&
             util.isInRange(this._position,
                 (<NonTerminal>node.value).startToken.range.start,
                 (<NonTerminal>node.value).endToken.range.end)) {
@@ -798,7 +866,7 @@ export class PathReader implements TreeVisitor<NonTerminal | Token>{
 
     shouldDescend(node: Tree<NonTerminal | Token>) {
 
-        if (!node.value || !node.value.hasOwnProperty('nonTerminalType')) {
+        if (node.value === null || !node.value.hasOwnProperty('nonTerminalType')) {
             return false;
         }
 
@@ -812,6 +880,55 @@ export class PathReader implements TreeVisitor<NonTerminal | Token>{
 }
 
 export class VariableReader implements TreeVisitor<NonTerminal | Token>{
+
+    private _stack: any[];
+    private _active: number;
+    private _scopeStack:string[];
+
+    constructor(public variableTable: VariableTable) {
+        this._stack = [];
+        this._active = 0;
+        this._scopeStack = [];
+    }
+
+    preOrder(node: Tree<NonTerminal | Token>){
+
+    }
+
+    postOrder(node: Tree<NonTerminal | Token>) {
+
+        if (this._active < 1) {
+            return;
+        }
+
+        if (node.value === null) {
+            this._stack.push(null);
+        }
+
+        switch ((<NonTerminal>node.value).nonTerminalType) {
+            case NonTerminalType.BinaryExpression:
+            
+                break;
+            case NonTerminalType.Foreach:
+                break;
+            default:
+                break;
+        }
+
+    }
+
+    shouldDescend(node: Tree<NonTerminal | Token>) {
+
+        if (node.value === null) {
+            return false;
+        }
+
+        switch ((<NonTerminal>node.value).nonTerminalType) {
+            default:
+                return true;
+        }
+    }
+
 
 
 
