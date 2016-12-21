@@ -14,7 +14,7 @@ export function popMany(array: any[], count: number) {
     return popped.reverse();
 }
 
-export function top(array: any) {
+export function top<T>(array: T[]) {
     return array.length ? array[array.length - 1] : null;
 }
 

@@ -9,8 +9,8 @@ import { NonTerminal, NonTerminalType, NonTerminalFlag, Token } from 'php7parser
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag, MethodTag } from './parse';
 import * as util from './util';
 import {
-    Symbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString, SymbolModifier,
-    SymbolTree, TypeResolvedVariable, VariableTable
+    PhpSymbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString, SymbolModifier,
+    SymbolTree, TypeResolvedVariable, ResolvedVariableTable
 } from './symbol';
 
 export class ImportTableReader implements TreeVisitor<NonTerminal | Token> {
@@ -417,10 +417,10 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             return;
         }
 
-        let s = new Symbol(SymbolKind.Parameter, name);
+        let s = new PhpSymbol(SymbolKind.Parameter, name);
         s.type = new TypeString(type);
         this._assignLocation(s, node.value);
-        this._stack.push(new Tree<Symbol>(s));
+        this._stack.push(new Tree<PhpSymbol>(s));
 
     }
 
@@ -460,14 +460,14 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     private _postOrderInterfaceDeclaration(node: Tree<NonTerminal>) {
 
-        let name: string, extendsList: string[], body: (Tree<Symbol>[] | Tree<Symbol> | string[])[];
+        let name: string, extendsList: string[], body: (Tree<PhpSymbol>[] | Tree<PhpSymbol> | string[])[];
         [name, extendsList, body] = util.popMany(this._stack, 3);
         if (!name) {
             return;
         }
 
-        let s = new Symbol(SymbolKind.Interface, this.nameResolver.resolveRelative(name));
-        let t = new Tree<Symbol>(s);
+        let s = new PhpSymbol(SymbolKind.Interface, this.nameResolver.resolveRelative(name));
+        let t = new Tree<PhpSymbol>(s);
         this._assignLocation(s, node.value);
         this._assignClassBody(t, body);
         this._assignClassPhpDoc(t, node.value.doc);
@@ -477,15 +477,15 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     private _postOrderTraitDeclaration(node: Tree<NonTerminal>) {
 
-        let name: string, body: (Tree<Symbol>[] | Tree<Symbol> | string[])[];
+        let name: string, body: (Tree<PhpSymbol>[] | Tree<PhpSymbol> | string[])[];
         [name, body] = util.popMany(this._stack, 2);
 
         if (!name) {
             return;
         }
 
-        let s = new Symbol(SymbolKind.Trait, this.nameResolver.resolveRelative(name));
-        let t = new Tree<Symbol>(s);
+        let s = new PhpSymbol(SymbolKind.Trait, this.nameResolver.resolveRelative(name));
+        let t = new Tree<PhpSymbol>(s);
         this._assignLocation(s, node.value);
         this._assignClassBody(t, body);
         this._assignClassPhpDoc(t, node.value.doc);
@@ -502,18 +502,18 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             return;
         }
 
-        let s = new Symbol(kind, name);
+        let s = new PhpSymbol(kind, name);
         this._assignLocation(s, node.value);
-        this._stack.push(new Tree<Symbol>(s));
+        this._stack.push(new Tree<PhpSymbol>(s));
     }
 
     private _postOrderPropertyOrClassConstantDeclarationStatement(node: Tree<NonTerminal>) {
 
         let list = util.popMany(this._stack, node.children.length);
-        let prop: Tree<Symbol>;
+        let prop: Tree<PhpSymbol>;
         let modifiers = this._nonTerminalFlagToSymbolModifier(node.value.flag);
         let doc = node.value.doc ? this.docBlockParser.parse(node.value.doc.text) : null;
-        let filtered: Tree<Symbol>[] = [];
+        let filtered: Tree<PhpSymbol>[] = [];
 
         for (let n = 0; n < list.length; ++n) {
             prop = list[n];
@@ -529,7 +529,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-    private _assignPropertyPhpDoc(s: Symbol, doc: PhpDoc) {
+    private _assignPropertyPhpDoc(s: PhpSymbol, doc: PhpDoc) {
         if (!doc) {
             return;
         }
@@ -555,25 +555,25 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             return;
         }
         name = this.nameResolver.resolveRelative(name);
-        let s = new Symbol(SymbolKind.Constant, name);
+        let s = new PhpSymbol(SymbolKind.Constant, name);
         this._assignLocation(s, node.value);
-        this.symbolTreeRoot.addChild(new Tree<Symbol>(s));
+        this.symbolTreeRoot.addChild(new Tree<PhpSymbol>(s));
 
     }
 
-    private _assignLocation(s: Symbol, n: NonTerminal) {
+    private _assignLocation(s: PhpSymbol, n: NonTerminal) {
         s.start = n.startToken.range.start.line;
         s.end = n.startToken.range.end.line;
         s.uri = this.uri;
     }
 
-    private _assignClassBody(t: Tree<Symbol>, body: (Tree<Symbol> | Tree<Symbol>[] | string[])[]) {
+    private _assignClassBody(t: Tree<PhpSymbol>, body: (Tree<PhpSymbol> | Tree<PhpSymbol>[] | string[])[]) {
 
         if (!body) {
             return;
         }
-        let child: Tree<Symbol> | Tree<Symbol>[] | string[];
-        let gChild: Tree<Symbol> | string;
+        let child: Tree<PhpSymbol> | Tree<PhpSymbol>[] | string[];
+        let gChild: Tree<PhpSymbol> | string;
 
         for (let n = 0; n < body.length; ++n) {
             child = body[n];
@@ -594,21 +594,21 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
                     for (let k = 0; k < child.length; ++k) {
                         gChild = child[k];
                         //property/constant
-                        (<Tree<Symbol>>gChild).value.scope = t.value.name;
-                        t.addChild(<Tree<Symbol>>gChild);
+                        (<Tree<PhpSymbol>>gChild).value.scope = t.value.name;
+                        t.addChild(<Tree<PhpSymbol>>gChild);
                     }
                 }
 
             }
             else {
                 //methods
-                (<Tree<Symbol>>child).value.scope = t.value.name;
-                t.addChild(<Tree<Symbol>>child);
+                (<Tree<PhpSymbol>>child).value.scope = t.value.name;
+                t.addChild(<Tree<PhpSymbol>>child);
             }
         }
     }
 
-    private _assignClassPhpDoc(t: Tree<Symbol>, doc: Token) {
+    private _assignClassPhpDoc(t: Tree<PhpSymbol>, doc: Token) {
         if (!doc) {
             return;
         }
@@ -621,7 +621,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     private _postOrderMethodDeclaration(node: Tree<NonTerminal>) {
 
-        let name: string, params: Tree<Symbol>[], returnType: string, body: null;
+        let name: string, params: Tree<PhpSymbol>[], returnType: string, body: null;
         [name, params, returnType, body] = util.popMany(this._stack, 4);
 
         if (!name) {
@@ -629,14 +629,14 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             return;
         }
 
-        let s = new Symbol(SymbolKind.Method, name);
+        let s = new PhpSymbol(SymbolKind.Method, name);
         s.modifiers = this._nonTerminalFlagToSymbolModifier(node.value.flag);
 
         if (returnType) {
             s.type = new TypeString(returnType);
         }
 
-        let tree = new Tree<Symbol>(s);
+        let tree = new Tree<PhpSymbol>(s);
         this._assignFunctionOrMethodParameters(tree, params);
         this._assignFunctionOrMethodPhpDoc(s, params, node.value.doc);
         this._assignLocation(s, node.value);
@@ -646,7 +646,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     private _postOrderFunctionDeclaration(node: Tree<NonTerminal>) {
 
-        let name: string, params: Tree<Symbol>[], returnType: string, body: null;
+        let name: string, params: Tree<PhpSymbol>[], returnType: string, body: null;
         [name, params, returnType, body] = util.popMany(this._stack, 4);
 
         if (!name) {
@@ -654,13 +654,13 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         }
 
         name = this.nameResolver.resolveRelative(name);
-        let s = new Symbol(SymbolKind.Function, name);
+        let s = new PhpSymbol(SymbolKind.Function, name);
 
         if (returnType) {
             s.type = new TypeString(returnType);
         }
 
-        let tree = new Tree<Symbol>(s);
+        let tree = new Tree<PhpSymbol>(s);
         this._assignFunctionOrMethodParameters(tree, params);
         this._assignFunctionOrMethodPhpDoc(s, params, node.value.doc);
         this._assignLocation(s, node.value);
@@ -670,9 +670,9 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
 
 
-    private _assignFunctionOrMethodParameters(s: Tree<Symbol>, params: Tree<Symbol>[]) {
+    private _assignFunctionOrMethodParameters(s: Tree<PhpSymbol>, params: Tree<PhpSymbol>[]) {
 
-        let param: Tree<Symbol>;
+        let param: Tree<PhpSymbol>;
         for (let n = 0; n < params.length; ++n) {
             param = params[n];
             if (!param) {
@@ -684,7 +684,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-    private _assignFunctionOrMethodPhpDoc(s: Symbol, params: Tree<Symbol>[], doc: Token) {
+    private _assignFunctionOrMethodPhpDoc(s: PhpSymbol, params: Tree<PhpSymbol>[], doc: Token) {
 
         let phpDoc: PhpDoc;
         if (!doc || !(phpDoc = this.docBlockParser.parse(doc.text))) {
@@ -693,8 +693,8 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
         s.description = phpDoc.summary;
         let tag: TypeTag;
-        let paramMap: { [name: string]: Symbol } = {};
-        let param: Symbol;
+        let paramMap: { [name: string]: PhpSymbol } = {};
+        let param: PhpSymbol;
 
         for (let n = 0; n < params.length; ++n) {
             param = params[n].value;
@@ -717,22 +717,22 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
     }
 
     private _postOrderNamespace(node: Tree<NonTerminal>) {
-        let name: string, list: Tree<Symbol>[];
+        let name: string, list: Tree<PhpSymbol>[];
         [name, list] = util.popMany(this._stack, 2);
-        let nodes: Tree<Symbol>[] = [];
+        let nodes: Tree<PhpSymbol>[] = [];
 
         if (name) {
-            let s = new Symbol(SymbolKind.Namespace, name);
+            let s = new PhpSymbol(SymbolKind.Namespace, name);
             s.start = s.end = node.value.startToken.range.start.line;
             s.uri = this.uri;
-            this.symbolTreeRoot.addChild(new Tree<Symbol>(s));
+            this.symbolTreeRoot.addChild(new Tree<PhpSymbol>(s));
         }
 
     }
 
     private _postOrderClassDeclaration(node: Tree<NonTerminal>) {
 
-        let name: string, extendsClass: string, implementsInterfaces: string[], body: (string[] | Tree<Symbol>)[];
+        let name: string, extendsClass: string, implementsInterfaces: string[], body: (string[] | Tree<PhpSymbol>)[];
         [name, extendsClass, implementsInterfaces, body] = util.popMany(this._stack, 4);
 
         if (!name) {
@@ -740,7 +740,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         }
 
         name = this.nameResolver.resolveRelative(name);
-        let s = new Symbol(SymbolKind.Class, name);
+        let s = new PhpSymbol(SymbolKind.Class, name);
         if (extendsClass || (implementsInterfaces && implementsInterfaces.length)) {
             s.associated = [];
             if (extendsClass) {
@@ -752,7 +752,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         }
 
         s.modifiers = this._nonTerminalFlagToSymbolModifier(node.value.flag);
-        let t = new Tree<Symbol>(s);
+        let t = new Tree<PhpSymbol>(s);
         this._assignClassBody(t, body);
         this._assignClassPhpDoc(t, node.value.doc);
         this._assignLocation(s, node.value);
@@ -760,7 +760,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-    private _addClassMagicMembers(classNode: Tree<Symbol>, doc: PhpDoc) {
+    private _addClassMagicMembers(classNode: Tree<PhpSymbol>, doc: PhpDoc) {
 
         let tag: Tag;
         for (let n = 0; n < doc.tags.length; ++n) {
@@ -804,7 +804,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         return symbolModifier;
     }
 
-    private _propertyTagToTreeSymbol(tag: TypeTag): Tree<Symbol> {
+    private _propertyTagToTreeSymbol(tag: TypeTag): Tree<PhpSymbol> {
 
         let modifiers = SymbolModifier.Public | SymbolModifier.Magic;
         if (tag.tagName === '@property-write') {
@@ -813,19 +813,19 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             modifiers |= SymbolModifier.ReadOnly;
         }
 
-        let s = new Symbol(SymbolKind.Property, tag.name);
+        let s = new PhpSymbol(SymbolKind.Property, tag.name);
         s.description = tag.description;
         s.modifiers = modifiers;
         s.type = new TypeString(tag.typeString);
-        return new Tree<Symbol>(s);
+        return new Tree<PhpSymbol>(s);
     }
 
-    private _methodTagToTreeSymbol(tag: MethodTag): Tree<Symbol> {
-        let s = new Symbol(SymbolKind.Method, tag.name);
+    private _methodTagToTreeSymbol(tag: MethodTag): Tree<PhpSymbol> {
+        let s = new PhpSymbol(SymbolKind.Method, tag.name);
         s.modifiers = SymbolModifier.Public | SymbolModifier.Magic;
         s.description = tag.description;
         s.type = new TypeString(tag.returnTypeString);
-        let t = new Tree<Symbol>(s);
+        let t = new Tree<PhpSymbol>(s);
 
         for (let n = 0; n < tag.parameters.length; ++n) {
             t.addChild(this._methodTagParamToSymbol(tag.parameters[n]));
@@ -834,11 +834,11 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         return t;
     }
 
-    private _methodTagParamToSymbol(methodTagParam: MethodTagParam): Tree<Symbol> {
+    private _methodTagParamToSymbol(methodTagParam: MethodTagParam): Tree<PhpSymbol> {
 
-        let s = new Symbol(SymbolKind.Parameter, methodTagParam.name);
+        let s = new PhpSymbol(SymbolKind.Parameter, methodTagParam.name);
         s.type = new TypeString(methodTagParam.typeString);
-        return new Tree<Symbol>(s);
+        return new Tree<PhpSymbol>(s);
 
     }
 
@@ -885,7 +885,7 @@ export class VariableReader implements TreeVisitor<NonTerminal | Token>{
     private _active: number;
     private _scopeStack:string[];
 
-    constructor(public variableTable: VariableTable) {
+    constructor(public variableTable: ResolvedVariableTable) {
         this._stack = [];
         this._active = 0;
         this._scopeStack = [];

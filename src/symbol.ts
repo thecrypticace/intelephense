@@ -37,7 +37,9 @@ export enum SymbolModifier {
     Anonymous = 1 << 9
 }
 
-export class Symbol {
+export class PhpSymbol {
+
+    private _id;
 
     uri: string;
     start: number;
@@ -48,18 +50,15 @@ export class Symbol {
     associated: string[];
     type: TypeString;
 
-    constructor(public kind: SymbolKind, public name: string) { }
-
-    get uid() {
-        return [
-            this.uri ? this.uri : '?',
-            this.scope ? this.scope : '?',
-            SymbolKind[this.kind],
-            this.name
-        ].join('|');
+    constructor(public kind: SymbolKind, public name: string) {
+        this._id = Symbol(name);
     }
 
-    isEqualTo(symbol: Symbol) {
+    get id() {
+        return this._id;
+    }
+
+    isEqualTo(symbol: PhpSymbol) {
         return this.kind === symbol.kind &&
             this.name === symbol.name &&
             this.uri === symbol.uri &&
@@ -116,7 +115,7 @@ export class NameResolver {
 
     private _importTable: ImportTable;
     private _namespaceStack: string[];
-    namespace:string;
+    namespace: string;
 
     constructor(importTable: ImportTable) {
         this._importTable = importTable;
@@ -229,9 +228,9 @@ export class TypeString {
 
     }
 
-    merge(type: string) {
+    merge(type: string | TypeString) {
 
-        let parts = this._chunk(type);
+        let parts = util.isString(type) ? this._chunk(<string>type) : (<TypeString>type)._parts;
         Array.prototype.push.apply(parts, this._parts);
         let map: Map<string> = {};
         let part: string;
@@ -315,7 +314,7 @@ export class TypeString {
 
 }
 
-export class SymbolTree extends Tree<Symbol> {
+export class SymbolTree extends Tree<PhpSymbol> {
 
     private _uri: string;
 
@@ -358,7 +357,7 @@ export class DocumentSymbols {
  * Get suffixes after $, namespace separator, underscore and on capitals
  * Includes acronym using non namespaced portion of string
  */
-function symbolSuffixes(symbol: Symbol) {
+function symbolSuffixes(symbol: PhpSymbol) {
     let text = symbol.toString();
     let lcText = text.toLowerCase();
     let suffixes = [lcText];
@@ -398,11 +397,11 @@ function symbolSuffixes(symbol: Symbol) {
 export class SymbolStore {
 
     private _map: { [uri: string]: DocumentSymbols };
-    private _index: SuffixArray<Symbol>;
+    private _index: SuffixArray<PhpSymbol>;
 
     constructor() {
         this._map = {};
-        this._index = new SuffixArray<Symbol>(symbolSuffixes);
+        this._index = new SuffixArray<PhpSymbol>(symbolSuffixes);
     }
 
     getDocumentSymbols(uri: string) {
@@ -431,10 +430,10 @@ export class SymbolStore {
      */
     match(text: string) {
         let symbols = this._index.match(text);
-        let map: { [index: string]: Symbol } = {};
+        let map: { [index: string]: PhpSymbol } = {};
         let uid: string;
-        let uniqueSymbols: Symbol[] = [];
-        let s: Symbol;
+        let uniqueSymbols: PhpSymbol[] = [];
+        let s: PhpSymbol;
 
         for (let n = 0; n < symbols.length; ++n) {
             s = symbols[n];
@@ -453,7 +452,7 @@ export class SymbolStore {
         let kindMask = SymbolKind.Parameter | SymbolKind.Variable;
         let modifierMask = SymbolModifier.Anonymous | SymbolModifier.Private | SymbolModifier.Use;
 
-        let predicate: Predicate<Symbol> = (s) => {
+        let predicate: Predicate<PhpSymbol> = (s) => {
             return !(s.kind & kindMask) && !(s.modifiers & modifierMask);
         };
 
@@ -463,56 +462,151 @@ export class SymbolStore {
 
 }
 
-
-
 interface ResolvedVariable {
-    name:string;
-    type:TypeString;
+    name: string;
+    type: TypeString;
 }
 
-const enum ResolveVariableSetType {
-    None, Scope, Branch
+const enum ResolvedVariableSetKind {
+    None, Scope, BranchGroup, Branch
 }
 
 interface ResolvedVariableSet {
-    type:ResolveVariableSetType;
-    vars:Map<ResolvedVariable>;
+    kind: ResolvedVariableSetKind;
+    vars: Map<ResolvedVariable>;
 }
 
-export class VariableTable {
+export class ResolvedVariableTable {
 
-    private _path:Tree<ResolvedVariableSet>[];
-    private _root:Tree<ResolvedVariableSet>;
+    private _path: Tree<ResolvedVariableSet>[];
 
-    constructor(public uri:string) {
-        this._path = [];
-        this._root = new Tree<ResolvedVariableSet>(null);
+    constructor(public uri: string) {
+        this._path = [new Tree<ResolvedVariableSet>({ kind: ResolvedVariableSetKind.Scope, vars: {} })];
     }
 
-    addResolvedVariable(name:string, type:TypeString) {
+    addVariable(name: string, type: TypeString) {
+        let vars = util.top<Tree<ResolvedVariableSet>>(this._path).value.vars;
+
+        if (vars.hasOwnProperty(name)) {
+            vars[name].type = vars[name].type.merge(type);
+        } else {
+            vars[name] = { name: name, type: type };
+        }
+    }
+
+    pushBranch() {
+        let b = new Tree<ResolvedVariableSet>({ kind: ResolvedVariableSetKind.Branch, vars: {} });
+        util.top<Tree<ResolvedVariableSet>>(this._path).addChild(b);
+        this._path.push(b);
+    }
+
+    popBranch() {
+        this._path.pop();
+    }
+
+    pushBranchGroup() {
+        let b = new Tree<ResolvedVariableSet>({ kind: ResolvedVariableSetKind.BranchGroup, vars: {} });
+        util.top<Tree<ResolvedVariableSet>>(this._path).addChild(b);
+        this._path.push(b);
+    }
+
+    popBranchGroup() {
+
+        //can consolidate variables and prune tree as at this point
+        //each variable may be any of types discovered in branches 
+        let b = this._path.pop();
+        let top = util.top(this._path);
+        let consolidator = new TypeConsolidator(top.value.vars);
+        b.traverse(consolidator);
+        top.removeChild(b);
 
     }
 
-    pushBranch(){
+    /**
+     * @param {string[]} carry  names of variables that should cross scope (closure, anon class)
+     */
+    pushScope(carry: string[] = null) {
+        let s = new Tree<ResolvedVariableSet>({ kind: ResolvedVariableSetKind.Scope, vars: {} });
+
+        if (carry !== null) {
+
+            let parentScope = this._path[this._scopeIndex()];
+            let types = parentScope.value.vars;
+            let v: ResolvedVariable;
+            let varName: string
+            for (let n = 0; n < carry.length; ++n) {
+                varName = carry[n];
+                if (types.hasOwnProperty(varName)) {
+                    s.value.vars[varName] = { name: varName, type: v.type };
+                }
+            }
+        }
+
+        util.top<Tree<ResolvedVariableSet>>(this._path).addChild(s);
+        this._path.push(s);
+    }
+
+    popScope() {
+        this._path.pop();
+    }
+
+    getType(varName: string) {
+
+        let type: TypeString;
+        let vars: Map<ResolvedVariable>;
+
+        for (let n = this._scopeIndex(); n < this._path.length; ++n) {
+            vars = this._path[n].value.vars;
+            if (vars.hasOwnProperty(varName)) {
+                type = type ? type.merge(vars[varName].type) : vars[varName].type;
+            }
+
+        }
+
+        return type;
+    }
+
+    private _scopeIndex() {
+
+        let n = this._path.length;
+        while (n--) {
+            if (this._path[n].value.kind === ResolvedVariableSetKind.Scope) {
+                return n;
+            }
+        }
+
+        throw new Error('Scope not found');
 
     }
 
-    popBranch(){
+}
+
+class TypeConsolidator implements TreeVisitor<ResolvedVariableSet> {
+
+    constructor(public variables: Map<ResolvedVariable> = {}) {
 
     }
 
-    pushScope(){
+    preOrder(node: Tree<ResolvedVariableSet>) {
+
+        let keys = Object.keys(node.value.vars);
+        let v: ResolvedVariable;
+        let key: string;
+        for (let n = 0; n < keys.length; ++n) {
+            key = keys[n];
+            v = node.value.vars[key];
+            if (this.variables.hasOwnProperty(key)) {
+                this.variables[key].type = this.variables[key].type.merge(v.type);
+            } else {
+                this.variables[key] = v;
+            }
+        }
 
     }
 
-    popScope(){
-
+    shouldDescend() {
+        return true;
     }
-
-    getType(varName:string){
-
-    }
-
 
 }
 
