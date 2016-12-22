@@ -523,7 +523,7 @@ export class ResolvedVariableTable {
     }
 
     /**
-     * @param {string[]} carry  names of variables that should cross scope (closure, anon class)
+     * @param {string[]} carry  names of variables that should cross scope (closures)
      */
     pushScope(carry: string[] = null) {
         let s = new Tree<ResolvedVariableSet>({ kind: ResolvedVariableSetKind.Scope, vars: {} });

@@ -10,7 +10,7 @@ import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag, MethodTag } from '.
 import * as util from './util';
 import {
     PhpSymbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString, SymbolModifier,
-    SymbolTree, TypeResolvedVariable, ResolvedVariableTable
+    SymbolTree, ResolvedVariableTable
 } from './symbol';
 
 export class ImportTableReader implements TreeVisitor<NonTerminal | Token> {
@@ -879,25 +879,81 @@ export class PathReader implements TreeVisitor<NonTerminal | Token>{
 
 }
 
-export class VariableReader implements TreeVisitor<NonTerminal | Token>{
+const enum TypeResolverMode {
+    None, Assignment, InstanceOf, ResolveVariableName, ResolveType, Foreach
+}
+
+export class TypeResolver implements TreeVisitor<NonTerminal | Token>{
 
     private _stack: any[];
-    private _active: number;
-    private _scopeStack:string[];
+    private _modeStack: TypeResolverMode[];
 
-    constructor(public variableTable: ResolvedVariableTable) {
+    constructor(public variableTable: ResolvedVariableTable, public nameResolver: NameResolver) {
         this._stack = [];
-        this._active = 0;
-        this._scopeStack = [];
+        this._modeStack = [];
     }
 
-    preOrder(node: Tree<NonTerminal | Token>){
+    preOrder(node: Tree<NonTerminal | Token>) {
+
+        if (node.value === null) {
+            return;
+        }
+
+        switch ((<NonTerminal>node.value).nonTerminalType) {
+            case NonTerminalType.FunctionDeclaration:
+            case NonTerminalType.MethodDeclaration:
+            case NonTerminalType.ClassDeclaration:
+            case NonTerminalType.AnonymousClassDeclaration:
+                this.variableTable.pushScope();
+                break;
+            case NonTerminalType.IfList:
+                this.variableTable.pushBranchGroup();
+                break;
+            case NonTerminalType.If:
+                this.variableTable.pushBranch();
+                break;
+            case NonTerminalType.BinaryExpression:
+                if ((<NonTerminal>node.value).flag === NonTerminalFlag.BinaryAssign ||
+                    (<NonTerminal>node.value).flag === NonTerminalFlag.BinaryInstanceOf) {
+                    this._modeStack.push(TypeResolverMode.ResolveVariableName);
+                }
+                break;
+            case NonTerminalType.Foreach:
+                this._modeStack.push(TypeResolverMode.ResolveType);
+                break;
+            default:
+                break;
+        }
+
+    }
+
+    inOrder(node: Tree<NonTerminal | Token>, childIndex: number) {
+
+        if (node.value === null) {
+            return;
+        }
+
+        switch ((<NonTerminal>node.value).nonTerminalType) {
+            case NonTerminalType.BinaryExpression:
+                if (((<NonTerminal>node.value).flag === NonTerminalFlag.BinaryAssign ||
+                    (<NonTerminal>node.value).flag === NonTerminalFlag.BinaryInstanceOf) &&
+                    childIndex === 0) {
+                    this._modeStack.pop();
+                    this._modeStack.push(TypeResolverMode.ResolveType);
+                }
+                break;
+            case NonTerminalType.Foreach:
+            
+                break;
+            default:
+                break;
+        }
 
     }
 
     postOrder(node: Tree<NonTerminal | Token>) {
 
-        if (this._active < 1) {
+        if (this._modeStack.length < 1) {
             return;
         }
 
@@ -906,10 +962,44 @@ export class VariableReader implements TreeVisitor<NonTerminal | Token>{
         }
 
         switch ((<NonTerminal>node.value).nonTerminalType) {
+            case NonTerminalType.FunctionDeclaration:
+            case NonTerminalType.MethodDeclaration:
+            case NonTerminalType.ClassDeclaration:
+            case NonTerminalType.AnonymousClassDeclaration:
+                this.variableTable.popScope();
+                break;
+            case NonTerminalType.IfList:
+                this.variableTable.popBranchGroup();
+                break;
+            case NonTerminalType.If:
+                this.variableTable.popBranch();
+                break;
+            case NonTerminalType.Variable:
+                this._postOrderVariable(node);
+                break;
             case NonTerminalType.BinaryExpression:
-            
+                if ((<NonTerminal>node.value).flag === NonTerminalFlag.BinaryAssign) {
+                    this._postOrderAssignment(node);
+                } else {
+                    util.popMany(this._stack, node.children.length);
+                    this._stack.push(null);
+                }
                 break;
             case NonTerminalType.Foreach:
+                this._modeStack.pop();
+                break;
+            case NonTerminalType.Name:
+
+                break;
+            case NonTerminalType.NamespaceName:
+                if (util.top(this._modeStack) === TypeResolverMode.ResolveType) {
+                    this._stack.push(util.popMany(this._stack, node.children.length).join('\\'));
+                }
+                break;
+            case undefined:
+                if (util.top(this._modeStack) === TypeResolverMode.ResolveType) {
+                    this._stack.push((<Token>node.value).text);
+                }
                 break;
             default:
                 break;
@@ -924,13 +1014,102 @@ export class VariableReader implements TreeVisitor<NonTerminal | Token>{
         }
 
         switch ((<NonTerminal>node.value).nonTerminalType) {
+            case NonTerminalType.Variable:
+
+                return false;
             default:
                 return true;
         }
     }
 
+    private _postOrderResolveType(node: Tree<NonTerminal | Token>) {
+
+        switch ((<NonTerminal>node.value).nonTerminalType) {
+            case NonTerminalType.FunctionDeclaration:
+            case NonTerminalType.MethodDeclaration:
+            case NonTerminalType.ClassDeclaration:
+            case NonTerminalType.AnonymousClassDeclaration:
+                this.variableTable.popScope();
+                break;
+            case NonTerminalType.IfList:
+                this.variableTable.popBranchGroup();
+                break;
+            case NonTerminalType.If:
+                this.variableTable.popBranch();
+                break;
+            case NonTerminalType.Variable:
+                this._postOrderVariable(node);
+                break;
+            case NonTerminalType.BinaryExpression:
+                if ((<NonTerminal>node.value).flag === NonTerminalFlag.BinaryAssign) {
+                    this._postOrderAssignment(node);
+                } else {
+                    util.popMany(this._stack, node.children.length);
+                    this._stack.push(null);
+                }
+                break;
+            case NonTerminalType.Foreach:
+                this._modeStack.pop();
+                break;
+            case NonTerminalType.Name:
+
+                break;
+            case NonTerminalType.NamespaceName:
+                this._stack.push(util.popMany(this._stack, node.children.length).join('\\'));
+                break;
+            case undefined:
+                this._stack.push((<Token>node.value).text);
+                break;
+            default:
+                break;
+        }
 
 
+    }
+
+    private postOrderNameResolveType(node: Tree<NonTerminal>) {
+        let name = this._stack.pop();
+        if (!name) {
+            this._stack.push(null);
+        }
+
+        switch (node.value.flag) {
+            case NonTerminalFlag.NameNotFullyQualified:
+                name = this.nameResolver.resolveNotFullyQualified(name, );
+                break;
+            case NonTerminalFlag.NameRelative:
+                name = this.nameResolver.resolveRelative(name);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private _postOrderVariableResolveName(node: Tree<NonTerminal | Token>) {
+        let child = node.children[0];
+        let name = null;
+        if (child.value.hasOwnProperty('tokenType')) {
+            name = (<Token>child.value).text;
+        }
+        this._stack.push(name);
+    }
+
+    private _postOrderVariableResolveType(node: Tree<NonTerminal | Token>) {
+
+        let child = node.children[0];
+        let type = null;
+        if (child.value.hasOwnProperty('tokenType')) {
+            let type = this.variableTable.getType((<Token>child.value).text);
+        }
+        this._stack.push(type);
+    }
+
+    private _postOrderAssignment(node) {
+
+        let varName: string, type: TypeString;
+        [varName, type] = util.popMany(this._stack)
+
+    }
 
 
 }
