@@ -5,7 +5,7 @@
 'use strict';
 
 import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray } from './types';
-import { NonTerminal, NonTerminalType, NonTerminalFlag, Token } from 'php7parser';
+import { NonTerminal, NonTerminalType, NonTerminalFlag, Token, TokenType } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag, MethodTag } from './parse';
 import * as util from './util';
 import {
@@ -1075,7 +1075,7 @@ export class TypeResolver implements TreeVisitor<NonTerminal | Token>{
 
         switch (node.value.flag) {
             case NonTerminalFlag.NameNotFullyQualified:
-                name = this.nameResolver.resolveNotFullyQualified(name, );
+                name = this.nameResolver.resolveNotFullyQualified(name);
                 break;
             case NonTerminalFlag.NameRelative:
                 name = this.nameResolver.resolveRelative(name);
@@ -1107,7 +1107,56 @@ export class TypeResolver implements TreeVisitor<NonTerminal | Token>{
     private _postOrderAssignment(node) {
 
         let varName: string, type: TypeString;
-        [varName, type] = util.popMany(this._stack)
+        [varName, type] = util.popMany(this._stack);
+
+    }
+
+
+}
+
+export class Resolved implements TreeVisitor<NonTerminal | Token> {
+
+    private _typeStack:TypeString[];
+
+    preOrder(node:Tree<NonTerminal|Token>){
+
+        if(node.value === null){
+            return false;
+        }
+
+        switch((<NonTerminal>node.value).nonTerminalType){
+            case NonTerminalType.List:
+            case NonTerminalType.Array:
+            case NonTerminalType.ArrayPair:
+            case NonTerminalType.Dimension:
+                return true;
+            default:
+                return false;
+        }
+
+    }
+
+    postOrder(node:Tree<NonTerminal|Token>){
+
+        switch((<NonTerminal>node.value).nonTerminalType){
+
+            case NonTerminalType.Variable:
+
+                break;
+
+
+        }
+
+
+    }
+
+    private _variableName(node:Tree<NonTerminal|Token>){
+        if(!node.children || node.children.length < 1 || 
+            (<Token>node.children[0].value).tokenType !== TokenType.T_VARIABLE ) {
+            this._stack.push(null);
+        }
+
+
 
     }
 
