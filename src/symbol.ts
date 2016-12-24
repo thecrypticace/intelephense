@@ -188,6 +188,10 @@ export class TypeString {
         this._parts = text ? this._chunk(text) : [];
     }
 
+    isEmpty(){
+        return this._parts.length < 1;
+    }
+
     atomicClassArray() {
 
         let parts: string[] = [];

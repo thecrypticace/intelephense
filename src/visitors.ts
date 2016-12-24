@@ -1132,6 +1132,7 @@ export class VariableTypeAssignment implements TreeVisitor<NonTerminal | Token> 
 
         switch ((<NonTerminal>node.value).nonTerminalType) {
             case NonTerminalType.List:
+                
             case NonTerminalType.Array:
             case NonTerminalType.ArrayPair:
                 //skip traverse of array pair key
