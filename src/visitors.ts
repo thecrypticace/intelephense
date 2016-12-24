@@ -943,7 +943,7 @@ export class TypeResolver implements TreeVisitor<NonTerminal | Token>{
                 }
                 break;
             case NonTerminalType.Foreach:
-            
+
                 break;
             default:
                 break;
@@ -1114,49 +1114,45 @@ export class TypeResolver implements TreeVisitor<NonTerminal | Token>{
 
 }
 
-export class Resolved implements TreeVisitor<NonTerminal | Token> {
+export class VariableTypeAssignment implements TreeVisitor<NonTerminal | Token> {
 
-    private _typeStack:TypeString[];
+    private _typeStack: TypeString[];
+    private _table: ResolvedVariableTable;
 
-    preOrder(node:Tree<NonTerminal|Token>){
+    constructor(type: TypeString, table: ResolvedVariableTable) {
+        this._typeStack = [type];
+        this._table = table;
+    }
 
-        if(node.value === null){
+    preOrder(node: Tree<NonTerminal | Token>) {
+
+        if (node.value === null) {
             return false;
         }
 
-        switch((<NonTerminal>node.value).nonTerminalType){
+        switch ((<NonTerminal>node.value).nonTerminalType) {
             case NonTerminalType.List:
             case NonTerminalType.Array:
             case NonTerminalType.ArrayPair:
+                //skip traverse of array pair key
+                return false;
             case NonTerminalType.Dimension:
-                return true;
+            case NonTerminalType.Variable:
+                return this._variable(node);
             default:
                 return false;
         }
 
     }
 
-    postOrder(node:Tree<NonTerminal|Token>){
+    private _variable(node: Tree<NonTerminal | Token>) {
 
-        switch((<NonTerminal>node.value).nonTerminalType){
-
-            case NonTerminalType.Variable:
-
-                break;
-
-
+        if (node.children && node.children.length &&
+            (<Token>node.children[0].value).tokenType === TokenType.T_VARIABLE) {
+            this._table.setVariable((<Token>node.children[0].value).text, util.top<TypeString>(this._typeStack));
         }
 
-
-    }
-
-    private _variableName(node:Tree<NonTerminal|Token>){
-        if(!node.children || node.children.length < 1 || 
-            (<Token>node.children[0].value).tokenType !== TokenType.T_VARIABLE ) {
-            this._stack.push(null);
-        }
-
-
+        return false;
 
     }
 

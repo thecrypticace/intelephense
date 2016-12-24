@@ -216,8 +216,12 @@ export class TypeString {
                 part = part.slice(0, -2);
                 if (part.slice(-1) === ')') {
                     part = part.slice(1, -1);
+                    Array.prototype.push.apply(parts, this._chunk(part));
+                    parts = this._unique(parts);
+                } else {
+                    parts.push(part);
                 }
-                parts.push(part);
+
             }
 
         }
@@ -228,20 +232,22 @@ export class TypeString {
 
     }
 
+    array() {
+        let text: string;
+        if (this._parts.length > 1) {
+            text = '(' + this.toString() + ')[]';
+        } else {
+            text = this._parts[0] + '[]';
+        }
+        return new TypeString(text);
+    }
+
     merge(type: string | TypeString) {
 
         let parts = util.isString(type) ? this._chunk(<string>type) : (<TypeString>type)._parts;
         Array.prototype.push.apply(parts, this._parts);
-        let map: Map<string> = {};
-        let part: string;
-
-        for (let n = 0; n < parts.length; ++n) {
-            part = parts[n];
-            map[part] = part;
-        }
-
         let newTypeString = new TypeString(null);
-        newTypeString._parts = Object.keys(map);
+        newTypeString._parts = this._unique(parts);
         return newTypeString;
     }
 
@@ -264,6 +270,18 @@ export class TypeString {
 
     toString() {
         return this._parts.join('|');
+    }
+
+    private _unique(parts: string[]) {
+        let map: Map<string> = {};
+        let part: string;
+
+        for (let n = 0; n < parts.length; ++n) {
+            part = parts[n];
+            map[part] = part;
+        }
+
+        return Object.keys(map);
     }
 
     private _chunk(typeString: string) {
@@ -484,14 +502,9 @@ export class ResolvedVariableTable {
         this._path = [new Tree<ResolvedVariableSet>({ kind: ResolvedVariableSetKind.Scope, vars: {} })];
     }
 
-    addVariable(name: string, type: TypeString) {
+    setVariable(name: string, type: TypeString) {
         let vars = util.top<Tree<ResolvedVariableSet>>(this._path).value.vars;
-
-        if (vars.hasOwnProperty(name)) {
-            vars[name].type = vars[name].type.merge(type);
-        } else {
-            vars[name] = { name: name, type: type };
-        }
+        vars[name] = { name: name, type: type };
     }
 
     pushBranch() {
