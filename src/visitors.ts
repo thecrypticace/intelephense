@@ -1132,16 +1132,48 @@ export class VariableTypeAssignment implements TreeVisitor<NonTerminal | Token> 
 
         switch ((<NonTerminal>node.value).nonTerminalType) {
             case NonTerminalType.List:
-                
             case NonTerminalType.Array:
+                this._typeStack.push(util.top<TypeString>(this._typeStack).arrayDereference());
+                return true;
             case NonTerminalType.ArrayPair:
                 //skip traverse of array pair key
                 return false;
             case NonTerminalType.Dimension:
+                this._typeStack.push(util.top<TypeString>(this._typeStack).array());
+                return true;
             case NonTerminalType.Variable:
-                return this._variable(node);
+                this._variable(node);
+                return false;
             default:
                 return false;
+        }
+
+    }
+
+    inOrder(node: Tree<NonTerminal | Token>, afterChildIndex: number) {
+
+        if (node.value === null) {
+            return false;
+        }
+
+        switch ((<NonTerminal>node.value).nonTerminalType) {
+            case NonTerminalType.Dimension:
+                //dont descend into dimension offset
+                return false;
+            default:
+                return true;
+        }
+
+    }
+
+    postOrder(node:Tree<NonTerminal|Token>){
+
+        if(node.value === null){
+            return;
+        }
+
+        switch((<NonTerminal>node.value).nonTerminalType){
+            
         }
 
     }
@@ -1150,10 +1182,14 @@ export class VariableTypeAssignment implements TreeVisitor<NonTerminal | Token> 
 
         if (node.children && node.children.length &&
             (<Token>node.children[0].value).tokenType === TokenType.T_VARIABLE) {
-            this._table.setVariable((<Token>node.children[0].value).text, util.top<TypeString>(this._typeStack));
-        }
 
-        return false;
+            let type = util.top<TypeString>(this._typeStack);
+
+            if (!type.isEmpty()) {
+                this._table.setVariable((<Token>node.children[0].value).text, type);
+            }
+
+        }
 
     }
 
