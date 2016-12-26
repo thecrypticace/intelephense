@@ -114,13 +114,13 @@ export class ImportTable {
 export class NameResolver {
 
     private _importTable: ImportTable;
-    private _namespaceStack: string[];
     namespace: string;
+    thisName: string;
 
     constructor(importTable: ImportTable) {
         this._importTable = importTable;
-        this._namespaceStack = [];
         this.namespace = '';
+        this.thisName = '';
     }
 
     resolveRelative(relativeName: string) {
@@ -128,6 +128,11 @@ export class NameResolver {
     }
 
     resolveNotFullyQualified(notFqName: string, kind: SymbolKind) {
+
+        if (notFqName === 'self' || notFqName === 'static') {
+            return this.thisName;
+        }
+
         let pos = notFqName.indexOf('\\');
         if (pos === -1) {
             return this._resolveUnqualified(notFqName, kind);
@@ -188,7 +193,7 @@ export class TypeString {
         this._parts = text ? this._chunk(text) : [];
     }
 
-    isEmpty(){
+    isEmpty() {
         return this._parts.length < 1;
     }
 
@@ -373,13 +378,22 @@ export class DocumentSymbols {
         return this._uri;
     }
 
+    get symbolTree(){
+        return this._symbolTree;
+    }
+
+    get importTable(){
+        return this._importTable;
+    }
+
 }
 
 /**
  * Get suffixes after $, namespace separator, underscore and on capitals
  * Includes acronym using non namespaced portion of string
  */
-function symbolSuffixes(symbol: PhpSymbol) {
+function symbolSuffixes(node: Tree<PhpSymbol>) {
+    let symbol = node.value;
     let text = symbol.toString();
     let lcText = text.toLowerCase();
     let suffixes = [lcText];
@@ -418,12 +432,12 @@ function symbolSuffixes(symbol: PhpSymbol) {
 
 export class SymbolStore {
 
-    private _map: { [uri: string]: DocumentSymbols };
-    private _index: SuffixArray<PhpSymbol>;
+    private _map: Map<DocumentSymbols>;
+    private _index: SuffixArray<Tree<PhpSymbol>>;
 
     constructor() {
         this._map = {};
-        this._index = new SuffixArray<PhpSymbol>(symbolSuffixes);
+        this._index = new SuffixArray<Tree<PhpSymbol>>(symbolSuffixes);
     }
 
     getDocumentSymbols(uri: string) {
@@ -435,7 +449,7 @@ export class SymbolStore {
             throw new Error(`Duplicate key ${documentSymbols.uri}`);
         }
         this._map[documentSymbols.uri] = documentSymbols;
-        this._index.addMany(this._externalSymbols(documentSymbols));
+        this._index.addMany(this._externalSymbols(documentSymbols.symbolTree));
     }
 
     remove(uri: string) {
@@ -443,7 +457,7 @@ export class SymbolStore {
         if (!doc) {
             return;
         }
-        this._index.removeMany(this._externalSymbols(doc));
+        this._index.removeMany(this._externalSymbols(doc.symbolTree));
         delete this._map[uri];
     }
 
@@ -471,14 +485,16 @@ export class SymbolStore {
 
     private _externalSymbols(symbolTree: SymbolTree) {
 
-        let kindMask = SymbolKind.Parameter | SymbolKind.Variable;
-        let modifierMask = SymbolModifier.Anonymous | SymbolModifier.Private | SymbolModifier.Use;
+        let notKindMask = SymbolKind.Parameter | SymbolKind.Variable;
+        let notModifierMask = SymbolModifier.Anonymous | SymbolModifier.Private;
 
-        let predicate: Predicate<PhpSymbol> = (s) => {
-            return !(s.kind & kindMask) && !(s.modifiers & modifierMask);
+        let predicate: Predicate<Tree<PhpSymbol>> = (x) => {
+            return x.value !== null &&
+                !(x.value.kind & notKindMask) &&
+                !(x.value.modifiers & notModifierMask);
         };
 
-        return symbolTree.match(predicate, 2);
+        return symbolTree.match(predicate);
 
     }
 

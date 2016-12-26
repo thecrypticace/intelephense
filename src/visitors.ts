@@ -10,8 +10,34 @@ import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag, MethodTag } from '.
 import * as util from './util';
 import {
     PhpSymbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString, SymbolModifier,
-    SymbolTree, ResolvedVariableTable
+    SymbolTree, ResolvedVariableTable, SymbolStore
 } from './symbol';
+
+
+function namespaceNameToString(node: Tree<NonTerminal | Token>) {
+    let parts: string[] = [];
+    let child: Tree<Token>;
+    for (let n = 0; n < node.children.length; ++n) {
+        child = node.children[n] as Tree<Token>;
+        if (child.value !== null) {
+            parts.push(child.value.text);
+        }
+    }
+    return parts.join('\\');
+}
+
+function fqn(name: string, flag: NonTerminalFlag, nameResolver: NameResolver, kind: SymbolKind) {
+
+    switch (flag) {
+        case NonTerminalFlag.NameRelative:
+            return nameResolver.resolveRelative(name);
+        case NonTerminalFlag.NameNotFullyQualified:
+            return nameResolver.resolveNotFullyQualified(name, kind);
+        default:
+            //fqn
+            return name;
+    }
+}
 
 export class ImportTableReader implements TreeVisitor<NonTerminal | Token> {
 
@@ -883,7 +909,7 @@ const enum TypeResolverMode {
     None, Assignment, InstanceOf, ResolveVariableName, ResolveType, Foreach
 }
 
-export class TypeResolver implements TreeVisitor<NonTerminal | Token>{
+export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
 
     private _stack: any[];
     private _modeStack: TypeResolverMode[];
@@ -1137,10 +1163,18 @@ export class VariableTypeAssignment implements TreeVisitor<NonTerminal | Token> 
                 return true;
             case NonTerminalType.ArrayPair:
                 //skip traverse of array pair key
+                if (node.children[1].value !== null) {
+                    let visitor = new VariableTypeAssignment(util.top<TypeString>(this._typeStack), this._table);
+                    node.children[1].traverse(visitor);
+                }
                 return false;
             case NonTerminalType.Dimension:
-                this._typeStack.push(util.top<TypeString>(this._typeStack).array());
-                return true;
+                //skip traverse of dimension offset
+                if (node.children[0].value !== null) {
+                    let visitor = new VariableTypeAssignment(util.top<TypeString>(this._typeStack).array(), this._table);
+                    node.children[0].traverse(visitor);
+                }
+                return false;
             case NonTerminalType.Variable:
                 this._variable(node);
                 return false;
@@ -1150,30 +1184,19 @@ export class VariableTypeAssignment implements TreeVisitor<NonTerminal | Token> 
 
     }
 
-    inOrder(node: Tree<NonTerminal | Token>, afterChildIndex: number) {
+    postOrder(node: Tree<NonTerminal | Token>) {
 
         if (node.value === null) {
-            return false;
-        }
-
-        switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.Dimension:
-                //dont descend into dimension offset
-                return false;
-            default:
-                return true;
-        }
-
-    }
-
-    postOrder(node:Tree<NonTerminal|Token>){
-
-        if(node.value === null){
             return;
         }
 
-        switch((<NonTerminal>node.value).nonTerminalType){
-            
+        switch ((<NonTerminal>node.value).nonTerminalType) {
+            case NonTerminalType.List:
+            case NonTerminalType.Array:
+                this._typeStack.pop();
+                break;
+            default:
+                break;
         }
 
     }
@@ -1196,4 +1219,127 @@ export class VariableTypeAssignment implements TreeVisitor<NonTerminal | Token> 
 
 }
 
+export class TypeResolver implements TreeVisitor<NonTerminal | Token> {
 
+    private _stack: any[];
+    private _kind: SymbolKind[];
+
+    constructor(public nameResolver: NameResolver,
+        public variableTable: ResolvedVariableTable,
+        public symbolStore: SymbolStore) {
+        this._stack = [];
+        this._kind = [SymbolKind.Class];
+    }
+
+
+
+    postOrder(node: Tree<NonTerminal | Token>) {
+
+        if (node.value === null) {
+            return;
+        }
+
+        switch ((<NonTerminal>node.value).nonTerminalType) {
+            case NonTerminalType.NamespaceName:
+                this._stack.push(namespaceNameToString(node));
+                break;
+            case NonTerminalType.Name:
+                this._stack.push(fqn(this._stack.pop(), (<NonTerminal>node.value).flag,
+                    this.nameResolver, util.top<SymbolKind>(this._kind)));
+                break;
+            case NonTerminalType.Variable:
+                this._variable(node);
+                break;
+            case NonTerminalType.Array:
+
+                break;
+            case NonTerminalType.Dimension:
+
+                break;
+            case NonTerminalType.StaticProperty:
+
+                break;
+            case NonTerminalType.StaticMethodCall:
+
+                break;
+            case NonTerminalType.Property:
+
+                break;
+            case NonTerminalType.MethodCall:
+
+                break;
+            case NonTerminalType.Call:
+
+                this._kind.pop();
+                break;
+            default:
+                break;
+        }
+
+
+    }
+
+    private _staticProperty(node: Tree<NonTerminalType | Token>) {
+
+        let className: string, propName: string;
+        [className, propName] = util.popMany<any>(this._stack, 2);
+
+
+
+    }
+
+    private _dimension(node: Tree<NonTerminalType | Token>) {
+
+
+
+    }
+
+    private _array(node: Tree<NonTerminalType | Token>) {
+
+
+
+    }
+
+    private _variable(node: Tree<NonTerminal | Token>) {
+
+        let child = node.children[0] as Tree<Token>;
+
+        if (child.value === null || child.value.tokenType !== TokenType.T_VARIABLE) {
+            this._stack.push(null);
+            return;
+        }
+
+        this._stack.push(this.variableTable.getType(child.value.text));
+
+    }
+
+}
+
+function variableName(node: Tree<NonTerminal | Token>) {
+    let child = node.children[0] as Tree<Token>;
+
+    if (child.value === null || child.value.tokenType !== TokenType.T_VARIABLE) {
+        return null;
+    }
+
+    return child.value.text;
+}
+
+function typeResolveStaticProperty(node: Tree<NonTerminal>, nameResolver: NameResolver,
+    variableTable: ResolvedVariableTable, symbolStore: SymbolStore) {
+        let propName = variableName(node.children[1]);
+        if(!propName){
+            return null;
+        }
+        let className = typeResolve(node, nameResolver, variableTable, symbolStore);
+        if(!className){
+            return null;
+        }
+        let symbolTree = symbolStore.match(className).shift();
+
+}
+
+function typeResolve(node: Tree<NonTerminal>, nameResolver: NameResolver,
+    variableTable: ResolvedVariableTable, symbolStore: SymbolStore){
+
+}

@@ -6,8 +6,8 @@
 
 import { Position } from 'php7parser';
 
-export function popMany(array: any[], count: number) {
-    let popped: any[] = [];
+export function popMany<T>(array: T[], count: number) {
+    let popped: T[] = [];
     while (count--) {
         popped.push(array.pop());
     }

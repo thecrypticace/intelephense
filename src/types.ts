@@ -24,10 +24,9 @@ export interface DebugLogger {
 
 export interface TreeVisitor<T> {
 
-    preOrder?(t: Tree<T>): void;
+    preOrder?(t: Tree<T>): boolean;
     inOrder?(t: Tree<T>, afterChildIndex: number): void;
     postOrder?(t: Tree<T>): void;
-    shouldDescend(t: Tree<T>): boolean;
 
 }
 
@@ -120,29 +119,99 @@ export class Tree<T> {
         return this._value !== undefined && this._value !== null ? this._value.toString() : '';
     }
 
+    find(predicate: Predicate<Tree<T>>) {
+
+        let node: Tree<T>;
+        let visitor: BreadthFirstTreeVisitor<T> = (x) => {
+            if (predicate(x)) {
+                node = x;
+                return false;
+            }
+            return true;
+        };
+        this.breadthFirstTraverse(visitor);
+        return node;
+
+    }
+
+    match(predicate:Predicate<Tree<T>>){
+
+        let visitor = new FilterVisitor<T>(predicate);
+        this.traverse(visitor);
+        return visitor.array;
+
+    }
+
     traverse(visitor: TreeVisitor<T>) {
 
-        if(visitor.hasOwnProperty('preOrder')){
-            visitor.preOrder(this);
+        let descend: boolean = false;
+
+        if (visitor.hasOwnProperty('preOrder')) {
+            descend = visitor.preOrder(this);
         }
 
-        if (this._children.length && visitor.hasOwnProperty('shouldDescend') && visitor.shouldDescend(this)) {
+        if (this._children.length && descend) {
 
             for (let n = 0, l = this._children.length; n < l; ++n) {
                 this._children[n].traverse(visitor);
-                if(visitor.hasOwnProperty('inOrder')){
+                if (visitor.hasOwnProperty('inOrder')) {
                     visitor.inOrder(this, n);
                 }
             }
 
-        } else if(visitor.hasOwnProperty('inOrder')){
+        } else if (visitor.hasOwnProperty('inOrder')) {
             visitor.inOrder(this, -1);
         }
 
-        if(visitor.hasOwnProperty('postOrder')){
+        if (visitor.hasOwnProperty('postOrder')) {
             visitor.postOrder(this);
         }
 
+    }
+
+    breadthFirstTraverse(breadthFirstVisitor: BreadthFirstTreeVisitor<T>) {
+
+        let stack: Tree<T>[] = [this];
+        let node: Tree<T>;
+
+        while (stack.length > 0) {
+
+            node = stack.shift();
+            if (!breadthFirstVisitor(node)) {
+                break;
+            }
+
+            Array.prototype.push.apply(stack, node.children);
+
+        }
+
+    }
+
+}
+
+export interface BreadthFirstTreeVisitor<T> {
+    (node: Tree<T>): boolean;
+}   
+
+class FilterVisitor<T> implements TreeVisitor<T>{
+
+    private _predicate:Predicate<Tree<T>>;
+    private _array:Tree<T>[];
+
+    constructor(predicate:Predicate<Tree<T>>){
+        this._predicate = predicate;
+        this._array = [];
+    }
+
+    get array(){
+        return this._array;
+    }
+
+    preOrder(node:Tree<T>){
+        if(this._predicate(node)){
+            this._array.push(node);
+        }
+        return true;
     }
 
 }
@@ -161,9 +230,6 @@ class ToArrayVisitor<T> implements TreeVisitor<T>{
 
     preOrder(t) {
         this._array.push(t.value);
-    }
-
-    shouldDescend(t) {
         return true;
     }
 
@@ -171,62 +237,62 @@ class ToArrayVisitor<T> implements TreeVisitor<T>{
 
 class MultiVisitor<T> implements TreeVisitor<T> {
 
-    private _visitors:[TreeVisitor<T>, Tree<T>][];
+    private _visitors: [TreeVisitor<T>, Tree<T>][];
 
-    constructor(visitors:TreeVisitor<T>[] = []){
-        for(let n = 0; n < visitors.length; ++n){
+    constructor(visitors: TreeVisitor<T>[] = []) {
+        for (let n = 0; n < visitors.length; ++n) {
             this.add(visitors[n]);
-        } 
+        }
     }
 
-    add(v:TreeVisitor<T>){
+    add(v: TreeVisitor<T>) {
         this._visitors.push([v, null]);
     }
 
-    preOrder(t){
-        let v:[TreeVisitor<T>, Tree<T>];
-        for(let n = 0; n < this._visitors.length; ++n){
+    preOrder(t) {
+        let v: [TreeVisitor<T>, Tree<T>];
+        for (let n = 0; n < this._visitors.length; ++n) {
             v = this._visitors[n];
-            if(!v[1]){
+            if (!v[1]) {
                 v[0].preOrder(t);
             }
         }
     }
 
-    inOrder(t, afterChildIndex){
-        let v:[TreeVisitor<T>, Tree<T>];
-        for(let n = 0; n < this._visitors.length; ++n){
+    inOrder(t, afterChildIndex) {
+        let v: [TreeVisitor<T>, Tree<T>];
+        for (let n = 0; n < this._visitors.length; ++n) {
             v = this._visitors[n];
-            if(!v[1]){
+            if (!v[1]) {
                 v[0].inOrder(t, afterChildIndex);
             }
         }
     }
 
-    postOrder(t){
-        let v:[TreeVisitor<T>, Tree<T>];
-        for(let n = 0; n < this._visitors.length; ++n){
+    postOrder(t) {
+        let v: [TreeVisitor<T>, Tree<T>];
+        for (let n = 0; n < this._visitors.length; ++n) {
             v = this._visitors[n];
-            if(v[1] === t){
+            if (v[1] === t) {
                 v[1] = null;
             }
-            if(!v[1]){
+            if (!v[1]) {
                 v[0].postOrder(t);
             }
         }
     }
 
-    shouldDescend(t){
-        
-        let v:[TreeVisitor<T>, Tree<T>];
+    shouldDescend(t) {
+
+        let v: [TreeVisitor<T>, Tree<T>];
         let descend = false;
 
-        for(let n = 0; n < this._visitors.length; ++n){
+        for (let n = 0; n < this._visitors.length; ++n) {
             v = this._visitors[n];
-            if(v[1]){
+            if (v[1]) {
                 continue;
             }
-            if(v[0].shouldDescend(t)){
+            if (v[0].shouldDescend(t)) {
                 descend = true;
             } else {
                 v[1] = t;
@@ -452,5 +518,5 @@ interface SuffixArrayNode<T> {
 }
 
 export interface Map<T> {
-    [index:string]:T;
+    [index: string]: T;
 }
