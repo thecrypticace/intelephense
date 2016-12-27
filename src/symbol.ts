@@ -473,14 +473,14 @@ export class SymbolStore {
 
         let filtered: Tree<PhpSymbol>[] = [];
         let s: Tree<PhpSymbol>;
-        
+
         for (let n = 0; n < matched.length; ++n) {
             s = matched[n];
             if ((s.value.kind & kindMask) > 0) {
                 filtered.push(s);
             }
         }
-        
+
         return filtered;
     }
 
@@ -515,101 +515,75 @@ interface ResolvedVariableSet {
     vars: Map<ResolvedVariable>;
 }
 
+/**
+ * Tracks variable type within a single scope
+ */
 export class ResolvedVariableTable {
 
-    private _path: Tree<ResolvedVariableSet>[];
+    private _node: Tree<ResolvedVariableSet>;
 
     constructor(public uri: string) {
-        this._path = [new Tree<ResolvedVariableSet>({ kind: ResolvedVariableSetKind.Scope, vars: {} })];
+        this._node = new Tree<ResolvedVariableSet>({
+            kind: ResolvedVariableSetKind.Scope,
+            vars: {}
+        });
     }
 
     setVariable(name: string, type: TypeString) {
-        let vars = util.top<Tree<ResolvedVariableSet>>(this._path).value.vars;
-        vars[name] = { name: name, type: type };
+        this._node.value.vars[name] = { name: name, type: type };
     }
 
     pushBranch() {
-        let b = new Tree<ResolvedVariableSet>({ kind: ResolvedVariableSetKind.Branch, vars: {} });
-        util.top<Tree<ResolvedVariableSet>>(this._path).addChild(b);
-        this._path.push(b);
+        let b = new Tree<ResolvedVariableSet>({
+            kind: ResolvedVariableSetKind.Branch,
+            vars: {}
+        });
+        this._node.addChild(b);
+        this._node = b;
     }
 
     popBranch() {
-        this._path.pop();
+        this._node = this._node.parent;
     }
 
     pushBranchGroup() {
-        let b = new Tree<ResolvedVariableSet>({ kind: ResolvedVariableSetKind.BranchGroup, vars: {} });
-        util.top<Tree<ResolvedVariableSet>>(this._path).addChild(b);
-        this._path.push(b);
+        let b = new Tree<ResolvedVariableSet>({
+            kind: ResolvedVariableSetKind.BranchGroup,
+            vars: {}
+        });
+        this._node.addChild(b);
+        this._node = b;
     }
 
     popBranchGroup() {
 
         //can consolidate variables and prune tree as at this point
         //each variable may be any of types discovered in branches 
-        let b = this._path.pop();
-        let top = util.top(this._path);
-        let consolidator = new TypeConsolidator(top.value.vars);
+        let b = this._node;
+        this._node = b.parent;
+        let consolidator = new TypeConsolidator(this._node.value.vars);
         b.traverse(consolidator);
-        top.removeChild(b);
+        this._node.removeChild(b);
 
-    }
-
-    /**
-     * @param {string[]} carry  names of variables that should cross scope (closures)
-     */
-    pushScope(carry: string[] = null) {
-        let s = new Tree<ResolvedVariableSet>({ kind: ResolvedVariableSetKind.Scope, vars: {} });
-
-        if (carry !== null) {
-
-            let parentScope = this._path[this._scopeIndex()];
-            let types = parentScope.value.vars;
-            let v: ResolvedVariable;
-            let varName: string
-            for (let n = 0; n < carry.length; ++n) {
-                varName = carry[n];
-                if (types.hasOwnProperty(varName)) {
-                    s.value.vars[varName] = { name: varName, type: v.type };
-                }
-            }
-        }
-
-        util.top<Tree<ResolvedVariableSet>>(this._path).addChild(s);
-        this._path.push(s);
-    }
-
-    popScope() {
-        this._path.pop();
     }
 
     getType(varName: string) {
 
         let type: TypeString;
         let vars: Map<ResolvedVariable>;
+        let node = this._node;
 
-        for (let n = this._scopeIndex(); n < this._path.length; ++n) {
-            vars = this._path[n].value.vars;
-            if (vars.hasOwnProperty(varName)) {
-                type = type ? type.merge(vars[varName].type) : vars[varName].type;
+        while(node){
+
+            if (node.value.vars.hasOwnProperty(varName)) {
+                return node.value.vars[varName];
+            } else {
+                node = node.parent;
             }
 
         }
 
-        return type;
-    }
-
-    private _scopeIndex() {
-
-        let n = this._path.length;
-        while (n--) {
-            if (this._path[n].value.kind === ResolvedVariableSetKind.Scope) {
-                return n;
-            }
-        }
-
-        throw new Error('Scope not found');
+        return null;
 
     }
 
@@ -617,7 +591,7 @@ export class ResolvedVariableTable {
 
 class TypeConsolidator implements TreeVisitor<ResolvedVariableSet> {
 
-    constructor(public variables: Map<ResolvedVariable> = {}) {
+    constructor(public variables: Map<ResolvedVariable>) {
 
     }
 
@@ -626,9 +600,11 @@ class TypeConsolidator implements TreeVisitor<ResolvedVariableSet> {
         let keys = Object.keys(node.value.vars);
         let v: ResolvedVariable;
         let key: string;
+
         for (let n = 0; n < keys.length; ++n) {
             key = keys[n];
             v = node.value.vars[key];
+            
             if (this.variables.hasOwnProperty(key)) {
                 this.variables[key].type = this.variables[key].type.merge(v.type);
             } else {
@@ -636,10 +612,8 @@ class TypeConsolidator implements TreeVisitor<ResolvedVariableSet> {
             }
         }
 
-    }
-
-    shouldDescend() {
         return true;
+
     }
 
 }

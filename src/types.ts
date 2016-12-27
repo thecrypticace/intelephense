@@ -22,8 +22,40 @@ export interface DebugLogger {
     debug(message: string): void;
 }
 
+export interface EventHandler<T>{
+    (t:T):void;
+}
+
+export class Event<T> {
+
+    private _subscribed:EventHandler<T>[];
+
+    constructor(){
+        this._subscribed = [];
+    }
+
+    subscribe(handler:EventHandler<T>){
+        this._subscribed.push(handler);
+        let index = this._subscribed.length - 1;
+        let subscribed = this._subscribed;
+        return ()=>{
+            subscribed.splice(index, 1);
+        };
+    }
+
+    trigger(args:T){
+        let handler:EventHandler<T>;
+        for(let n = 0; n < this._subscribed.length; ++n){
+            handler = this._subscribed[n];
+            handler(args);
+        }
+    }
+
+}
+
 export interface TreeVisitor<T> {
 
+    haltTraverse?:Event<null>;
     preOrder?(t: Tree<T>): boolean;
     inOrder?(t: Tree<T>, afterChildIndex: number): void;
     postOrder?(t: Tree<T>): void;
@@ -70,6 +102,8 @@ export class Tree<T> {
     private _children: Tree<T>[];
     private _value: T;
 
+    parent:Tree<T>;
+
     constructor(value: T) {
         this._value = value;
         this._children = [];
@@ -89,6 +123,7 @@ export class Tree<T> {
 
     addChild(child: Tree<T>) {
         this._children.push(child);
+        child.parent = this;
         return child;
     }
 
@@ -101,6 +136,7 @@ export class Tree<T> {
     removeChild(child: Tree<T>) {
         let i = this._children.indexOf(child);
         if (i !== -1) {
+            child.parent = null;
             return this._children.splice(i, 1)[0];
         }
         return null;

@@ -930,12 +930,16 @@ const enum TypeResolverMode {
     None, Assignment, InstanceOf, ResolveVariableName, ResolveType, Foreach
 }
 
+/**
+ * Resolves variable type within a single scope
+ */
 export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
 
     private _stack: any[];
     private _modeStack: TypeResolverMode[];
 
-    constructor(public variableTable: ResolvedVariableTable, public nameResolver: NameResolver) {
+    constructor(public variableTable: ResolvedVariableTable, 
+    public nameResolver: NameResolver) {
         this._stack = [];
         this._modeStack = [];
     }
@@ -950,9 +954,12 @@ export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
             case NonTerminalType.FunctionDeclaration:
             case NonTerminalType.MethodDeclaration:
             case NonTerminalType.ClassDeclaration:
+            case NonTerminalType.TraitDeclaration:
+            case NonTerminalType.InterfaceDeclaration:
             case NonTerminalType.AnonymousClassDeclaration:
-                this.variableTable.pushScope();
-                break;
+            case NonTerminalType.Closure:
+                
+                return false;
             case NonTerminalType.IfList:
                 this.variableTable.pushBranchGroup();
                 break;
@@ -1052,21 +1059,6 @@ export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
                 break;
         }
 
-    }
-
-    shouldDescend(node: Tree<NonTerminal | Token>) {
-
-        if (node.value === null) {
-            return false;
-        }
-
-        switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.Variable:
-
-                return false;
-            default:
-                return true;
-        }
     }
 
     private _postOrderResolveType(node: Tree<NonTerminal | Token>) {
