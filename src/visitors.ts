@@ -891,13 +891,47 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
 }
 
-export class PathReader implements TreeVisitor<NonTerminal | Token>{
+export class SymbolAtLineSearch implements TreeVisitor<PhpSymbol> {
 
-    private _path: Tree<NonTerminal>[];
+    private _node: Tree<PhpSymbol>;
+    private _line: number;
+    private _kindMask:SymbolKind;
+
+    constructor(line:number, kindMask:SymbolKind) {
+        this._line = line;
+        this._kindMask = kindMask;
+    }
+
+    get node(){
+        return this._node;
+    }
+
+    preOrder(node: Tree<PhpSymbol>) {
+
+        if (node.value !== null &&
+            node.value.start >= this._line &&
+            node.value.end <= this._line &&
+            (node.value.kind & this._kindMask) > 0) {
+            this._node = node;
+            return true;
+        }
+        return false;
+
+    }
+
+}
+
+export class NonTerminalAtPositionSearch implements TreeVisitor<NonTerminal | Token>{
+
+    private _node: Tree<NonTerminal>;
     private _position: Position;
 
     constructor(position: Position) {
         this._position = position;
+    }
+
+    get node(){
+        return this._node;
     }
 
     preOrder(node: Tree<NonTerminal | Token>) {
@@ -906,28 +940,13 @@ export class PathReader implements TreeVisitor<NonTerminal | Token>{
             util.isInRange(this._position,
                 (<NonTerminal>node.value).startToken.range.start,
                 (<NonTerminal>node.value).endToken.range.end)) {
-            this._path.push(<Tree<NonTerminal>>node);
+            this._node = <Tree<NonTerminal>>node;
+            return true;
         }
+        return false;
 
     }
 
-    shouldDescend(node: Tree<NonTerminal | Token>) {
-
-        if (node.value === null || !node.value.hasOwnProperty('nonTerminalType')) {
-            return false;
-        }
-
-        return util.isInRange(this._position,
-            (<NonTerminal>node.value).startToken.range.start,
-            (<NonTerminal>node.value).endToken.range.end
-        );
-
-    }
-
-}
-
-const enum TypeResolverMode {
-    None, Assignment, InstanceOf, ResolveVariableName, ResolveType, Foreach
 }
 
 /**
