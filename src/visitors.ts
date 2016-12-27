@@ -935,19 +935,17 @@ const enum TypeResolverMode {
  */
 export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
 
-    private _stack: any[];
-    private _modeStack: TypeResolverMode[];
+    constructor(public variableTable: ResolvedVariableTable,
+        public nameResolver: NameResolver,
+        public typeResolver: TypeResolver,
+        public typeAssigner: TypeAssigner) {
 
-    constructor(public variableTable: ResolvedVariableTable, 
-    public nameResolver: NameResolver) {
-        this._stack = [];
-        this._modeStack = [];
     }
 
     preOrder(node: Tree<NonTerminal | Token>) {
 
         if (node.value === null) {
-            return;
+            return false;
         }
 
         switch ((<NonTerminal>node.value).nonTerminalType) {
@@ -958,202 +956,97 @@ export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
             case NonTerminalType.InterfaceDeclaration:
             case NonTerminalType.AnonymousClassDeclaration:
             case NonTerminalType.Closure:
-                
                 return false;
             case NonTerminalType.IfList:
+            case NonTerminalType.Switch:
                 this.variableTable.pushBranchGroup();
-                break;
+                return true;
             case NonTerminalType.If:
+            case NonTerminalType.Case:
                 this.variableTable.pushBranch();
-                break;
+                return true;
             case NonTerminalType.BinaryExpression:
                 if ((<NonTerminal>node.value).flag === NonTerminalFlag.BinaryAssign ||
                     (<NonTerminal>node.value).flag === NonTerminalFlag.BinaryInstanceOf) {
-                    this._modeStack.push(TypeResolverMode.ResolveVariableName);
+                    this._binaryExpression(node);
+                    return false;
                 }
-                break;
+                return true;
             case NonTerminalType.Foreach:
-                this._modeStack.push(TypeResolverMode.ResolveType);
-                break;
+                this._foreach(node);
+                return false;
             default:
-                break;
-        }
-
-    }
-
-    inOrder(node: Tree<NonTerminal | Token>, childIndex: number) {
-
-        if (node.value === null) {
-            return;
-        }
-
-        switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.BinaryExpression:
-                if (((<NonTerminal>node.value).flag === NonTerminalFlag.BinaryAssign ||
-                    (<NonTerminal>node.value).flag === NonTerminalFlag.BinaryInstanceOf) &&
-                    childIndex === 0) {
-                    this._modeStack.pop();
-                    this._modeStack.push(TypeResolverMode.ResolveType);
-                }
-                break;
-            case NonTerminalType.Foreach:
-
-                break;
-            default:
-                break;
+                return true;
         }
 
     }
 
     postOrder(node: Tree<NonTerminal | Token>) {
 
-        if (this._modeStack.length < 1) {
+        if (node.value === null) {
             return;
         }
 
-        if (node.value === null) {
-            this._stack.push(null);
-        }
-
         switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.FunctionDeclaration:
-            case NonTerminalType.MethodDeclaration:
-            case NonTerminalType.ClassDeclaration:
-            case NonTerminalType.AnonymousClassDeclaration:
-                this.variableTable.popScope();
-                break;
             case NonTerminalType.IfList:
+            case NonTerminalType.Switch:
                 this.variableTable.popBranchGroup();
                 break;
             case NonTerminalType.If:
+            case NonTerminalType.Case:
                 this.variableTable.popBranch();
                 break;
-            case NonTerminalType.Variable:
-                this._postOrderVariable(node);
-                break;
-            case NonTerminalType.BinaryExpression:
-                if ((<NonTerminal>node.value).flag === NonTerminalFlag.BinaryAssign) {
-                    this._postOrderAssignment(node);
-                } else {
-                    util.popMany(this._stack, node.children.length);
-                    this._stack.push(null);
-                }
-                break;
-            case NonTerminalType.Foreach:
-                this._modeStack.pop();
-                break;
-            case NonTerminalType.Name:
-
-                break;
-            case NonTerminalType.NamespaceName:
-                if (util.top(this._modeStack) === TypeResolverMode.ResolveType) {
-                    this._stack.push(util.popMany(this._stack, node.children.length).join('\\'));
-                }
-                break;
-            case undefined:
-                if (util.top(this._modeStack) === TypeResolverMode.ResolveType) {
-                    this._stack.push((<Token>node.value).text);
-                }
-                break;
             default:
                 break;
         }
 
     }
 
-    private _postOrderResolveType(node: Tree<NonTerminal | Token>) {
+    private _binaryExpression(node: Tree<NonTerminal | Token>) {
 
-        switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.FunctionDeclaration:
-            case NonTerminalType.MethodDeclaration:
-            case NonTerminalType.ClassDeclaration:
-            case NonTerminalType.AnonymousClassDeclaration:
-                this.variableTable.popScope();
-                break;
-            case NonTerminalType.IfList:
-                this.variableTable.popBranchGroup();
-                break;
-            case NonTerminalType.If:
-                this.variableTable.popBranch();
-                break;
-            case NonTerminalType.Variable:
-                this._postOrderVariable(node);
-                break;
-            case NonTerminalType.BinaryExpression:
-                if ((<NonTerminal>node.value).flag === NonTerminalFlag.BinaryAssign) {
-                    this._postOrderAssignment(node);
-                } else {
-                    util.popMany(this._stack, node.children.length);
-                    this._stack.push(null);
-                }
-                break;
-            case NonTerminalType.Foreach:
-                this._modeStack.pop();
-                break;
-            case NonTerminalType.Name:
+        let lhs = node.children[0];
+        let rhs = node.children[1];
 
-                break;
-            case NonTerminalType.NamespaceName:
-                this._stack.push(util.popMany(this._stack, node.children.length).join('\\'));
-                break;
-            case undefined:
-                this._stack.push((<Token>node.value).text);
-                break;
-            default:
-                break;
+        if (lhs.value === null ||
+            ((<NonTerminal>lhs.value).nonTerminalType !== NonTerminalType.Variable &&
+                (<NonTerminal>lhs.value).nonTerminalType !== NonTerminalType.Array &&
+                (<NonTerminal>lhs.value).nonTerminalType !== NonTerminalType.Dimension) ||
+            rhs.value === null) {
+            return;
         }
 
+        let type = this.typeResolver.resolveType(rhs);
+        if (!type || type.isEmpty()) {
+            return;
+        }
+        this.typeAssigner.assignType(lhs, type);
 
     }
 
-    private postOrderNameResolveType(node: Tree<NonTerminal>) {
-        let name = this._stack.pop();
-        if (!name) {
-            this._stack.push(null);
+    private _foreach(node: Tree<NonTerminal | Token>) {
+
+        let expr1 = node.children[0];
+        let expr3 = node.children[2];
+
+        if (expr3.value === null ||
+            ((<NonTerminal>expr3.value).nonTerminalType !== NonTerminalType.Variable &&
+                (<NonTerminal>expr3.value).nonTerminalType !== NonTerminalType.Array &&
+                (<NonTerminal>expr3.value).nonTerminalType !== NonTerminalType.Dimension) ||
+            expr1.value === null) {
+            return;
         }
 
-        switch (node.value.flag) {
-            case NonTerminalFlag.NameNotFullyQualified:
-                name = this.nameResolver.resolveNotFullyQualified(name);
-                break;
-            case NonTerminalFlag.NameRelative:
-                name = this.nameResolver.resolveRelative(name);
-                break;
-            default:
-                break;
+        let type = this.typeResolver.resolveType(expr1);
+        if (!type || type.isEmpty()) {
+            return;
         }
-    }
-
-    private _postOrderVariableResolveName(node: Tree<NonTerminal | Token>) {
-        let child = node.children[0];
-        let name = null;
-        if (child.value.hasOwnProperty('tokenType')) {
-            name = (<Token>child.value).text;
-        }
-        this._stack.push(name);
-    }
-
-    private _postOrderVariableResolveType(node: Tree<NonTerminal | Token>) {
-
-        let child = node.children[0];
-        let type = null;
-        if (child.value.hasOwnProperty('tokenType')) {
-            let type = this.variableTable.getType((<Token>child.value).text);
-        }
-        this._stack.push(type);
-    }
-
-    private _postOrderAssignment(node) {
-
-        let varName: string, type: TypeString;
-        [varName, type] = util.popMany(this._stack);
+        this.typeAssigner.assignType(expr3, type);
 
     }
-
 
 }
 
-export class VariableTypeAssignment {
+export class TypeAssigner {
 
     private _table: ResolvedVariableTable;
 
@@ -1168,7 +1061,6 @@ export class VariableTypeAssignment {
         }
 
         switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.List:
             case NonTerminalType.Array:
                 this._array(node, typeString);
             case NonTerminalType.ArrayPair:
@@ -1186,23 +1078,23 @@ export class VariableTypeAssignment {
 
     }
 
-    private _dimension(node:Tree<NonTerminal|Token>, typeString:TypeString){
+    private _dimension(node: Tree<NonTerminal | Token>, typeString: TypeString) {
         this.assignType(node.children[0], typeString.array());
     }
 
-    private _array(node:Tree<NonTerminal|Token>, typeString:TypeString){
+    private _array(node: Tree<NonTerminal | Token>, typeString: TypeString) {
         let type = typeString.arrayDereference();
 
-        if(!node.children){
+        if (!node.children) {
             return;
         }
 
-        for(let n =0; n < node.children.length; ++n){
+        for (let n = 0; n < node.children.length; ++n) {
             this._arrayPair(node.children[n], type);
         }
     }
 
-    private _arrayPair(node:Tree<NonTerminal|Token>, typeString:TypeString){
+    private _arrayPair(node: Tree<NonTerminal | Token>, typeString: TypeString) {
         this.assignType(node.children[1], typeString);
     }
 

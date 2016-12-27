@@ -576,7 +576,7 @@ export class ResolvedVariableTable {
         while(node){
 
             if (node.value.vars.hasOwnProperty(varName)) {
-                return node.value.vars[varName];
+                return node.value.vars[varName].type;
             } else {
                 node = node.parent;
             }
@@ -604,7 +604,7 @@ class TypeConsolidator implements TreeVisitor<ResolvedVariableSet> {
         for (let n = 0; n < keys.length; ++n) {
             key = keys[n];
             v = node.value.vars[key];
-            
+
             if (this.variables.hasOwnProperty(key)) {
                 this.variables[key].type = this.variables[key].type.merge(v.type);
             } else {
