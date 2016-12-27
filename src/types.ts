@@ -181,7 +181,9 @@ export class Tree<T> {
                 break;
             }
 
-            Array.prototype.push.apply(stack, node.children);
+            if(node.children){
+                Array.prototype.push.apply(stack, node.children);
+            }
 
         }
 
@@ -443,19 +445,17 @@ export class SuffixArray<T> {
         }
     }
 
-    /**
-     * May contain duplicates
-     */
+    
     match(text: string) {
 
         let nodes = this._nodeMatch(text);
-        let matches: T[] = [];
+        let matches: Set<T> = new Set<T>();
 
         for (let n = 0; n < nodes.length; ++n) {
-            Array.prototype.push.apply(matches, nodes[n].items);
+            Set.prototype.add.apply(matches, nodes[n].items);
         }
 
-        return matches;
+        return Array.from(matches);
 
     }
 

@@ -378,11 +378,11 @@ export class DocumentSymbols {
         return this._uri;
     }
 
-    get symbolTree(){
+    get symbolTree() {
         return this._symbolTree;
     }
 
-    get importTable(){
+    get importTable() {
         return this._importTable;
     }
 
@@ -464,23 +464,24 @@ export class SymbolStore {
     /**
      * Matches external symbols only
      */
-    match(text: string) {
-        let symbols = this._index.match(text);
-        let map: { [index: string]: PhpSymbol } = {};
-        let uid: string;
-        let uniqueSymbols: PhpSymbol[] = [];
-        let s: PhpSymbol;
+    match(text: string, kindMask?: SymbolKind) {
+        let matched = this._index.match(text);
 
-        for (let n = 0; n < symbols.length; ++n) {
-            s = symbols[n];
-            uid = s.uid;
-            if (!map[uid]) {
-                map[uid] = s;
-                uniqueSymbols.push(s);
-            }
+        if (!kindMask) {
+            return matched;
         }
 
-        return uniqueSymbols;
+        let filtered: Tree<PhpSymbol>[] = [];
+        let s: Tree<PhpSymbol>;
+        
+        for (let n = 0; n < matched.length; ++n) {
+            s = matched[n];
+            if ((s.value.kind & kindMask) > 0) {
+                filtered.push(s);
+            }
+        }
+        
+        return filtered;
     }
 
     private _externalSymbols(symbolTree: SymbolTree) {
