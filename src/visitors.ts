@@ -145,77 +145,27 @@ export class ImportRuleReader implements TreeVisitor<NonTerminal | Token> {
 }
 
 export class NamespaceReader implements TreeVisitor<NonTerminal | Token> {
-
-    private _stack: any[];
-    private _active: number;
-
+    
     constructor(public nameResolver: NameResolver) {
-        this._stack = [];
-        this._active = 0;
+
     }
 
     preOrder(node: Tree<NonTerminal | Token>) {
-        if (node.value !== null && (<NonTerminal>node.value).nonTerminalType === NonTerminalType.Namespace) {
-            ++this._active;
-        }
-    }
-
-    inOrder(node: Tree<NonTerminal | Token>, afterChildIndex) {
-        if (node.value !== null && (<NonTerminal>node.value).nonTerminalType === NonTerminalType.Namespace && afterChildIndex === 0) {
-            this.nameResolver.namespace = util.top(this._stack);
-        }
-    }
-
-    postOrder(node: Tree<NonTerminal | Token>) {
-
-        if (this._active < 1) {
-            return;
-        }
-
-        if (node.value === null) {
-            this._stack.push(null);
-        }
-
-        switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.NamespaceName:
-                this._stack.push(util.popMany(this._stack, node.children.length).join('\\'));
-                break;
-            case NonTerminalType.Namespace:
-                let name: string, list: boolean;
-                [name, list] = util.popMany(this._stack, 2);
-                if (name && list) {
-                    this.nameResolver.namespace = '';
-                }
-                --this._active;
-                break;
-            case NonTerminalType.TopStatementList:
-                this._stack.push(true);
-                break;
-            case undefined:
-                //Token
-                this._stack.push((<Token>node.value).text);
-            default:
-                break;
-
-        }
-
-    }
-
-    shouldDescend(node: Tree<NonTerminal | Token>) {
-
+        
         if (node.value === null) {
             return false;
         }
 
         switch ((<NonTerminal>node.value).nonTerminalType) {
             case NonTerminalType.TopStatementList:
-                return this._active < 1;
+                return true;
             case NonTerminalType.Namespace:
-            case NonTerminalType.NamespaceName:
+                this.nameResolver.namespace = namespaceNameToString(node.children[0]);
                 return true;
             default:
                 return false;
         }
+        
     }
 
 }
