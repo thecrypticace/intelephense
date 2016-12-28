@@ -72,7 +72,7 @@ export class PhpSymbol {
 
 export interface ImportRule {
     kind: SymbolKind;
-    name: string;
+    alias: string;
     fqn: string;
 }
 
@@ -100,13 +100,20 @@ export class ImportTable {
 
     match(text: string, kind: SymbolKind) {
         let r: ImportRule;
+        let name:string;
         for (let n = 0; n < this._rules.length; ++n) {
             r = this._rules[n];
-            if (r.kind === kind && text === r.name) {
+            name = r.alias ? r.alias : this._lastNamespaceNamePart(r.fqn);
+            if (r.kind === kind && text === name) {
                 return r;
             }
         }
         return null;
+    }
+
+    private _lastNamespaceNamePart(text:string){
+        let pos = text.lastIndexOf('\\');
+        return pos >= 0 ? text.slice(pos + 1) : text;
     }
 
 }

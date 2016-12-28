@@ -31,7 +31,7 @@ function namespaceNameToString(node: Tree<NonTerminal | Token>) {
     return parts.join('\\');
 }
 
-function fqn(nameNode: Tree<NonTerminal | Token>, nameResolver: NameResolver, kind: SymbolKind) {
+function nameToFqnString(nameNode: Tree<NonTerminal | Token>, nameResolver: NameResolver, kind: SymbolKind) {
 
     if (nameNode.value === null || !nameNode.children) {
         return null;
@@ -50,7 +50,7 @@ function fqn(nameNode: Tree<NonTerminal | Token>, nameResolver: NameResolver, ki
     }
 }
 
-function variableName(variableNode: Tree<NonTerminal | Token>) {
+function variableToString(variableNode: Tree<NonTerminal | Token>) {
     let child = variableNode.children[0] as Tree<Token>;
 
     if (child.value === null || child.value.tokenType !== TokenType.T_VARIABLE) {
@@ -60,133 +60,73 @@ function variableName(variableNode: Tree<NonTerminal | Token>) {
     return child.value.text;
 }
 
-export class ImportTableReader implements TreeVisitor<NonTerminal | Token> {
+export class ImportRuleReader implements TreeVisitor<NonTerminal | Token> {
 
-    private _stack: any[];
-    private _active: number;
+    private _prefix: string;
+    private _kind: SymbolKind;
 
     constructor(public importTable: ImportTable) {
-        this._stack = [];
-        this._active = 0;
+
     }
 
     preOrder(node: Tree<NonTerminal | Token>) {
-
-        if (node.value === null) {
-            return;
-        }
-
-        switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.UseStatement:
-            case NonTerminalType.UseGroup:
-                ++this._active;
-                break;
-            default:
-                break;
-        }
-
-    }
-
-    postOrder(node: Tree<NonTerminal | Token>) {
-
-        if (this._active < 1) {
-            return;
-        }
-
-        if (!node.value) {
-            this._stack.push(null);
-        }
-
-        switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.NamespaceName:
-                this._stack.push(util.popMany(this._stack, node.children.length).join('\\'));
-                break;
-            case NonTerminalType.UseElement:
-                this._postOrderUseElement(<Tree<NonTerminal>>node);
-                break;
-            case NonTerminalType.UseList:
-                this._postOrderUseList(<Tree<NonTerminal>>node);
-                break;
-            case NonTerminalType.UseStatement:
-                this._postOrderUseStatement(<Tree<NonTerminal>>node);
-                --this._active;
-                break;
-            case NonTerminalType.UseGroup:
-                this._postOrderUseGroup(<Tree<NonTerminal>>node);
-                --this._active;
-                break;
-            case undefined:
-                //Token
-                this._stack.push((<Token>node.value).text);
-            default:
-                break;
-        }
-    }
-
-    shouldDescend(node: Tree<NonTerminal | Token>) {
-
 
         if (node.value === null) {
             return false;
         }
 
         switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.TopStatementList:
-            case NonTerminalType.UseElement:
-            case NonTerminalType.UseList:
             case NonTerminalType.UseStatement:
-            case NonTerminalType.UseGroup:
-            case NonTerminalType.NamespaceName:
-            case NonTerminalType.Namespace:
+                this._useStatement(node);
                 return true;
+            case NonTerminalType.UseGroup:
+                this._useGroup(node);
+                return true;
+            case NonTerminalType.Namespace:
+            case NonTerminalType.TopStatementList:
+            case NonTerminalType.UseList:
+                return true;
+            case NonTerminalType.UseElement:
+                this._useElement(node);
+                return false;
             default:
                 return false;
         }
+
     }
 
-    private _postOrderUseGroup(node: Tree<NonTerminal>) {
-        let prefix: string, list: ImportRule[];
-        let kind = this._useFlagToSymbolKind(node.value.flag);
-        [prefix, list] = util.popMany(this._stack, 2);
-        let rule: ImportRule;
+    private _useGroup(node: Tree<NonTerminal | Token>) {
+        this._prefix = namespaceNameToString(node.children[0]);
+        this._kind = this._useFlagToSymbolKind((<NonTerminal>node.value).flag);
+    }
 
-        for (let n = 0; n < list.length; ++n) {
-            rule = list[n];
-            if (prefix) {
-                rule.fqn = prefix + '\\' + rule.fqn;
-            }
-            if (kind) {
-                rule.kind = kind;
-            }
+    private _useStatement(node: Tree<NonTerminal | Token>) {
+        this._prefix = '';
+        this._kind = this._useFlagToSymbolKind((<NonTerminal>node.value).flag);
+    }
+
+    private _useElement(node: Tree<NonTerminal | Token>) {
+
+        let rule = {
+            fqn: namespaceNameToString(node.children[0]),
+            alias: node.children[1].value ? (<Token>node.children[1].value).text : null,
+            kind: this._useFlagToSymbolKind((<NonTerminal>node.value).flag)
         }
-        this.importTable.addRuleMany(list);
-    }
 
-    private _postOrderUseStatement(node: Tree<NonTerminal>) {
-        let list = this._stack.pop() as ImportRule[];
-        let kind = this._useFlagToSymbolKind(node.value.flag);
-        for (let n = 0; n < list.length; ++n) {
-            list[n].kind = kind;
+        if (!rule.fqn) {
+            return;
         }
-        this.importTable.addRuleMany(list);
-    }
 
-    private _postOrderUseList(node: Tree<NonTerminal>) {
-        this._stack.push(util.popMany(this._stack, node.children.length).filter((v, i, a) => { return v; }));
-    }
-
-    private _postOrderUseElement(node: Tree<NonTerminal>) {
-        let fqn: string, name: string;
-        [fqn, name] = util.popMany(this._stack, 2);
-        if (fqn) {
-            this._stack.push({
-                kind: this._useFlagToSymbolKind(node.value.flag),
-                fqn: fqn,
-                name: name
-            });
-        } else {
-            this._stack.push(null);
+        if (this._prefix) {
+            rule.fqn = this._prefix + '\\' + rule.fqn;
         }
+
+        if (this._kind) {
+            rule.kind = this._kind;
+        }
+
+        this.importTable.addRule(rule);
+
     }
 
     private _useFlagToSymbolKind(flag: NonTerminalFlag) {
@@ -895,14 +835,14 @@ export class SymbolAtLineSearch implements TreeVisitor<PhpSymbol> {
 
     private _node: Tree<PhpSymbol>;
     private _line: number;
-    private _kindMask:SymbolKind;
+    private _kindMask: SymbolKind;
 
-    constructor(line:number, kindMask:SymbolKind) {
+    constructor(line: number, kindMask: SymbolKind) {
         this._line = line;
         this._kindMask = kindMask;
     }
 
-    get node(){
+    get node() {
         return this._node;
     }
 
@@ -930,7 +870,7 @@ export class NonTerminalAtPositionSearch implements TreeVisitor<NonTerminal | To
         this._position = position;
     }
 
-    get node(){
+    get node() {
         return this._node;
     }
 
@@ -1183,7 +1123,7 @@ export class TypeResolver {
             return null;
         }
 
-        let name = fqn(nameNode, this.nameResolver, SymbolKind.Function);
+        let name = nameToFqnString(nameNode, this.nameResolver, SymbolKind.Function);
         if (!name) {
             return null;
         }
@@ -1217,7 +1157,7 @@ export class TypeResolver {
 
     private _property(node: Tree<NonTerminal | Token>) {
 
-        let propName = variableName(node.children[1]);
+        let propName = variableToString(node.children[1]);
         if (!propName) {
             return null;
         }
@@ -1249,7 +1189,7 @@ export class TypeResolver {
     }
 
     private _name(node: Tree<NonTerminal | Token>) {
-        let name = fqn(node, this.nameResolver, SymbolKind.Class);
+        let name = nameToFqnString(node, this.nameResolver, SymbolKind.Class);
         return name ? new TypeString(name) : null;
     }
 
