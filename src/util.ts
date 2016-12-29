@@ -24,10 +24,17 @@ export function isString(s: any) {
 
 export function isInRange(position: Position, startRange: Position, endRange: Position) {
 
-    return (position.line > startRange.line ||
-        (position.line === startRange.line && position.char >= startRange.char)) &&
-        (position.line < endRange.line ||
-            (position.line === endRange.line && position.char <= endRange.char));
+    if(position.line < startRange.line || 
+        (position.line === startRange.line && position.char < startRange.char)){
+            return -1;
+        }
+
+    if(position.line > endRange.line || 
+        (position.line === endRange.line && position.char > endRange.char)){
+            return 1;
+        }
+
+    return 0;
 
 }
 

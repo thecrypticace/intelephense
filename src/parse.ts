@@ -4,17 +4,20 @@
 
 'use strict';
 
-import { Tree } from './types';
-import { Token, NonTerminal, AstNodeFactory } from 'php7parser';
+import { Tree, BinarySearch } from './types';
+import { Token, NonTerminal, AstNodeFactory, Position } from 'php7parser';
+import * as util from './util';
 
 export class ParsedDocument {
 
     private _tokens: Token[];
     private _parseTree: ParseTree;
+    private _tokenSearch:BinarySearch<Token>;
 
     constructor(tokens: Token[], parseTree: ParseTree) {
         this._tokens = tokens;
         this._parseTree = parseTree;
+        this._tokenSearch = new BinarySearch<Token>(this._tokens);
     }
 
     get tokens() {
@@ -23,6 +26,12 @@ export class ParsedDocument {
 
     get parseTree() {
         return this._parseTree;
+    }
+
+    tokenIndexAtPosition(pos:Position){
+        return this._tokenSearch.rank((t)=>{
+            return util.isInRange(pos, t.range.start, t.range.end);
+        });
     }
 }
 

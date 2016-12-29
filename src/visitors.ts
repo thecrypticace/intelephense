@@ -6,11 +6,11 @@
 
 import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray } from './types';
 import { NonTerminal, NonTerminalType, NonTerminalFlag, Token, TokenType } from 'php7parser';
-import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag, MethodTag } from './parse';
+import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag, MethodTag, ParsedDocument } from './parse';
 import * as util from './util';
 import {
-    PhpSymbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString, SymbolModifier,
-    SymbolTree, ResolvedVariableTable, SymbolStore
+    PhpSymbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString,
+    SymbolModifier, SymbolTree, ResolvedVariableTable, SymbolStore, DocumentSymbols
 } from './symbol';
 
 
@@ -647,7 +647,7 @@ export class SymbolAtLineSearch implements TreeVisitor<PhpSymbol> {
         if (node.value !== null &&
             node.value.start >= this._line &&
             node.value.end <= this._line &&
-            (node.value.kind & this._kindMask) > 0) {
+            (!this._kindMask || (node.value.kind & this._kindMask) > 0)) {
             this._node = node;
             return true;
         }
@@ -685,7 +685,7 @@ export class NonTerminalOrTokenAtPositionSearch implements TreeVisitor<NonTermin
             end = (<Token>node.value).range.end;
         }
 
-        if (util.isInRange(this._position, start, end)) {
+        if (util.isInRange(this._position, start, end) === 0) {
             this._node = <Tree<NonTerminal>>node;
             return true;
         }
@@ -702,7 +702,7 @@ export class NonTerminalOrTokenAtPositionSearch implements TreeVisitor<NonTermin
 export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
 
     private _haltAtNode: Tree<NonTerminal | Token>;
-    private _haltTraverse:boolean;
+    private _haltTraverse: boolean;
 
     constructor(public variableTable: ResolvedVariableTable,
         public nameResolver: NameResolver,
@@ -715,11 +715,11 @@ export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
 
     preOrder(node: Tree<NonTerminal | Token>) {
 
-        if(this._haltTraverse){
+        if (this._haltTraverse) {
             return;
         }
 
-        if(this._haltAtNode === node){
+        if (this._haltAtNode === node) {
             this._haltTraverse = true;
             return;
         }
@@ -763,7 +763,7 @@ export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
 
     postOrder(node: Tree<NonTerminal | Token>) {
 
-        if(this._haltTraverse){
+        if (this._haltTraverse) {
             return;
         }
 
@@ -927,7 +927,7 @@ export class TypeResolver {
             case NonTerminalType.Name:
                 return this._name(node);
             case NonTerminalType.BinaryExpression:
-                //todo assignment chain?
+            //todo assignment chain?
             default:
                 return null;
         }
@@ -1073,5 +1073,28 @@ export class TypeResolver {
         return null;
 
     }
+
+}
+
+export interface DocumentContext {
+    position: Position;
+    tokenIndex: number;
+    symbol: Tree<PhpSymbol>;
+    ast: Tree<NonTerminal | Token>;
+}
+
+export function documentContextFactory(position: Position, parsedDoc: ParsedDocument, docSymbols: DocumentSymbols) {
+
+    let symbolSearch = new SymbolAtLineSearch(position.line, 0);
+    docSymbols.symbolTree.traverse(symbolSearch);
+    let astSearch = new NonTerminalOrTokenAtPositionSearch(position);
+    parsedDoc.parseTree.traverse(astSearch);
+    let context:DocumentContext = {
+        position:position,
+        tokenIndex:parsedDoc.tokenIndexAtPosition(position),
+        symbol: symbolSearch.node,
+        ast:astSearch.node
+    };
+    return context;
 
 }
