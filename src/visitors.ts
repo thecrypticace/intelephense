@@ -144,31 +144,6 @@ export class ImportRuleReader implements TreeVisitor<NonTerminal | Token> {
 
 }
 
-export class NamespaceReader implements TreeVisitor<NonTerminal | Token> {
-
-    constructor(public nameResolver: NameResolver) {
-
-    }
-
-    preOrder(node: Tree<NonTerminal | Token>) {
-
-        if (node.value === null) {
-            return false;
-        }
-
-        switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.TopStatementList:
-                return true;
-            case NonTerminalType.Namespace:
-                this.nameResolver.namespace = namespaceNameToString(node.children[0]);
-                return true;
-            default:
-                return false;
-        }
-
-    }
-
-}
 
 export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
