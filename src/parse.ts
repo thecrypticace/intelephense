@@ -13,11 +13,17 @@ export class ParsedDocument {
     private _tokens: Token[];
     private _parseTree: ParseTree;
     private _tokenSearch:BinarySearch<Token>;
+    private _uri:string;
 
-    constructor(tokens: Token[], parseTree: ParseTree) {
+    constructor(uri:string, tokens: Token[], parseTree: ParseTree) {
+        this._uri = uri;
         this._tokens = tokens;
         this._parseTree = parseTree;
         this._tokenSearch = new BinarySearch<Token>(this._tokens);
+    }
+
+    get uri(){
+        return this._uri;
     }
 
     get tokens() {
@@ -33,6 +39,28 @@ export class ParsedDocument {
             return util.isInRange(pos, t.range.start, t.range.end);
         });
     }
+}
+
+export class AstStore {
+
+    private _map:{[index:string]:ParsedDocument};
+
+    constructor(){
+        this._map = {};
+    }
+
+    add(parsedDoc:ParsedDocument){
+        this._map[parsedDoc.uri] = parsedDoc;
+    }
+
+    remove(uri:string){
+        delete this._map[uri];
+    }
+
+    getParsedDocument(uri:string){
+        return this._map[uri];
+    }
+
 }
 
 export class ParseTree extends Tree<NonTerminal | Token> {

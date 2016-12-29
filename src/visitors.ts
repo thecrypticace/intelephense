@@ -1079,6 +1079,7 @@ export class TypeResolver {
 export interface DocumentContext {
     position: Position;
     tokenIndex: number;
+    token:Token;
     symbol: Tree<PhpSymbol>;
     ast: Tree<NonTerminal | Token>;
 }
@@ -1089,9 +1090,11 @@ export function documentContextFactory(position: Position, parsedDoc: ParsedDocu
     docSymbols.symbolTree.traverse(symbolSearch);
     let astSearch = new NonTerminalOrTokenAtPositionSearch(position);
     parsedDoc.parseTree.traverse(astSearch);
+    let index = parsedDoc.tokenIndexAtPosition(position);
     let context:DocumentContext = {
         position:position,
-        tokenIndex:parsedDoc.tokenIndexAtPosition(position),
+        tokenIndex:index,
+        token:parsedDoc.tokens[index],
         symbol: symbolSearch.node,
         ast:astSearch.node
     };

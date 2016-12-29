@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray, Map } from './types';
+import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray } from './types';
 import { NonTerminal, NonTerminalType, NonTerminalFlag, Token } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag } from './parse';
 import * as util from './util';
@@ -291,7 +291,7 @@ export class TypeString {
     }
 
     private _unique(parts: string[]) {
-        let map: Map<string> = {};
+        let map: {[index:string]:string} = {};
         let part: string;
 
         for (let n = 0; n < parts.length; ++n) {
@@ -441,7 +441,7 @@ function symbolSuffixes(node: Tree<PhpSymbol>) {
 
 export class SymbolStore {
 
-    private _map: Map<DocumentSymbols>;
+    private _map: {[index:string]:DocumentSymbols};
     private _index: SuffixArray<Tree<PhpSymbol>>;
 
     constructor() {
@@ -521,7 +521,7 @@ const enum ResolvedVariableSetKind {
 
 interface ResolvedVariableSet {
     kind: ResolvedVariableSetKind;
-    vars: Map<ResolvedVariable>;
+    vars: {[index:string]:ResolvedVariable};
 }
 
 /**
@@ -579,7 +579,7 @@ export class ResolvedVariableTable {
     getType(varName: string) {
 
         let type: TypeString;
-        let vars: Map<ResolvedVariable>;
+        let vars: {[index:string]:ResolvedVariable};
         let node = this._node;
 
         while(node){
@@ -600,7 +600,7 @@ export class ResolvedVariableTable {
 
 class TypeConsolidator implements TreeVisitor<ResolvedVariableSet> {
 
-    constructor(public variables: Map<ResolvedVariable>) {
+    constructor(public variables: {[index:string]:ResolvedVariable}) {
 
     }
 
