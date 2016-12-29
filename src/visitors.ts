@@ -926,10 +926,11 @@ export class TypeResolver {
                 return this._call(node);
             case NonTerminalType.Name:
                 return this._name(node);
+            case NonTerminalType.BinaryExpression:
+                //todo assignment chain?
             default:
                 return null;
         }
-
 
     }
 
@@ -1074,6 +1075,3 @@ export class TypeResolver {
     }
 
 }
-
-
-
