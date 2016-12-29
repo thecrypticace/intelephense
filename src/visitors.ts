@@ -172,14 +172,13 @@ export class NamespaceReader implements TreeVisitor<NonTerminal | Token> {
 
 export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
-    private _tree: Tree<PhpSymbol>;
     private _doc: PhpDoc;
     private _modifiers: SymbolModifier;
     private _kind: SymbolKind;
 
     constructor(public uri: string, public importTable: ImportTable,
         public nameResolver: NameResolver, public docBlockParser: PhpDocParser,
-        public symbolTreeRoot: SymbolTree) {
+        public root: Tree<PhpSymbol>) {
     }
 
     preOrder(node: Tree<NonTerminal | Token>) {
@@ -218,26 +217,31 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
                 return true;
             case NonTerminalType.ConstantDeclaration:
                 this._propertyOrConstantDeclaration(node);
-                return true;
+                return false;
             case NonTerminalType.UseTrait:
                 this._useTrait(node);
-                return true;
+                return false;
+            case NonTerminalType.TypeExpression:
+                this._typeExpression(node);
+                return false;
             case NonTerminalType.AnonymousClassDeclaration:
-
+                this._classDeclaration(node, true);
                 return true;
             case NonTerminalType.Closure:
-
+                this._closure(node);
                 return true;
             case NonTerminalType.ClosureUseVariable:
-
-                return true;
+                this._closureUseVariable(node);
+                return false;
+            case undefined:
+                //Token
+                this._token(node);
+                return false;
             default:
                 return true;
         }
 
     }
-
-
 
     postOrder(node: Tree<NonTerminal | Token>) {
 
@@ -248,8 +252,8 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         switch ((<NonTerminal>node.value).nonTerminalType) {
 
             case NonTerminalType.Namespace:
-                if (this._tree.parent) {
-                    this._tree = this._tree.parent;
+                if (this.root.parent) {
+                    this.root = this.root.parent;
                 }
                 break;
             case NonTerminalType.FunctionDeclaration:
@@ -283,6 +287,27 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
+    private _token(node:Tree<NonTerminal|Token>){
+
+        if((<Token>node.value).tokenType !== TokenType.T_VARIABLE){
+            return;
+        }
+
+        let name = (<Token>node.value).text;
+        let existing = this.root.children.find((v,i,a)=>{
+            return v.value.name === name;
+        });
+
+        if(existing){
+            return;
+        }
+
+        let s = new PhpSymbol(SymbolKind.Variable, name);
+        s.start = s.end = (<Token>node.value).range.start.line;
+        this.root.addChild(new Tree<PhpSymbol>(s));
+
+    }
+
     private _namespace(node: Tree<NonTerminal | Token>) {
 
         let name = namespaceNameToString(node.children[0]);
@@ -291,63 +316,44 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             return;
         }
 
-        this._tree.addChild(new Tree<PhpSymbol>(new PhpSymbol(SymbolKind.Namespace, name)));
+        this.root.addChild(new Tree<PhpSymbol>(new PhpSymbol(SymbolKind.Namespace, name)));
 
     }
 
-    shouldDescend(node: Tree<NonTerminal | Token>) {
+    private _closure(node: Tree<NonTerminal | Token>) {
 
-        if (!node.value) {
-            return false;
+        //params, use, typeExpr, body
+
+        let name = 'Closure:' + util.guid();
+        let s = new PhpSymbol(SymbolKind.Function, name);
+        s.modifiers = SymbolModifier.Anonymous;
+        let t = new Tree<PhpSymbol>(s);
+        this.root.addChild(t);
+        this.root = t;
+
+    }
+
+    private _closureUseVariable(node: Tree<NonTerminal | Token>) {
+
+        if (!node.children) {
+            return;
         }
 
-        switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.Block:
-            case NonTerminalType.Case:
-            case NonTerminalType.CaseList:
-            case NonTerminalType.Catch:
-            case NonTerminalType.CatchList:
-            case NonTerminalType.ClassConstantDeclaration:
-            case NonTerminalType.ClassConstantDeclarationList:
-            case NonTerminalType.ClassDeclaration:
-            case NonTerminalType.ClassStatementList:
-            case NonTerminalType.ConstantDeclaration:
-            case NonTerminalType.ConstantDeclarationList:
-            case NonTerminalType.DoWhile:
-            case NonTerminalType.Finally:
-            case NonTerminalType.For:
-            case NonTerminalType.Foreach:
-            case NonTerminalType.FunctionDeclaration:
-            case NonTerminalType.If:
-            case NonTerminalType.IfList:
-            case NonTerminalType.InnerStatementList:
-            case NonTerminalType.InterfaceDeclaration:
-            case NonTerminalType.MethodDeclaration:
-            case NonTerminalType.Name:
-            case NonTerminalType.NameList:
-            case NonTerminalType.Namespace:
-            case NonTerminalType.NamespaceName:
-            case NonTerminalType.Parameter:
-            case NonTerminalType.ParameterList:
-            case NonTerminalType.PropertyDeclaration:
-            case NonTerminalType.PropertyDeclarationList:
-            case NonTerminalType.Switch:
-            case NonTerminalType.TopStatementList:
-            case NonTerminalType.TraitDeclaration:
-            case NonTerminalType.Try:
-            case NonTerminalType.TypeExpression:
-            case NonTerminalType.UseTrait:
-            case NonTerminalType.While:
-                return true;
-            default:
-                return false;
+        let name = node.children[0].value ? (<Token>node.children[0].value).text : null;
+        if (!name) {
+            return;
         }
+        let s = new PhpSymbol(SymbolKind.Variable, name);
+        let t = new Tree<PhpSymbol>(s);
+        this.root.addChild(t);
+        this._assignLocation(s, <NonTerminal>node.value);
+
     }
 
     private _useTrait(node: Tree<NonTerminal | Token>) {
 
         let nameList = this._nameList(node.children[0]);
-        Array.prototype.push.apply(this._tree.value.associated, nameList);
+        Array.prototype.push.apply(this.root.value.associated, nameList);
 
         //todo trait adaptations
     }
@@ -364,9 +370,8 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         let s = new PhpSymbol(SymbolKind.Parameter, name);
         let t = new Tree<PhpSymbol>(s);
         s.modifiers = this._nonTerminalFlagToSymbolModifier((<NonTerminal>node.value).flag);
-        s.type = this._typeExpression(node.children[0]);
-        this._tree.addChild(t);
-        this._tree = t;
+        this.root.addChild(t);
+        this.root = t;
         this._assignLocation(s, <NonTerminal>node.value);
 
         if (this._doc) {
@@ -398,8 +403,8 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
         this._assignLocation(s, <NonTerminal>node.value);
         this._assignClassPhpDoc(t, (<NonTerminal>node.value).doc);
-        this._tree.addChild(t);
-        this._tree = t;
+        this.root.addChild(t);
+        this.root = t;
     }
 
     private _traitDeclaration(node: Tree<NonTerminal | Token>) {
@@ -416,8 +421,8 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
         this._assignLocation(s, <NonTerminal>node.value);
         this._assignClassPhpDoc(t, (<NonTerminal>node.value).doc);
-        this._tree.addChild(t);
-        this._tree = t;
+        this.root.addChild(t);
+        this.root = t;
 
     }
 
@@ -449,8 +454,8 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
         }
 
-        this._tree.addChild(t);
-        this._tree = t;
+        this.root.addChild(t);
+        this.root = t;
 
     }
 
@@ -463,68 +468,10 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-    private _assignPropertyPhpDoc(s: PhpSymbol, doc: PhpDoc) {
-        if (!doc) {
-            return;
-        }
-
-        let tag: TypeTag;
-        for (let n = 0; n < doc.tags.length; ++n) {
-            tag = doc.tags[n] as TypeTag;
-            if (tag.tagName === '@var' && (!tag.name || tag.name === s.name)) {
-                s.description = tag.description;
-                s.type = new TypeString(tag.typeString);
-                break;
-            }
-        }
-
-    }
-
     private _assignLocation(s: PhpSymbol, n: NonTerminal) {
         s.start = n.startToken.range.start.line;
         s.end = n.startToken.range.end.line;
         s.uri = this.uri;
-    }
-
-    private _assignClassBody(t: Tree<PhpSymbol>, body: (Tree<PhpSymbol> | Tree<PhpSymbol>[] | string[])[]) {
-
-        if (!body) {
-            return;
-        }
-        let child: Tree<PhpSymbol> | Tree<PhpSymbol>[] | string[];
-        let gChild: Tree<PhpSymbol> | string;
-
-        for (let n = 0; n < body.length; ++n) {
-            child = body[n];
-
-            if (Array.isArray(child)) {
-                if (!child.length) {
-                    continue;
-                }
-
-                if (util.isString(child[0])) {
-                    //traits
-                    if (!t.value.associated) {
-                        t.value.associated = [];
-                    }
-                    Array.prototype.push.apply(t.value.associated, child);
-                } else {
-                    //constants, properties
-                    for (let k = 0; k < child.length; ++k) {
-                        gChild = child[k];
-                        //property/constant
-                        (<Tree<PhpSymbol>>gChild).value.scope = t.value.name;
-                        t.addChild(<Tree<PhpSymbol>>gChild);
-                    }
-                }
-
-            }
-            else {
-                //methods
-                (<Tree<PhpSymbol>>child).value.scope = t.value.name;
-                t.addChild(<Tree<PhpSymbol>>child);
-            }
-        }
     }
 
     private _assignClassPhpDoc(t: Tree<PhpSymbol>, doc: Token) {
@@ -550,7 +497,6 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         name = this.nameResolver.resolveRelative(name);
         let s = new PhpSymbol(kind, name);
         s.modifiers = this._nonTerminalFlagToSymbolModifier((<NonTerminal>node.value).flag);
-        s.type = this._typeExpression(node.children[2]);
         let t = new Tree<PhpSymbol>(s);
         this._doc = (<NonTerminal>node.value).doc ?
             this.docBlockParser.parse((<NonTerminal>node.value).doc.text) : null;
@@ -566,8 +512,8 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         }
 
         this._assignLocation(s, <NonTerminal>node.value);
-        this._tree.addChild(t);
-        this._tree = t;
+        this.root.addChild(t);
+        this.root = t;
 
     }
 
@@ -577,20 +523,23 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             return null;
         }
 
-        let type: TypeString;
+        let type: string;
 
         if (node.children[0].value === null) {
-            return null;
+            return;
         } else if ((<NonTerminal>node.children[0].value).nonTerminalType === NonTerminalType.Name) {
-            let name = nameToFqnString(node.children[0], this.nameResolver, SymbolKind.Class);
-            if (!name) {
-                return null;
+            type = nameToFqnString(node.children[0], this.nameResolver, SymbolKind.Class);
+            if (!type) {
+                return;
             }
-            return new TypeString(name);
+
         } else {
             //Token
-            return new TypeString((<Token>node.children[0].value).text);
+            type = (<Token>node.children[0].value).text;
         }
+
+        this.root.value.type = this.root.value.type ?
+            this.root.value.type.merge(type) : new TypeString(type);
 
     }
 
@@ -611,16 +560,23 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         return names;
     }
 
-    private _classDeclaration(node: Tree<NonTerminal | Token>) {
+    private _classDeclaration(node: Tree<NonTerminal | Token>, isAnonymous = false) {
 
-        let name = node.children[0].value !== null ?
-            (<Token>node.children[0].value).text : null;
+        let name: string;
 
-        if (!name) {
-            return;
+        if (isAnonymous) {
+            name = 'AnonymousClass:' + util.guid();
+        } else {
+            name = node.children[0].value !== null ?
+                (<Token>node.children[0].value).text : null;
+
+            if (!name) {
+                return;
+            }
+
+            name = this.nameResolver.resolveRelative(name);
         }
 
-        name = this.nameResolver.resolveRelative(name);
         let s = new PhpSymbol(SymbolKind.Class, name);
         let t = new Tree<PhpSymbol>(s);
         s.associated = [];
@@ -645,8 +601,8 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
         this._assignClassPhpDoc(t, (<NonTerminal>node.value).doc);
         this._assignLocation(s, <NonTerminal>node.value);
-        this._tree.addChild(t);
-        this._tree = t;
+        this.root.addChild(t);
+        this.root = t;
 
     }
 
@@ -691,11 +647,11 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             symbolModifier |= SymbolModifier.Static;
         }
 
-        if((flag & NonTerminalFlag.PassByRef) === NonTerminalFlag.PassByRef){
+        if ((flag & NonTerminalFlag.PassByRef) === NonTerminalFlag.PassByRef) {
             symbolModifier |= SymbolModifier.Reference;
         }
 
-        if((flag & NonTerminalFlag.Variadic) === NonTerminalFlag.Variadic){
+        if ((flag & NonTerminalFlag.Variadic) === NonTerminalFlag.Variadic) {
             symbolModifier |= SymbolModifier.Variadic;
         }
 

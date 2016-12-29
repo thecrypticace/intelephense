@@ -552,7 +552,3 @@ interface SuffixArrayNode<T> {
     key: string;
     items: T[];
 }
-
-export interface Map<T> {
-    [index: string]: T;
-}
