@@ -742,9 +742,9 @@ export class SymbolAtLineSearch implements TreeVisitor<PhpSymbol> {
 
 }
 
-export class NonTerminalAtPositionSearch implements TreeVisitor<NonTerminal | Token>{
+export class NonTerminalOrTokenAtPositionSearch implements TreeVisitor<NonTerminal | Token>{
 
-    private _node: Tree<NonTerminal>;
+    private _node: Tree<NonTerminal|Token>;
     private _position: Position;
 
     constructor(position: Position) {
@@ -757,13 +757,24 @@ export class NonTerminalAtPositionSearch implements TreeVisitor<NonTerminal | To
 
     preOrder(node: Tree<NonTerminal | Token>) {
 
-        if (node.value !== null && node.value.hasOwnProperty('nonTerminalType') &&
-            util.isInRange(this._position,
-                (<NonTerminal>node.value).startToken.range.start,
-                (<NonTerminal>node.value).endToken.range.end)) {
+        if(node.value !== null){
+            return false;
+        }
+
+        let start:Position, end:Position;
+        if(node.value.hasOwnProperty('nonTerminalType')){
+            start = (<NonTerminal>node.value).startToken.range.start;
+            end = (<NonTerminal>node.value).endToken.range.end;
+        } else {
+            start = (<Token>node.value).range.start;
+            end = (<Token>node.value).range.end;
+        }
+
+        if (util.isInRange(this._position, start, end)) {
             this._node = <Tree<NonTerminal>>node;
             return true;
         }
+        
         return false;
 
     }
