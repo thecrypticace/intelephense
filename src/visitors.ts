@@ -744,7 +744,7 @@ export class SymbolAtLineSearch implements TreeVisitor<PhpSymbol> {
 
 export class NonTerminalOrTokenAtPositionSearch implements TreeVisitor<NonTerminal | Token>{
 
-    private _node: Tree<NonTerminal|Token>;
+    private _node: Tree<NonTerminal | Token>;
     private _position: Position;
 
     constructor(position: Position) {
@@ -757,12 +757,12 @@ export class NonTerminalOrTokenAtPositionSearch implements TreeVisitor<NonTermin
 
     preOrder(node: Tree<NonTerminal | Token>) {
 
-        if(node.value !== null){
+        if (node.value !== null) {
             return false;
         }
 
-        let start:Position, end:Position;
-        if(node.value.hasOwnProperty('nonTerminalType')){
+        let start: Position, end: Position;
+        if (node.value.hasOwnProperty('nonTerminalType')) {
             start = (<NonTerminal>node.value).startToken.range.start;
             end = (<NonTerminal>node.value).endToken.range.end;
         } else {
@@ -774,7 +774,7 @@ export class NonTerminalOrTokenAtPositionSearch implements TreeVisitor<NonTermin
             this._node = <Tree<NonTerminal>>node;
             return true;
         }
-        
+
         return false;
 
     }
@@ -786,14 +786,28 @@ export class NonTerminalOrTokenAtPositionSearch implements TreeVisitor<NonTermin
  */
 export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
 
+    private _haltAtNode: Tree<NonTerminal | Token>;
+    private _haltTraverse:boolean;
+
     constructor(public variableTable: ResolvedVariableTable,
         public nameResolver: NameResolver,
         public typeResolver: TypeResolver,
-        public typeAssigner: TypeAssigner) {
-
+        public typeAssigner: TypeAssigner,
+        haltAtNode: Tree<NonTerminal | Token> = null) {
+        this._haltAtNode = haltAtNode;
+        this._haltTraverse = false;
     }
 
     preOrder(node: Tree<NonTerminal | Token>) {
+
+        if(this._haltTraverse){
+            return;
+        }
+
+        if(this._haltAtNode === node){
+            this._haltTraverse = true;
+            return;
+        }
 
         if (node.value === null) {
             return false;
@@ -833,6 +847,10 @@ export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
     }
 
     postOrder(node: Tree<NonTerminal | Token>) {
+
+        if(this._haltTraverse){
+            return;
+        }
 
         if (node.value === null) {
             return;
