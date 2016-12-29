@@ -34,7 +34,9 @@ export enum SymbolModifier {
     ReadOnly = 1 << 6,
     WriteOnly = 1 << 7,
     Magic = 1 << 8,
-    Anonymous = 1 << 9
+    Anonymous = 1 << 9,
+    Reference = 1 << 10,
+    Variadic = 1 << 11
 }
 
 export class PhpSymbol {
