@@ -657,7 +657,7 @@ export class SymbolAtLineSearch implements TreeVisitor<PhpSymbol> {
 
 }
 
-export class NonTerminalAtPositionSearch implements TreeVisitor<Phrase | Token>{
+export class PhraseAtPositionSearch implements TreeVisitor<Phrase | Token>{
 
     private _node: Tree<Phrase | Token>;
     private _position: Position;
@@ -1075,29 +1075,116 @@ export class TypeResolver {
 
 }
 
-export interface DocumentContext {
-    position: Position;
-    tokenIndex: number;
-    token:Token;
-    symbol: Tree<PhpSymbol>;
-    ast: Tree<Phrase | Token>;
+export class DocumentContext {
+
+    private _tokenIndex: number;
+    private _symbol: Tree<PhpSymbol>;
+    private _phrase: Tree<Phrase | Token>;
+
+    constructor(public position: Position,
+        public parsedDoc: ParsedDocument,
+        public docSymbols: DocumentSymbols,
+        public symbolStore: SymbolStore) {
+
+    }
+
+    get phrase() {
+        if (this._phrase === undefined) {
+            let search = new PhraseAtPositionSearch(this.position);
+            this.parsedDoc.parseTree.traverse(search);
+            this._phrase = search.node;
+        }
+        return this._phrase;
+    }
+
+    get symbol() {
+        if (this._symbol === undefined) {
+            let search = new SymbolAtLineSearch(this.position.line, 0);
+            this.docSymbols.symbolTree.traverse(search);
+            this._symbol = search.node;
+        }
+        return this._symbol;
+    }
+
+    get token() {
+        return this.parsedDoc.tokens[this.tokenIndex];
+    }
+
+    get tokenIndex() {
+        if (this._tokenIndex === undefined) {
+            this._tokenIndex = this.parsedDoc.tokenIndexAtPosition(this.position);
+        }
+        return this._tokenIndex;
+    }
+
+    get namespace(){
+        let s = this.symbol;
+  
+        if(!s){
+            return null;
+        }
+
+        if(s.value.kind === SymbolKind.Namespace){
+            return s;
+        }
+
+        return s.ancestor((x)=>{
+            return x.value.kind === SymbolKind.Namespace;
+        });
+    }
+
+    get classSymbol(){
+
+        let s = this.symbol;
+        
+        if(!s){
+            return null;
+        }
+
+        let kindMask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait;
+
+        if((s.value.kind & kindMask) > 0){
+            return s;
+        }
+
+        return s.ancestor((x)=>{
+            return (s.value.kind & kindMask) > 0;
+        });
+
+    }
+
+    resolveType(node: Tree<Phrase | Token>) {
+
+        if ((<Phrase>node.value).phraseType === PhraseType.Name) {
+            return this._typeResolveName(<Tree<Phrase>>node);
+        } else if ((<Token>node.value).tokenType === TokenType.T_VARIABLE &&
+            (<Token>node.value).text === '$this') {
+            return this._typeResolveThis(<Tree<Token>>node);
+        }
+
+        let nameResolver = new NameResolver(this.docSymbols.importTable);
+        let ns = this.namespace;
+        let classSymbol = this.classSymbol;
+        nameResolver.namespace = ns ? ns.value.name : '';
+        nameResolver.thisName = classSymbol ? classSymbol.value.name : '';
+        let varTable = new ResolvedVariableTable();
+        let typeResolver = new VariableTypeResolver(new ResolvedVariableTable(),
+            nameResolver,
+            new TypeResolver(nameResolver, varTable, this.symbolStore),
+            new TypeAssigner(varTable),
+            node);
+
+    }
+
+    private _namesp
+
+    private _typeResolveThis(token: Tree<Token>) {
+
+    }
+
+    private _typeResolveName(name: Tree<Phrase>) {
+
+    }
+
 }
 
-export function documentContextFactory(position: Position, parsedDoc: ParsedDocument, docSymbols: DocumentSymbols) {
-
-    let symbolSearch = new SymbolAtLineSearch(position.line, 0);
-    docSymbols.symbolTree.traverse(symbolSearch);
-    let astSearch = new NonTerminalAtPositionSearch(position);
-    parsedDoc.parseTree.traverse(astSearch);
-    let index = parsedDoc.tokenIndexAtPosition(position);
-    let context:DocumentContext = {
-        position:position,
-        tokenIndex:index,
-        token:parsedDoc.tokens[index],
-        symbol: symbolSearch.node,
-        ast:astSearch.node
-    };
-
-    return context;
-
-}

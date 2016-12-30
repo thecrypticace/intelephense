@@ -531,7 +531,7 @@ export class ResolvedVariableTable {
 
     private _node: Tree<ResolvedVariableSet>;
 
-    constructor(public uri: string) {
+    constructor() {
         this._node = new Tree<ResolvedVariableSet>({
             kind: ResolvedVariableSetKind.Scope,
             vars: {}
