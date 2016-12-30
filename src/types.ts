@@ -190,13 +190,8 @@ export class Tree<T> {
 
             for (let n = 0, l = this._children.length; n < l; ++n) {
                 this._children[n].traverse(visitor);
-                if (visitor.hasOwnProperty('inOrder')) {
-                    visitor.inOrder(this, n);
-                }
             }
 
-        } else if (visitor.hasOwnProperty('inOrder')) {
-            visitor.inOrder(this, -1);
         }
 
         if (visitor.hasOwnProperty('postOrder')) {
@@ -223,6 +218,18 @@ export class Tree<T> {
 
         }
 
+    }
+
+    ancestor(predicate:Predicate<Tree<T>>){
+
+        let ancestor = this as Tree<T>;
+        while((ancestor = ancestor.parent)){
+            if(predicate(ancestor)){
+                break;
+            }
+        }
+
+        return ancestor;
     }
 
 }

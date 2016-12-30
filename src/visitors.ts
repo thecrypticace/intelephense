@@ -5,7 +5,7 @@
 'use strict';
 
 import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray } from './types';
-import { NonTerminal, NonTerminalType, NonTerminalFlag, Token, TokenType } from 'php7parser';
+import { Phrase, PhraseType, PhraseFlag, Token, TokenType } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag, MethodTag, ParsedDocument } from './parse';
 import * as util from './util';
 import {
@@ -14,7 +14,7 @@ import {
 } from './symbol';
 
 
-function namespaceNameToString(node: Tree<NonTerminal | Token>) {
+function namespaceNameToString(node: Tree<Phrase | Token>) {
 
     if (!node.children) {
         return null;
@@ -31,7 +31,7 @@ function namespaceNameToString(node: Tree<NonTerminal | Token>) {
     return parts.join('\\');
 }
 
-function nameToFqnString(nameNode: Tree<NonTerminal | Token>, nameResolver: NameResolver, kind: SymbolKind) {
+function nameToFqnString(nameNode: Tree<Phrase | Token>, nameResolver: NameResolver, kind: SymbolKind) {
 
     if (nameNode.value === null || !nameNode.children) {
         return null;
@@ -39,10 +39,10 @@ function nameToFqnString(nameNode: Tree<NonTerminal | Token>, nameResolver: Name
 
     let namespaceName = namespaceNameToString(nameNode.children[0]);
 
-    switch ((<NonTerminal>nameNode.value).flag) {
-        case NonTerminalFlag.NameRelative:
+    switch ((<Phrase>nameNode.value).flag) {
+        case PhraseFlag.NameRelative:
             return nameResolver.resolveRelative(namespaceName);
-        case NonTerminalFlag.NameNotFullyQualified:
+        case PhraseFlag.NameNotFullyQualified:
             return nameResolver.resolveNotFullyQualified(namespaceName, kind);
         default:
             //fqn
@@ -50,7 +50,7 @@ function nameToFqnString(nameNode: Tree<NonTerminal | Token>, nameResolver: Name
     }
 }
 
-function variableToString(variableNode: Tree<NonTerminal | Token>) {
+function variableToString(variableNode: Tree<Phrase | Token>) {
     let child = variableNode.children[0] as Tree<Token>;
 
     if (child.value === null || child.value.tokenType !== TokenType.T_VARIABLE) {
@@ -60,7 +60,7 @@ function variableToString(variableNode: Tree<NonTerminal | Token>) {
     return child.value.text;
 }
 
-export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
+export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     private _doc: PhpDoc;
     private _modifiers: SymbolModifier;
@@ -72,72 +72,72 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         public tree: Tree<PhpSymbol>) {
     }
 
-    preOrder(node: Tree<NonTerminal | Token>) {
+    preOrder(node: Tree<Phrase | Token>) {
 
         if (node.value === null) {
             return false;
         }
 
-        switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.UseStatement:
+        switch ((<Phrase>node.value).phraseType) {
+            case PhraseType.UseStatement:
                 this._useStatement(node);
                 return true;
-            case NonTerminalType.UseGroup:
+            case PhraseType.UseGroup:
                 this._useGroup(node);
                 return true;
-            case NonTerminalType.UseElement:
+            case PhraseType.UseElement:
                 this._useElement(node);
                 return false;
-            case NonTerminalType.Namespace:
+            case PhraseType.Namespace:
                 this._namespace(node);
                 return true;
-            case NonTerminalType.FunctionDeclaration:
+            case PhraseType.FunctionDeclaration:
                 this._functionOrMethodDeclaration(node, SymbolKind.Function);
                 return true;
-            case NonTerminalType.MethodDeclaration:
+            case PhraseType.MethodDeclaration:
                 this._functionOrMethodDeclaration(node, SymbolKind.Method);
                 return true;
-            case NonTerminalType.ClassDeclaration:
+            case PhraseType.ClassDeclaration:
                 this._classDeclaration(node);
                 return true;
-            case NonTerminalType.TraitDeclaration:
+            case PhraseType.TraitDeclaration:
                 this._traitDeclaration(node);
                 return true;
-            case NonTerminalType.InterfaceDeclaration:
+            case PhraseType.InterfaceDeclaration:
                 this._interfaceDeclaration(node);
                 return true;
-            case NonTerminalType.PropertyDeclarationList:
+            case PhraseType.PropertyDeclarationList:
                 this._propertyOrConstantDeclarationStatement(node, SymbolKind.Property);
                 return true;
-            case NonTerminalType.ClassConstantDeclarationList:
+            case PhraseType.ClassConstantDeclarationList:
                 this._propertyOrConstantDeclarationStatement(node, SymbolKind.Constant);
                 return true;
-            case NonTerminalType.ConstantDeclarationList:
+            case PhraseType.ConstantDeclarationList:
                 this._propertyOrConstantDeclarationStatement(node, SymbolKind.Constant);
                 return true;
-            case NonTerminalType.ConstantDeclaration:
+            case PhraseType.ConstantDeclaration:
                 this._propertyOrConstantDeclaration(node);
                 return false;
-            case NonTerminalType.UseTrait:
+            case PhraseType.UseTrait:
                 this._useTrait(node);
                 return false;
-            case NonTerminalType.TypeExpression:
+            case PhraseType.TypeExpression:
                 this._typeExpression(node);
                 return false;
-            case NonTerminalType.AnonymousClassDeclaration:
+            case PhraseType.AnonymousClassDeclaration:
                 this._classDeclaration(node, true);
                 return true;
-            case NonTerminalType.Closure:
+            case PhraseType.Closure:
                 this._closure(node);
                 return true;
-            case NonTerminalType.ClosureUseVariable:
+            case PhraseType.ClosureUseVariable:
                 this._closureUseVariable(node);
                 return false;
             case undefined:
                 //Token
                 this._token(node);
                 return false;
-            case NonTerminalType.NameList:
+            case PhraseType.NameList:
                 return false;
             default:
                 return true;
@@ -145,24 +145,24 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-    postOrder(node: Tree<NonTerminal | Token>) {
+    postOrder(node: Tree<Phrase | Token>) {
 
         if (node.value === null) {
             return;
         }
 
-        switch ((<NonTerminal>node.value).nonTerminalType) {
+        switch ((<Phrase>node.value).phraseType) {
 
-            case NonTerminalType.Namespace:
-            case NonTerminalType.FunctionDeclaration:
-            case NonTerminalType.ClassDeclaration:
-            case NonTerminalType.TraitDeclaration:
-            case NonTerminalType.InterfaceDeclaration:
-            case NonTerminalType.PropertyDeclaration:
-            case NonTerminalType.ClassConstantDeclaration:
-            case NonTerminalType.ConstantDeclaration:
-            case NonTerminalType.MethodDeclaration:
-            case NonTerminalType.Parameter:
+            case PhraseType.Namespace:
+            case PhraseType.FunctionDeclaration:
+            case PhraseType.ClassDeclaration:
+            case PhraseType.TraitDeclaration:
+            case PhraseType.InterfaceDeclaration:
+            case PhraseType.PropertyDeclaration:
+            case PhraseType.ClassConstantDeclaration:
+            case PhraseType.ConstantDeclaration:
+            case PhraseType.MethodDeclaration:
+            case PhraseType.Parameter:
                 this.tree = this.tree.parent;
                 break;
             default:
@@ -171,22 +171,22 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-    private _useGroup(node: Tree<NonTerminal | Token>) {
+    private _useGroup(node: Tree<Phrase | Token>) {
         this._prefix = namespaceNameToString(node.children[0]);
-        this._kind = this._useFlagToSymbolKind((<NonTerminal>node.value).flag);
+        this._kind = this._useFlagToSymbolKind((<Phrase>node.value).flag);
     }
 
-    private _useStatement(node: Tree<NonTerminal | Token>) {
+    private _useStatement(node: Tree<Phrase | Token>) {
         this._prefix = '';
-        this._kind = this._useFlagToSymbolKind((<NonTerminal>node.value).flag);
+        this._kind = this._useFlagToSymbolKind((<Phrase>node.value).flag);
     }
 
-    private _useElement(node: Tree<NonTerminal | Token>) {
+    private _useElement(node: Tree<Phrase | Token>) {
 
         let rule = {
             fqn: namespaceNameToString(node.children[0]),
             alias: node.children[1].value ? (<Token>node.children[1].value).text : null,
-            kind: this._useFlagToSymbolKind((<NonTerminal>node.value).flag)
+            kind: this._useFlagToSymbolKind((<Phrase>node.value).flag)
         }
 
         if (!rule.fqn) {
@@ -205,20 +205,20 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-    private _useFlagToSymbolKind(flag: NonTerminalFlag) {
+    private _useFlagToSymbolKind(flag: PhraseFlag) {
         switch (flag) {
-            case NonTerminalFlag.UseClass:
+            case PhraseFlag.UseClass:
                 return SymbolKind.Class;
-            case NonTerminalFlag.UseConstant:
+            case PhraseFlag.UseConstant:
                 return SymbolKind.Constant;
-            case NonTerminalFlag.UseFunction:
+            case PhraseFlag.UseFunction:
                 return SymbolKind.Function;
             default:
                 return 0;
         }
     }
 
-    private _token(node: Tree<NonTerminal | Token>) {
+    private _token(node: Tree<Phrase | Token>) {
 
         if ((<Token>node.value).tokenType !== TokenType.T_VARIABLE) {
             return;
@@ -240,31 +240,31 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-    private _namespace(node: Tree<NonTerminal | Token>) {
+    private _namespace(node: Tree<Phrase | Token>) {
 
         let name = namespaceNameToString(node.children[0]);
         this.nameResolver.namespace = name;
         //empty name valid - global namespace
         let s = new PhpSymbol(SymbolKind.Namespace, name);
-        s.start = s.end = (<NonTerminal>node.value).startToken.range.start.line;
+        s.start = s.end = (<Phrase>node.value).startToken.range.start.line;
         s.uri = this.uri;
         this.tree = this.tree.addChild(new Tree<PhpSymbol>(s));
 
     }
 
-    private _closure(node: Tree<NonTerminal | Token>) {
+    private _closure(node: Tree<Phrase | Token>) {
 
         //params, use, typeExpr, body
 
         let name = 'Closure:' + util.guid();
         let s = new PhpSymbol(SymbolKind.Function, name);
         s.modifiers = SymbolModifier.Anonymous;
-        this._assignLocation(s, <NonTerminal>node.value);
+        this._assignLocation(s, <Phrase>node.value);
         this.tree = this.tree.addChild(new Tree<PhpSymbol>(s));
 
     }
 
-    private _closureUseVariable(node: Tree<NonTerminal | Token>) {
+    private _closureUseVariable(node: Tree<Phrase | Token>) {
 
         if (!node.children) {
             return;
@@ -275,13 +275,13 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             return;
         }
         let s = new PhpSymbol(SymbolKind.Variable, name);
-        s.modifiers = this._nonTerminalFlagToSymbolModifier((<NonTerminal>node.value).flag);
-        this._assignLocation(s, <NonTerminal>node.value);
+        s.modifiers = this._nonTerminalFlagToSymbolModifier((<Phrase>node.value).flag);
+        this._assignLocation(s, <Phrase>node.value);
         this.tree.addChild(new Tree<PhpSymbol>(s));
 
     }
 
-    private _useTrait(node: Tree<NonTerminal | Token>) {
+    private _useTrait(node: Tree<Phrase | Token>) {
 
         let nameList = this._nameList(node.children[0]);
         Array.prototype.push.apply(this.tree.value.associated, nameList);
@@ -289,7 +289,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         //todo trait adaptations
     }
 
-    private _parameter(node: Tree<NonTerminal | Token>) {
+    private _parameter(node: Tree<Phrase | Token>) {
 
         let name = node.children[1].value ?
             (<Token>node.children[1].value).text : null;
@@ -300,8 +300,8 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
         let s = new PhpSymbol(SymbolKind.Parameter, name);
         let t = new Tree<PhpSymbol>(s);
-        s.modifiers = this._nonTerminalFlagToSymbolModifier((<NonTerminal>node.value).flag);
-        this._assignLocation(s, <NonTerminal>node.value);
+        s.modifiers = this._nonTerminalFlagToSymbolModifier((<Phrase>node.value).flag);
+        this._assignLocation(s, <Phrase>node.value);
 
         if (this._doc) {
 
@@ -320,7 +320,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-    private _interfaceDeclaration(node: Tree<NonTerminal | Token>) {
+    private _interfaceDeclaration(node: Tree<Phrase | Token>) {
 
         let name = node.children[0].value ?
             (<Token>node.children[0].value).text : null;
@@ -339,13 +339,13 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             Array.prototype.push.apply(s.associated, implementsNameList);
         }
 
-        this._assignLocation(s, <NonTerminal>node.value);
-        this._assignClassPhpDoc(t, (<NonTerminal>node.value).doc);
+        this._assignLocation(s, <Phrase>node.value);
+        this._assignClassPhpDoc(t, (<Phrase>node.value).doc);
         this.tree = this.tree.addChild(t);
 
     }
 
-    private _traitDeclaration(node: Tree<NonTerminal | Token>) {
+    private _traitDeclaration(node: Tree<Phrase | Token>) {
 
         let name = node.children[0].value ?
             (<Token>node.children[0].value).text : null;
@@ -357,13 +357,13 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         name = this.nameResolver.resolveRelative(name);
         let s = new PhpSymbol(SymbolKind.Trait, name);
         let t = new Tree<PhpSymbol>(s);
-        this._assignLocation(s, <NonTerminal>node.value);
-        this._assignClassPhpDoc(t, (<NonTerminal>node.value).doc);
+        this._assignLocation(s, <Phrase>node.value);
+        this._assignClassPhpDoc(t, (<Phrase>node.value).doc);
         this.tree = this.tree.addChild(t);
 
     }
 
-    private _propertyOrConstantDeclaration(node: Tree<NonTerminal | Token>) {
+    private _propertyOrConstantDeclaration(node: Tree<Phrase | Token>) {
 
         let name = node.children[0].value ?
             (<Token>node.children[0].value).text : null;
@@ -393,16 +393,16 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-    private _propertyOrConstantDeclarationStatement(node: Tree<NonTerminal | Token>, kind: SymbolKind) {
+    private _propertyOrConstantDeclarationStatement(node: Tree<Phrase | Token>, kind: SymbolKind) {
 
         this._kind = kind;
-        this._modifiers = this._nonTerminalFlagToSymbolModifier((<NonTerminal>node.value).flag);
-        this._doc = (<NonTerminal>node.value).doc ?
-            this.docBlockParser.parse((<NonTerminal>node.value).doc.text) : null;
+        this._modifiers = this._nonTerminalFlagToSymbolModifier((<Phrase>node.value).flag);
+        this._doc = (<Phrase>node.value).doc ?
+            this.docBlockParser.parse((<Phrase>node.value).doc.text) : null;
 
     }
 
-    private _assignLocation(s: PhpSymbol, n: NonTerminal) {
+    private _assignLocation(s: PhpSymbol, n: Phrase) {
         s.start = n.startToken.range.start.line;
         s.end = n.endToken.range.end.line;
         s.uri = this.uri;
@@ -420,7 +420,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-    private _functionOrMethodDeclaration(node: Tree<NonTerminal | Token>, kind: SymbolKind) {
+    private _functionOrMethodDeclaration(node: Tree<Phrase | Token>, kind: SymbolKind) {
 
         let name = node.children[0].value ? (<Token>node.children[0].value).text : null;
 
@@ -430,9 +430,9 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
         name = this.nameResolver.resolveRelative(name);
         let s = new PhpSymbol(kind, name);
-        s.modifiers = this._nonTerminalFlagToSymbolModifier((<NonTerminal>node.value).flag);
-        this._doc = (<NonTerminal>node.value).doc ?
-            this.docBlockParser.parse((<NonTerminal>node.value).doc.text) : null;
+        s.modifiers = this._nonTerminalFlagToSymbolModifier((<Phrase>node.value).flag);
+        this._doc = (<Phrase>node.value).doc ?
+            this.docBlockParser.parse((<Phrase>node.value).doc.text) : null;
 
         if (this._doc) {
             s.description = this._doc.summary;
@@ -444,12 +444,12 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             }
         }
 
-        this._assignLocation(s, <NonTerminal>node.value);
+        this._assignLocation(s, <Phrase>node.value);
         this.tree = this.tree.addChild(new Tree<PhpSymbol>(s));
 
     }
 
-    private _typeExpression(node: Tree<NonTerminal | Token>) {
+    private _typeExpression(node: Tree<Phrase | Token>) {
 
         if (!node.value) {
             return null;
@@ -459,7 +459,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
         if (node.children[0].value === null) {
             return;
-        } else if ((<NonTerminal>node.children[0].value).nonTerminalType === NonTerminalType.Name) {
+        } else if ((<Phrase>node.children[0].value).phraseType === PhraseType.Name) {
             type = nameToFqnString(node.children[0], this.nameResolver, SymbolKind.Class);
             if (!type) {
                 return;
@@ -475,7 +475,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-    private _nameList(node: Tree<NonTerminal | Token>) {
+    private _nameList(node: Tree<Phrase | Token>) {
 
         if (!node.children) {
             return [];
@@ -492,7 +492,7 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
         return names;
     }
 
-    private _classDeclaration(node: Tree<NonTerminal | Token>, isAnonymous = false) {
+    private _classDeclaration(node: Tree<Phrase | Token>, isAnonymous = false) {
 
         let name: string;
 
@@ -527,10 +527,10 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
             Array.prototype.push.apply(s.associated, implementsNameList);
         }
 
-        s.modifiers = this._nonTerminalFlagToSymbolModifier((<NonTerminal>node.value).flag);
+        s.modifiers = this._nonTerminalFlagToSymbolModifier((<Phrase>node.value).flag);
 
-        this._assignClassPhpDoc(t, (<NonTerminal>node.value).doc);
-        this._assignLocation(s, <NonTerminal>node.value);
+        this._assignClassPhpDoc(t, (<Phrase>node.value).doc);
+        this._assignLocation(s, <Phrase>node.value);
         this.tree = this.tree.addChild(t);
 
     }
@@ -549,38 +549,38 @@ export class SymbolReader implements TreeVisitor<NonTerminal | Token> {
 
     }
 
-    private _nonTerminalFlagToSymbolModifier(flag: NonTerminalFlag) {
+    private _nonTerminalFlagToSymbolModifier(flag: PhraseFlag) {
 
         let symbolModifier = 0;
-        if ((flag & NonTerminalFlag.ModifierFinal) > 0) {
+        if ((flag & PhraseFlag.ModifierFinal) > 0) {
             symbolModifier = SymbolModifier.Final;
         }
 
-        if ((flag & NonTerminalFlag.ModifierAbstract) > 0) {
+        if ((flag & PhraseFlag.ModifierAbstract) > 0) {
             symbolModifier |= SymbolModifier.Abstract;
         }
 
-        if ((flag & NonTerminalFlag.ModifierPrivate) > 0) {
+        if ((flag & PhraseFlag.ModifierPrivate) > 0) {
             symbolModifier |= SymbolModifier.Private;
         }
 
-        if ((flag & NonTerminalFlag.ModifierProtected) > 0) {
+        if ((flag & PhraseFlag.ModifierProtected) > 0) {
             symbolModifier |= SymbolModifier.Protected;
         }
 
-        if ((flag & NonTerminalFlag.ModifierPublic) > 0) {
+        if ((flag & PhraseFlag.ModifierPublic) > 0) {
             symbolModifier |= SymbolModifier.Public;
         }
 
-        if ((flag & NonTerminalFlag.ModifierStatic) > 0) {
+        if ((flag & PhraseFlag.ModifierStatic) > 0) {
             symbolModifier |= SymbolModifier.Static;
         }
 
-        if ((flag & (NonTerminalFlag.PassByRef | NonTerminalFlag.ReturnsRef)) > 0) {
+        if ((flag & (PhraseFlag.PassByRef | PhraseFlag.ReturnsRef)) > 0) {
             symbolModifier |= SymbolModifier.Reference;
         }
 
-        if ((flag & NonTerminalFlag.Variadic) === NonTerminalFlag.Variadic) {
+        if ((flag & PhraseFlag.Variadic) === PhraseFlag.Variadic) {
             symbolModifier |= SymbolModifier.Variadic;
         }
 
@@ -657,9 +657,9 @@ export class SymbolAtLineSearch implements TreeVisitor<PhpSymbol> {
 
 }
 
-export class NonTerminalOrTokenAtPositionSearch implements TreeVisitor<NonTerminal | Token>{
+export class NonTerminalAtPositionSearch implements TreeVisitor<Phrase | Token>{
 
-    private _node: Tree<NonTerminal | Token>;
+    private _node: Tree<Phrase | Token>;
     private _position: Position;
 
     constructor(position: Position) {
@@ -670,23 +670,22 @@ export class NonTerminalOrTokenAtPositionSearch implements TreeVisitor<NonTermin
         return this._node;
     }
 
-    preOrder(node: Tree<NonTerminal | Token>) {
+    preOrder(node: Tree<Phrase | Token>) {
 
         if (node.value !== null) {
             return false;
         }
 
         let start: Position, end: Position;
-        if (node.value.hasOwnProperty('nonTerminalType')) {
-            start = (<NonTerminal>node.value).startToken.range.start;
-            end = (<NonTerminal>node.value).endToken.range.end;
+        if (node.value.hasOwnProperty('phraseType')) {
+            start = (<Phrase>node.value).startToken.range.start;
+            end = (<Phrase>node.value).endToken.range.end;
         } else {
-            start = (<Token>node.value).range.start;
-            end = (<Token>node.value).range.end;
+            return false;
         }
 
         if (util.isInRange(this._position, start, end) === 0) {
-            this._node = <Tree<NonTerminal>>node;
+            this._node = <Tree<Phrase>>node;
             return true;
         }
 
@@ -699,21 +698,21 @@ export class NonTerminalOrTokenAtPositionSearch implements TreeVisitor<NonTermin
 /**
  * Resolves variable type within a single scope
  */
-export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
+export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
-    private _haltAtNode: Tree<NonTerminal | Token>;
+    private _haltAtNode: Tree<Phrase | Token>;
     private _haltTraverse: boolean;
 
     constructor(public variableTable: ResolvedVariableTable,
         public nameResolver: NameResolver,
         public typeResolver: TypeResolver,
         public typeAssigner: TypeAssigner,
-        haltAtNode: Tree<NonTerminal | Token> = null) {
+        haltAtNode: Tree<Phrase | Token> = null) {
         this._haltAtNode = haltAtNode;
         this._haltTraverse = false;
     }
 
-    preOrder(node: Tree<NonTerminal | Token>) {
+    preOrder(node: Tree<Phrase | Token>) {
 
         if (this._haltTraverse) {
             return;
@@ -728,31 +727,31 @@ export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
             return false;
         }
 
-        switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.FunctionDeclaration:
-            case NonTerminalType.MethodDeclaration:
-            case NonTerminalType.ClassDeclaration:
-            case NonTerminalType.TraitDeclaration:
-            case NonTerminalType.InterfaceDeclaration:
-            case NonTerminalType.AnonymousClassDeclaration:
-            case NonTerminalType.Closure:
+        switch ((<Phrase>node.value).phraseType) {
+            case PhraseType.FunctionDeclaration:
+            case PhraseType.MethodDeclaration:
+            case PhraseType.ClassDeclaration:
+            case PhraseType.TraitDeclaration:
+            case PhraseType.InterfaceDeclaration:
+            case PhraseType.AnonymousClassDeclaration:
+            case PhraseType.Closure:
                 return false;
-            case NonTerminalType.IfList:
-            case NonTerminalType.Switch:
+            case PhraseType.IfList:
+            case PhraseType.Switch:
                 this.variableTable.pushBranchGroup();
                 return true;
-            case NonTerminalType.If:
-            case NonTerminalType.Case:
+            case PhraseType.If:
+            case PhraseType.Case:
                 this.variableTable.pushBranch();
                 return true;
-            case NonTerminalType.BinaryExpression:
-                if ((<NonTerminal>node.value).flag === NonTerminalFlag.BinaryAssign ||
-                    (<NonTerminal>node.value).flag === NonTerminalFlag.BinaryInstanceOf) {
+            case PhraseType.BinaryExpression:
+                if ((<Phrase>node.value).flag === PhraseFlag.BinaryAssign ||
+                    (<Phrase>node.value).flag === PhraseFlag.BinaryInstanceOf) {
                     this._binaryExpression(node);
                     return false;
                 }
                 return true;
-            case NonTerminalType.Foreach:
+            case PhraseType.Foreach:
                 this._foreach(node);
                 return false;
             default:
@@ -761,7 +760,7 @@ export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
 
     }
 
-    postOrder(node: Tree<NonTerminal | Token>) {
+    postOrder(node: Tree<Phrase | Token>) {
 
         if (this._haltTraverse) {
             return;
@@ -771,13 +770,13 @@ export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
             return;
         }
 
-        switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.IfList:
-            case NonTerminalType.Switch:
+        switch ((<Phrase>node.value).phraseType) {
+            case PhraseType.IfList:
+            case PhraseType.Switch:
                 this.variableTable.popBranchGroup();
                 break;
-            case NonTerminalType.If:
-            case NonTerminalType.Case:
+            case PhraseType.If:
+            case PhraseType.Case:
                 this.variableTable.popBranch();
                 break;
             default:
@@ -786,15 +785,15 @@ export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
 
     }
 
-    private _binaryExpression(node: Tree<NonTerminal | Token>) {
+    private _binaryExpression(node: Tree<Phrase | Token>) {
 
         let lhs = node.children[0];
         let rhs = node.children[1];
 
         if (lhs.value === null ||
-            ((<NonTerminal>lhs.value).nonTerminalType !== NonTerminalType.Variable &&
-                (<NonTerminal>lhs.value).nonTerminalType !== NonTerminalType.Array &&
-                (<NonTerminal>lhs.value).nonTerminalType !== NonTerminalType.Dimension) ||
+            ((<Phrase>lhs.value).phraseType !== PhraseType.Variable &&
+                (<Phrase>lhs.value).phraseType !== PhraseType.Array &&
+                (<Phrase>lhs.value).phraseType !== PhraseType.Dimension) ||
             rhs.value === null) {
             return;
         }
@@ -807,15 +806,15 @@ export class VariableTypeResolver implements TreeVisitor<NonTerminal | Token>{
 
     }
 
-    private _foreach(node: Tree<NonTerminal | Token>) {
+    private _foreach(node: Tree<Phrase | Token>) {
 
         let expr1 = node.children[0];
         let expr3 = node.children[2];
 
         if (expr3.value === null ||
-            ((<NonTerminal>expr3.value).nonTerminalType !== NonTerminalType.Variable &&
-                (<NonTerminal>expr3.value).nonTerminalType !== NonTerminalType.Array &&
-                (<NonTerminal>expr3.value).nonTerminalType !== NonTerminalType.Dimension) ||
+            ((<Phrase>expr3.value).phraseType !== PhraseType.Variable &&
+                (<Phrase>expr3.value).phraseType !== PhraseType.Array &&
+                (<Phrase>expr3.value).phraseType !== PhraseType.Dimension) ||
             expr1.value === null) {
             return;
         }
@@ -838,22 +837,22 @@ export class TypeAssigner {
         this._table = table;
     }
 
-    assignType(node: Tree<NonTerminal | Token>, typeString: TypeString) {
+    assignType(node: Tree<Phrase | Token>, typeString: TypeString) {
 
         if (node.value === null) {
             return;
         }
 
-        switch ((<NonTerminal>node.value).nonTerminalType) {
-            case NonTerminalType.Array:
+        switch ((<Phrase>node.value).phraseType) {
+            case PhraseType.Array:
                 this._array(node, typeString);
-            case NonTerminalType.ArrayPair:
+            case PhraseType.ArrayPair:
                 this._arrayPair(node.children[1], typeString);
                 break;
-            case NonTerminalType.Dimension:
+            case PhraseType.Dimension:
                 this._dimension(node, typeString);
                 break;
-            case NonTerminalType.Variable:
+            case PhraseType.Variable:
                 this._variable(node, typeString);
                 break;
             default:
@@ -862,11 +861,11 @@ export class TypeAssigner {
 
     }
 
-    private _dimension(node: Tree<NonTerminal | Token>, typeString: TypeString) {
+    private _dimension(node: Tree<Phrase | Token>, typeString: TypeString) {
         this.assignType(node.children[0], typeString.array());
     }
 
-    private _array(node: Tree<NonTerminal | Token>, typeString: TypeString) {
+    private _array(node: Tree<Phrase | Token>, typeString: TypeString) {
         let type = typeString.arrayDereference();
 
         if (!node.children) {
@@ -878,11 +877,11 @@ export class TypeAssigner {
         }
     }
 
-    private _arrayPair(node: Tree<NonTerminal | Token>, typeString: TypeString) {
+    private _arrayPair(node: Tree<Phrase | Token>, typeString: TypeString) {
         this.assignType(node.children[1], typeString);
     }
 
-    private _variable(node: Tree<NonTerminal | Token>, typeString: TypeString) {
+    private _variable(node: Tree<Phrase | Token>, typeString: TypeString) {
 
         if (node.children && node.children.length &&
             (<Token>node.children[0].value).tokenType === TokenType.T_VARIABLE &&
@@ -904,29 +903,29 @@ export class TypeResolver {
 
     }
 
-    resolveType(node: Tree<NonTerminal | Token>): TypeString {
+    resolveType(node: Tree<Phrase | Token>): TypeString {
 
         if (node.value === null) {
             return null;
         }
 
-        switch ((<NonTerminal>node.value).nonTerminalType) {
+        switch ((<Phrase>node.value).phraseType) {
 
-            case NonTerminalType.Variable:
+            case PhraseType.Variable:
                 return this._variable(node);
-            case NonTerminalType.Dimension:
+            case PhraseType.Dimension:
                 return this._dimension(node);
-            case NonTerminalType.StaticProperty:
-            case NonTerminalType.Property:
+            case PhraseType.StaticProperty:
+            case PhraseType.Property:
                 return this._property(node);
-            case NonTerminalType.StaticMethodCall:
-            case NonTerminalType.MethodCall:
+            case PhraseType.StaticMethodCall:
+            case PhraseType.MethodCall:
                 return this._methodCall(node);
-            case NonTerminalType.Call:
+            case PhraseType.Call:
                 return this._call(node);
-            case NonTerminalType.Name:
+            case PhraseType.Name:
                 return this._name(node);
-            case NonTerminalType.BinaryExpression:
+            case PhraseType.BinaryExpression:
             //todo assignment chain?
             default:
                 return null;
@@ -934,18 +933,18 @@ export class TypeResolver {
 
     }
 
-    private _dimension(node: Tree<NonTerminal | Token>) {
+    private _dimension(node: Tree<Phrase | Token>) {
 
         let typeString = this.resolveType(node.children[0]);
         return typeString ? typeString.arrayDereference() : null;
 
     }
 
-    private _call(node: Tree<NonTerminal | Token>) {
+    private _call(node: Tree<Phrase | Token>) {
 
         let nameNode = node.children[0];
 
-        if ((<NonTerminal>nameNode.value).nonTerminalType !== NonTerminalType.Name) {
+        if ((<Phrase>nameNode.value).phraseType !== PhraseType.Name) {
             return null;
         }
 
@@ -959,7 +958,7 @@ export class TypeResolver {
 
     }
 
-    private _methodCall(node: Tree<NonTerminal | Token>) {
+    private _methodCall(node: Tree<Phrase | Token>) {
 
         let methodNameToken = node.children[1].value as Token;
         if (!methodNameToken) {
@@ -981,7 +980,7 @@ export class TypeResolver {
 
     }
 
-    private _property(node: Tree<NonTerminal | Token>) {
+    private _property(node: Tree<Phrase | Token>) {
 
         let propName = variableToString(node.children[1]);
         if (!propName) {
@@ -1002,7 +1001,7 @@ export class TypeResolver {
         return propSymbol ? propSymbol.value.type : null;
     }
 
-    private _variable(node: Tree<NonTerminal | Token>) {
+    private _variable(node: Tree<Phrase | Token>) {
 
         let child = node.children[0] as Tree<Token>;
 
@@ -1014,7 +1013,7 @@ export class TypeResolver {
 
     }
 
-    private _name(node: Tree<NonTerminal | Token>) {
+    private _name(node: Tree<Phrase | Token>) {
         let name = nameToFqnString(node, this.nameResolver, SymbolKind.Class);
         return name ? new TypeString(name) : null;
     }
@@ -1081,14 +1080,14 @@ export interface DocumentContext {
     tokenIndex: number;
     token:Token;
     symbol: Tree<PhpSymbol>;
-    ast: Tree<NonTerminal | Token>;
+    ast: Tree<Phrase | Token>;
 }
 
 export function documentContextFactory(position: Position, parsedDoc: ParsedDocument, docSymbols: DocumentSymbols) {
 
     let symbolSearch = new SymbolAtLineSearch(position.line, 0);
     docSymbols.symbolTree.traverse(symbolSearch);
-    let astSearch = new NonTerminalOrTokenAtPositionSearch(position);
+    let astSearch = new NonTerminalAtPositionSearch(position);
     parsedDoc.parseTree.traverse(astSearch);
     let index = parsedDoc.tokenIndexAtPosition(position);
     let context:DocumentContext = {
@@ -1098,6 +1097,7 @@ export function documentContextFactory(position: Position, parsedDoc: ParsedDocu
         symbol: symbolSearch.node,
         ast:astSearch.node
     };
+
     return context;
 
 }

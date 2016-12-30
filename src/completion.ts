@@ -2,8 +2,8 @@
  * Licensed under the MIT Licence.
  */
 
-import {Position, Token, TokenType} from 'php7parser';
-import {documentContextFactory} from './visitors';
+import {Position, Token, TokenType, Phrase, PhraseFlag, PhraseType} from 'php7parser';
+import {documentContextFactory, DocumentContext, TypeResolver} from './visitors';
 import {PhpSymbol, SymbolStore, DocumentSymbols} from './symbol';
 import {ParsedDocument, AstStore} from './parse';
 
@@ -34,12 +34,10 @@ export class CompletionProvider{
 
                 break;
             case TokenType.T_VARIABLE:
+            case '$':
 
                 break;
             case TokenType.T_STRING:
-
-                break;
-            case '$':
 
                 break;
             default:
@@ -48,7 +46,16 @@ export class CompletionProvider{
 
     }
 
+    private _objectOperator(context:DocumentContext){
 
+        let ast = context.ast.ancestor((x)=>{
+            return (<Phrase>x.value).phraseType === PhraseType.Property ||
+                (<Phrase>x.value).phraseType === PhraseType.MethodCall;
+        });
+
+
+
+    }
 
     private _staticMember(){
 

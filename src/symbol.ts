@@ -5,7 +5,7 @@
 'use strict';
 
 import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray } from './types';
-import { NonTerminal, NonTerminalType, NonTerminalFlag, Token } from 'php7parser';
+import { Phrase, PhraseType, PhraseFlag, Token } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag } from './parse';
 import * as util from './util';
 

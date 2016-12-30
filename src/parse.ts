@@ -5,7 +5,7 @@
 'use strict';
 
 import { Tree, BinarySearch } from './types';
-import { Token, NonTerminal, AstNodeFactory, Position } from 'php7parser';
+import { Token, Phrase, AstNodeFactory, Position } from 'php7parser';
 import * as util from './util';
 
 export class ParsedDocument {
@@ -63,7 +63,7 @@ export class AstStore {
 
 }
 
-export class ParseTree extends Tree<NonTerminal | Token> {
+export class ParseTree extends Tree<Phrase | Token> {
 
     private _uri;
 
@@ -77,8 +77,8 @@ export class ParseTree extends Tree<NonTerminal | Token> {
     }
 }
 
-export var astNodeFactory: AstNodeFactory<Tree<NonTerminal | Token>> = function (value, children) {
-    let tree = new Tree<NonTerminal | Token>(value);
+export var astNodeFactory: AstNodeFactory<Tree<Phrase | Token>> = function (value, children) {
+    let tree = new Tree<Phrase | Token>(value);
     tree.addChildren(children);
     return tree;
 }
