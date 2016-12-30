@@ -1009,7 +1009,27 @@ export class TypeResolver {
             return null;
         }
 
-        return this.variableTable.getType(child.value.text);
+        let text = child.value.text;
+
+        if(text === '$this'){
+
+        } else {
+
+        }
+
+    }
+
+    private _traverseUpAndFindVariableAssignment(varName:string, varNode:Tree<Phrase|Token>){
+
+        let parent = varNode;
+        let sibling:Tree<Phrase|Token>;
+        while(true){
+
+            sibling = varNode.previousSibling();
+            
+
+
+        }
 
     }
 

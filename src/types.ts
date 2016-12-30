@@ -22,30 +22,30 @@ export interface DebugLogger {
     debug(message: string): void;
 }
 
-export interface EventHandler<T>{
-    (t:T):void;
+export interface EventHandler<T> {
+    (t: T): void;
 }
 
 export class Event<T> {
 
-    private _subscribed:EventHandler<T>[];
+    private _subscribed: EventHandler<T>[];
 
-    constructor(){
+    constructor() {
         this._subscribed = [];
     }
 
-    subscribe(handler:EventHandler<T>){
+    subscribe(handler: EventHandler<T>) {
         this._subscribed.push(handler);
         let index = this._subscribed.length - 1;
         let subscribed = this._subscribed;
-        return ()=>{
+        return () => {
             subscribed.splice(index, 1);
         };
     }
 
-    trigger(args:T){
-        let handler:EventHandler<T>;
-        for(let n = 0; n < this._subscribed.length; ++n){
+    trigger(args: T) {
+        let handler: EventHandler<T>;
+        for (let n = 0; n < this._subscribed.length; ++n) {
             handler = this._subscribed[n];
             handler(args);
         }
@@ -55,7 +55,7 @@ export class Event<T> {
 
 export interface TreeVisitor<T> {
 
-    haltTraverse?:Event<null>;
+    haltTraverse?: Event<null>;
     preOrder?(t: Tree<T>): boolean;
     inOrder?(t: Tree<T>, afterChildIndex: number): void;
     postOrder?(t: Tree<T>): void;
@@ -102,7 +102,7 @@ export class Tree<T> {
     private _children: Tree<T>[];
     private _value: T;
 
-    parent:Tree<T>;
+    parent: Tree<T>;
 
     constructor(value: T) {
         this._value = value;
@@ -170,7 +170,7 @@ export class Tree<T> {
 
     }
 
-    match(predicate:Predicate<Tree<T>>){
+    match(predicate: Predicate<Tree<T>>) {
 
         let visitor = new FilterVisitor<T>(predicate);
         this.traverse(visitor);
@@ -212,7 +212,7 @@ export class Tree<T> {
                 break;
             }
 
-            if(node.children){
+            if (node.children) {
                 Array.prototype.push.apply(stack, node.children);
             }
 
@@ -220,11 +220,20 @@ export class Tree<T> {
 
     }
 
-    ancestor(predicate:Predicate<Tree<T>>){
+    previousSibling() {
+        let parent = this.parent;
+        if (!parent) {
+            return null;
+        }
+        let i = parent.children.indexOf(this);
+        return i > 0 ? parent.children[i] : null;
+    }
+
+    ancestor(predicate: Predicate<Tree<T>>) {
 
         let ancestor = this as Tree<T>;
-        while((ancestor = ancestor.parent)){
-            if(predicate(ancestor)){
+        while ((ancestor = ancestor.parent)) {
+            if (predicate(ancestor)) {
                 break;
             }
         }
@@ -236,24 +245,24 @@ export class Tree<T> {
 
 export interface BreadthFirstTreeVisitor<T> {
     (node: Tree<T>): boolean;
-}   
+}
 
 class FilterVisitor<T> implements TreeVisitor<T>{
 
-    private _predicate:Predicate<Tree<T>>;
-    private _array:Tree<T>[];
+    private _predicate: Predicate<Tree<T>>;
+    private _array: Tree<T>[];
 
-    constructor(predicate:Predicate<Tree<T>>){
+    constructor(predicate: Predicate<Tree<T>>) {
         this._predicate = predicate;
         this._array = [];
     }
 
-    get array(){
+    get array() {
         return this._array;
     }
 
-    preOrder(node:Tree<T>){
-        if(this._predicate(node)){
+    preOrder(node: Tree<T>) {
+        if (this._predicate(node)) {
             this._array.push(node);
         }
         return true;
@@ -488,7 +497,7 @@ export class SuffixArray<T> {
         }
     }
 
-    
+
     match(text: string) {
 
         let nodes = this._nodeMatch(text);
