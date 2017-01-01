@@ -10,7 +10,7 @@ import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag, MethodTag, ParsedDo
 import * as util from './util';
 import {
     PhpSymbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString,
-    SymbolModifier, SymbolTree, ResolvedVariableTable, SymbolStore, DocumentSymbols
+    SymbolModifier, SymbolTree, VariableTable, SymbolStore, DocumentSymbols
 } from './symbol';
 
 
@@ -696,18 +696,20 @@ export class PhraseAtPositionSearch implements TreeVisitor<Phrase | Token>{
 }
 
 /**
- * Resolves variable type within a single scope
+ * Resolves variable type
  */
 export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
     private _haltAtNode: Tree<Phrase | Token>;
     private _haltTraverse: boolean;
+    private _exprResolver:ExpressionTypeResolver;
 
-    constructor(public variableTable: ResolvedVariableTable,
+    constructor(public variableTable: VariableTable,
         public nameResolver: NameResolver,
-        public typeResolver: TypeResolver,
-        public typeAssigner: TypeAssigner,
+        public symbolStore: SymbolStore,
+        public docSymbols: DocumentSymbols,
         haltAtNode: Tree<Phrase | Token> = null) {
+        this._exprResolver = new ExpressionTypeResolver(this.variableTable, this.nameResolver, this.symbolStore);
         this._haltAtNode = haltAtNode;
         this._haltTraverse = false;
     }
@@ -715,12 +717,12 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
     preOrder(node: Tree<Phrase | Token>) {
 
         if (this._haltTraverse) {
-            return;
+            return false;
         }
 
         if (this._haltAtNode === node) {
             this._haltTraverse = true;
-            return;
+            return false;
         }
 
         if (node.value === null) {
@@ -729,13 +731,20 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
         switch ((<Phrase>node.value).phraseType) {
             case PhraseType.FunctionDeclaration:
+                this._methodOrFunction(node, SymbolKind.Function);
+                return true;
             case PhraseType.MethodDeclaration:
+                this._methodOrFunction(node, SymbolKind.Method);
+                return true;
             case PhraseType.ClassDeclaration:
             case PhraseType.TraitDeclaration:
             case PhraseType.InterfaceDeclaration:
             case PhraseType.AnonymousClassDeclaration:
+                this.variableTable.pushScope();
+                return true;
             case PhraseType.Closure:
-                return false;
+                this._closure(node);
+                return true;
             case PhraseType.IfList:
             case PhraseType.Switch:
                 this.variableTable.pushBranchGroup();
@@ -762,11 +771,7 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
     postOrder(node: Tree<Phrase | Token>) {
 
-        if (this._haltTraverse) {
-            return;
-        }
-
-        if (node.value === null) {
+        if (this._haltTraverse || node.value === null) {
             return;
         }
 
@@ -779,9 +784,84 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
             case PhraseType.Case:
                 this.variableTable.popBranch();
                 break;
+            case PhraseType.FunctionDeclaration:
+            case PhraseType.MethodDeclaration:
+            case PhraseType.ClassDeclaration:
+            case PhraseType.TraitDeclaration:
+            case PhraseType.InterfaceDeclaration:
+            case PhraseType.AnonymousClassDeclaration:
+            case PhraseType.Closure:
+                this.variableTable.popScope();
+                break;
             default:
                 break;
         }
+
+    }
+
+    private _methodOrFunction(node: Tree<Phrase | Token>, kind:SymbolKind) {
+
+        this.variableTable.pushScope();
+        let name = node.children && node.children[0].value ?
+            (<Token>node.children[0].value).text : null;
+
+        if (!name) {
+            return;
+        }
+
+        if(kind === SymbolKind.Function){
+            name = this.nameResolver.resolveRelative(name);
+        }
+
+        let symbol = this.docSymbols.symbolTree.find((x) => {
+            return x.value.kind === kind &&
+                x.value.name === name &&
+                (<Phrase>node.value).startToken.range.start.line === x.value.start;
+        });
+
+        if (!symbol) {
+            return;
+        }
+
+        symbol.children.filter((v, i, a) => {
+            return v.value.kind === SymbolKind.Parameter;
+        }).forEach((v, i, a) => {
+            if (v.value.type) {
+                this.variableTable.setType(v.value.name, v.value.type);
+            }
+        });
+
+    }
+
+    private _closure(node:Tree<Phrase|Token>){   
+
+        let symbol = this.docSymbols.symbolTree.find((x) => {
+            return x.value.kind === SymbolKind.Function && 
+                x.value.modifiers === SymbolModifier.Anonymous &&
+                (<Phrase>node.value).startToken.range.start.line === x.value.start;
+        });
+
+        if (!symbol) {
+            return;
+        }
+
+        let use = symbol.children.filter((v,i,a)=>{
+            return v.value.kind === SymbolKind.Variable &&
+                v.value.modifiers === SymbolModifier.Use;
+        }).map((v,i,a)=>{
+            return v.value.name;
+        });
+
+
+        this.variableTable.pushScope(use);
+
+        symbol.children.filter((v, i, a) => {
+            return v.value.kind === SymbolKind.Parameter;
+        }).forEach((v, i, a) => {
+            if (v.value.type) {
+                this.variableTable.setType(v.value.name, v.value.type);
+            }
+        });
 
     }
 
@@ -798,11 +878,12 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
             return;
         }
 
-        let type = this.typeResolver.resolveType(rhs);
+        let type = this._exprResolver.resolveType(rhs);
         if (!type || type.isEmpty()) {
             return;
         }
-        this.typeAssigner.assignType(lhs, type);
+
+        this._assignType(lhs, type);
 
     }
 
@@ -819,25 +900,15 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
             return;
         }
 
-        let type = this.typeResolver.resolveType(expr1);
+        let type = this._exprResolver.resolveType(expr1);
         if (!type || type.isEmpty()) {
             return;
         }
-        this.typeAssigner.assignType(expr3, type);
+        this._assignType(expr3, type);
 
     }
 
-}
-
-export class TypeAssigner {
-
-    private _table: ResolvedVariableTable;
-
-    constructor(table: ResolvedVariableTable) {
-        this._table = table;
-    }
-
-    assignType(node: Tree<Phrase | Token>, typeString: TypeString) {
+     private _assignType(node: Tree<Phrase | Token>, typeString: TypeString) {
 
         if (node.value === null) {
             return;
@@ -862,7 +933,7 @@ export class TypeAssigner {
     }
 
     private _dimension(node: Tree<Phrase | Token>, typeString: TypeString) {
-        this.assignType(node.children[0], typeString.array());
+        this._assignType(node.children[0], typeString.array());
     }
 
     private _array(node: Tree<Phrase | Token>, typeString: TypeString) {
@@ -878,7 +949,7 @@ export class TypeAssigner {
     }
 
     private _arrayPair(node: Tree<Phrase | Token>, typeString: TypeString) {
-        this.assignType(node.children[1], typeString);
+        this._assignType(node.children[1], typeString);
     }
 
     private _variable(node: Tree<Phrase | Token>, typeString: TypeString) {
@@ -887,23 +958,21 @@ export class TypeAssigner {
             (<Token>node.children[0].value).tokenType === TokenType.T_VARIABLE &&
             typeString &&
             !typeString.isEmpty()) {
-            this._table.setVariable((<Token>node.children[0].value).text, typeString);
+            this.variableTable.setType((<Token>node.children[0].value).text, typeString);
         }
 
     }
 
-
 }
 
-export class TypeResolver {
+export class ExpressionTypeResolver {
 
-    constructor(public nameResolver: NameResolver,
-        public variableTable: ResolvedVariableTable,
-        public symbolStore: SymbolStore) {
+constructor(public variableTable:VariableTable,
+    public nameResolver:NameResolver,
+    public symbolStore:SymbolStore){
+}
 
-    }
-
-    resolveType(node: Tree<Phrase | Token>): TypeString {
+resolveType(node: Tree<Phrase | Token>): TypeString {
 
         if (node.value === null) {
             return null;
@@ -926,7 +995,9 @@ export class TypeResolver {
             case PhraseType.Name:
                 return this._name(node);
             case PhraseType.BinaryExpression:
-            //todo assignment chain?
+            //todo assignment chain
+            case PhraseType.TernaryExpression:
+            //todo ternary
             default:
                 return null;
         }
@@ -944,7 +1015,7 @@ export class TypeResolver {
 
         let nameNode = node.children[0];
 
-        if ((<Phrase>nameNode.value).phraseType !== PhraseType.Name) {
+        if (!nameNode.value || (<Phrase>nameNode.value).phraseType !== PhraseType.Name) {
             return null;
         }
 
@@ -1005,31 +1076,11 @@ export class TypeResolver {
 
         let child = node.children[0] as Tree<Token>;
 
-        if (child.value === null || child.value.tokenType !== TokenType.T_VARIABLE) {
+        if (!child.value || child.value.tokenType !== TokenType.T_VARIABLE) {
             return null;
         }
 
-        let text = child.value.text;
-
-        if(text === '$this'){
-
-        } else {
-
-        }
-
-    }
-
-    private _traverseUpAndFindVariableAssignment(varName:string, varNode:Tree<Phrase|Token>){
-
-        let parent = varNode;
-        let sibling:Tree<Phrase|Token>;
-        while(true){
-
-            sibling = varNode.previousSibling();
-            
-
-
-        }
+        return this.variableTable.getType(child.value.text);
 
     }
 
@@ -1095,6 +1146,72 @@ export class TypeResolver {
 
 }
 
+export class TypeAssigner {
+
+    private _table: VariableTable;
+
+    constructor(table: VariableTable) {
+        this._table = table;
+    }
+
+    assignType(node: Tree<Phrase | Token>, typeString: TypeString) {
+
+        if (node.value === null) {
+            return;
+        }
+
+        switch ((<Phrase>node.value).phraseType) {
+            case PhraseType.Array:
+                this._array(node, typeString);
+            case PhraseType.ArrayPair:
+                this._arrayPair(node.children[1], typeString);
+                break;
+            case PhraseType.Dimension:
+                this._dimension(node, typeString);
+                break;
+            case PhraseType.Variable:
+                this._variable(node, typeString);
+                break;
+            default:
+                break;
+        }
+
+    }
+
+    private _dimension(node: Tree<Phrase | Token>, typeString: TypeString) {
+        this.assignType(node.children[0], typeString.array());
+    }
+
+    private _array(node: Tree<Phrase | Token>, typeString: TypeString) {
+        let type = typeString.arrayDereference();
+
+        if (!node.children) {
+            return;
+        }
+
+        for (let n = 0; n < node.children.length; ++n) {
+            this._arrayPair(node.children[n], type);
+        }
+    }
+
+    private _arrayPair(node: Tree<Phrase | Token>, typeString: TypeString) {
+        this.assignType(node.children[1], typeString);
+    }
+
+    private _variable(node: Tree<Phrase | Token>, typeString: TypeString) {
+
+        if (node.children && node.children.length &&
+            (<Token>node.children[0].value).tokenType === TokenType.T_VARIABLE &&
+            typeString &&
+            !typeString.isEmpty()) {
+            this._table.setType((<Token>node.children[0].value).text, typeString);
+        }
+
+    }
+
+
+}
+
 export class DocumentContext {
 
     private _tokenIndex: number;
@@ -1137,37 +1254,37 @@ export class DocumentContext {
         return this._tokenIndex;
     }
 
-    get namespace(){
+    get namespace() {
         let s = this.symbol;
-  
-        if(!s){
+
+        if (!s) {
             return null;
         }
 
-        if(s.value.kind === SymbolKind.Namespace){
+        if (s.value.kind === SymbolKind.Namespace) {
             return s;
         }
 
-        return s.ancestor((x)=>{
+        return s.ancestor((x) => {
             return x.value.kind === SymbolKind.Namespace;
         });
     }
 
-    get classSymbol(){
+    get classSymbol() {
 
         let s = this.symbol;
-        
-        if(!s){
+
+        if (!s) {
             return null;
         }
 
         let kindMask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait;
 
-        if((s.value.kind & kindMask) > 0){
+        if ((s.value.kind & kindMask) > 0) {
             return s;
         }
 
-        return s.ancestor((x)=>{
+        return s.ancestor((x) => {
             return (s.value.kind & kindMask) > 0;
         });
 
@@ -1187,8 +1304,8 @@ export class DocumentContext {
         let classSymbol = this.classSymbol;
         nameResolver.namespace = ns ? ns.value.name : '';
         nameResolver.thisName = classSymbol ? classSymbol.value.name : '';
-        let varTable = new ResolvedVariableTable();
-        let typeResolver = new VariableTypeResolver(new ResolvedVariableTable(),
+        let varTable = new VariableTable();
+        let typeResolver = new VariableTypeResolver(new VariableTable(),
             nameResolver,
             new TypeResolver(nameResolver, varTable, this.symbolStore),
             new TypeAssigner(varTable),

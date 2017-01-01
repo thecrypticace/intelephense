@@ -36,7 +36,8 @@ export enum SymbolModifier {
     Magic = 1 << 8,
     Anonymous = 1 << 9,
     Reference = 1 << 10,
-    Variadic = 1 << 11
+    Variadic = 1 << 11,
+    Use = 1 << 12
 }
 
 export class PhpSymbol {
@@ -102,7 +103,7 @@ export class ImportTable {
 
     match(text: string, kind: SymbolKind) {
         let r: ImportRule;
-        let name:string;
+        let name: string;
         for (let n = 0; n < this._rules.length; ++n) {
             r = this._rules[n];
             name = r.alias ? r.alias : this._lastNamespaceNamePart(r.fqn);
@@ -113,7 +114,7 @@ export class ImportTable {
         return null;
     }
 
-    private _lastNamespaceNamePart(text:string){
+    private _lastNamespaceNamePart(text: string) {
         let pos = text.lastIndexOf('\\');
         return pos >= 0 ? text.slice(pos + 1) : text;
     }
@@ -291,7 +292,7 @@ export class TypeString {
     }
 
     private _unique(parts: string[]) {
-        let map: {[index:string]:string} = {};
+        let map: { [index: string]: string } = {};
         let part: string;
 
         for (let n = 0; n < parts.length; ++n) {
@@ -441,7 +442,7 @@ function symbolSuffixes(node: Tree<PhpSymbol>) {
 
 export class SymbolStore {
 
-    private _map: {[index:string]:DocumentSymbols};
+    private _map: { [index: string]: DocumentSymbols };
     private _index: SuffixArray<Tree<PhpSymbol>>;
 
     constructor() {
@@ -515,40 +516,58 @@ interface ResolvedVariable {
     type: TypeString;
 }
 
-const enum ResolvedVariableSetKind {
+const enum VariableSetKind {
     None, Scope, BranchGroup, Branch
 }
 
-interface ResolvedVariableSet {
-    kind: ResolvedVariableSetKind;
-    vars: {[index:string]:ResolvedVariable};
+interface VariableSet {
+    kind: VariableSetKind;
+    vars: { [index: string]: ResolvedVariable };
 }
 
 /**
- * Tracks variable type within a single scope
+ * Tracks variable type
  */
-export class ResolvedVariableTable {
+export class VariableTable {
 
-    private _node: Tree<ResolvedVariableSet>;
+    private _node: Tree<VariableSet>;
 
     constructor() {
-        this._node = new Tree<ResolvedVariableSet>({
-            kind: ResolvedVariableSetKind.Scope,
+        this._node = new Tree<VariableSet>({
+            kind: VariableSetKind.Scope,
             vars: {}
         });
     }
 
-    setVariable(name: string, type: TypeString) {
-        this._node.value.vars[name] = { name: name, type: type };
+    setType(varName: string, type: TypeString) {
+        this._node.value.vars[varName] = { name: varName, type: type };
+    }
+
+    pushScope(carry:string[] = null){
+
+        let resolvedVariables:ResolvedVariable[] = [];
+        if(carry){
+            let type:TypeString;
+            for(let n = 0; n < carry.length; ++n){
+                type = this.getType(carry[n]);
+                if(type){
+                    resolvedVariables.push({name:carry[n], type:type});
+                }
+            }
+        }
+
+        this._pushNode(VariableSetKind.Scope);
+        for(let n = 0; n < resolvedVariables.length; ++n){
+            this.setType(resolvedVariables[n].name, resolvedVariables[n].type);
+        }
+    }
+
+    popScope(){
+        this._node = this._node.parent;
     }
 
     pushBranch() {
-        let b = new Tree<ResolvedVariableSet>({
-            kind: ResolvedVariableSetKind.Branch,
-            vars: {}
-        });
-        this._node.addChild(b);
-        this._node = b;
+        this._pushNode(VariableSetKind.Branch);
     }
 
     popBranch() {
@@ -556,12 +575,7 @@ export class ResolvedVariableTable {
     }
 
     pushBranchGroup() {
-        let b = new Tree<ResolvedVariableSet>({
-            kind: ResolvedVariableSetKind.BranchGroup,
-            vars: {}
-        });
-        this._node.addChild(b);
-        this._node = b;
+        this._pushNode(VariableSetKind.BranchGroup);
     }
 
     popBranchGroup() {
@@ -579,15 +593,17 @@ export class ResolvedVariableTable {
     getType(varName: string) {
 
         let type: TypeString;
-        let vars: {[index:string]:ResolvedVariable};
+        let vars: { [index: string]: ResolvedVariable };
         let node = this._node;
 
-        while(node){
+        while (node) {
 
             if (node.value.vars.hasOwnProperty(varName)) {
                 return node.value.vars[varName].type;
-            } else {
+            } else if (node.value.kind !== VariableSetKind.Scope){
                 node = node.parent;
+            } else {
+                break;
             }
 
         }
@@ -596,15 +612,23 @@ export class ResolvedVariableTable {
 
     }
 
+    private _pushNode(kind:VariableSetKind){
+        let node = new Tree<VariableSet>({
+            kind: kind,
+            vars: {}
+        });
+        this._node = this._node.addChild(node);
+    }
+
 }
 
-class TypeConsolidator implements TreeVisitor<ResolvedVariableSet> {
+class TypeConsolidator implements TreeVisitor<VariableSet> {
 
-    constructor(public variables: {[index:string]:ResolvedVariable}) {
+    constructor(public variables: { [index: string]: ResolvedVariable }) {
 
     }
 
-    preOrder(node: Tree<ResolvedVariableSet>) {
+    preOrder(node: Tree<VariableSet>) {
 
         let keys = Object.keys(node.value.vars);
         let v: ResolvedVariable;
