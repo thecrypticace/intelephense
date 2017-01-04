@@ -55,9 +55,8 @@ export class Event<T> {
 
 export interface TreeVisitor<T> {
 
-    haltTraverse?: Event<null>;
+    haltTraverse?:boolean;
     preOrder?(t: Tree<T>): boolean;
-    inOrder?(t: Tree<T>, afterChildIndex: number): void;
     postOrder?(t: Tree<T>): void;
 
 }
@@ -180,16 +179,26 @@ export class Tree<T> {
 
     traverse(visitor: TreeVisitor<T>) {
 
-        let descend: boolean = false;
+        if(visitor.haltTraverse){
+            return;
+        }
+
+        let descend = true;
 
         if (visitor.hasOwnProperty('preOrder')) {
             descend = visitor.preOrder(this);
+            if(visitor.haltTraverse){
+                return;
+            }
         }
 
         if (this._children.length && descend) {
 
             for (let n = 0, l = this._children.length; n < l; ++n) {
                 this._children[n].traverse(visitor);
+                if(visitor.haltTraverse){
+                    return;
+                }
             }
 
         }

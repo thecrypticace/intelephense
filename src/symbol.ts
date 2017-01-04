@@ -134,6 +134,9 @@ export class NameResolver {
     }
 
     resolveRelative(relativeName: string) {
+        if (!relativeName) {
+            return '';
+        }
         return this.namespace ? this.namespace + '\\' + relativeName : relativeName;
     }
 
@@ -351,23 +354,40 @@ export class TypeString {
 
 }
 
-export class SymbolTree extends Tree<PhpSymbol> {
+export class SymbolTree {
 
-    private _uri: string;
+    static lookupMemberSymbols(store: SymbolStore, typeSymbol: Tree<PhpSymbol>, kindMask: SymbolKind, memberName: string = null) {
 
-    constructor(uri: string) {
-        super(null);
-        this._uri = uri;
-    }
+        let predicate: Predicate<Tree<PhpSymbol>> = (x) => {
+            return (!memberName || x.value.name === memberName) &&
+                (x.value.kind & kindMask) > 0;
+        };
 
-    get uri() {
-        return this._uri;
-    }
+        let member = typeSymbol.find(predicate);
+        let members: Tree<PhpSymbol>[] = [];
 
-    toArray() {
-        let symbols = super.toArray();
-        symbols.shift(); //root has null value
-        return symbols;
+        if (member) {
+            members.push(member);
+        }
+
+        if (!typeSymbol.value.associated) {
+            return members;
+        }
+
+        //lookup in base class/traits
+        let associated: Tree<PhpSymbol>;
+        let typeKindMask = SymbolKind.Class | SymbolKind.Trait;
+        for (let n = 0; n < typeSymbol.value.associated.length; ++n) {
+
+            associated = store.match(typeSymbol.value.associated[n], typeKindMask).shift();
+            if (associated) {
+                Array.prototype.push.apply(members, SymbolTree.lookupMemberSymbols(store, associated, kindMask, memberName));
+            }
+
+        }
+
+        return members;
+
     }
 
 }
@@ -375,10 +395,10 @@ export class SymbolTree extends Tree<PhpSymbol> {
 export class DocumentSymbols {
 
     private _importTable: ImportTable;
-    private _symbolTree: SymbolTree;
+    private _symbolTree: Tree<PhpSymbol>;
     private _uri: string;
 
-    constructor(uri: string, importTable: ImportTable, symbolTree: SymbolTree) {
+    constructor(uri: string, importTable: ImportTable, symbolTree: Tree<PhpSymbol>) {
         this._uri = uri;
         this._importTable = importTable;
         this._symbolTree = symbolTree;
@@ -494,7 +514,7 @@ export class SymbolStore {
         return filtered;
     }
 
-    private _externalSymbols(symbolTree: SymbolTree) {
+    private _externalSymbols(symbolTree: Tree<PhpSymbol>) {
 
         let notKindMask = SymbolKind.Parameter | SymbolKind.Variable;
         let notModifierMask = SymbolModifier.Anonymous | SymbolModifier.Private;
@@ -531,38 +551,48 @@ interface VariableSet {
 export class VariableTable {
 
     private _node: Tree<VariableSet>;
+    private _thisTypeStack: TypeString[];
 
     constructor() {
         this._node = new Tree<VariableSet>({
             kind: VariableSetKind.Scope,
             vars: {}
         });
+        this._thisTypeStack = [];
     }
 
     setType(varName: string, type: TypeString) {
         this._node.value.vars[varName] = { name: varName, type: type };
     }
 
-    pushScope(carry:string[] = null){
+    pushThisType(thisType: TypeString) {
+        this._thisTypeStack.push(thisType);
+    }
 
-        let resolvedVariables:ResolvedVariable[] = [];
-        if(carry){
-            let type:TypeString;
-            for(let n = 0; n < carry.length; ++n){
+    popThisType() {
+        this._thisTypeStack.pop();
+    }
+
+    pushScope(carry: string[] = null) {
+
+        let resolvedVariables: ResolvedVariable[] = [];
+        if (carry) {
+            let type: TypeString;
+            for (let n = 0; n < carry.length; ++n) {
                 type = this.getType(carry[n]);
-                if(type){
-                    resolvedVariables.push({name:carry[n], type:type});
+                if (type) {
+                    resolvedVariables.push({ name: carry[n], type: type });
                 }
             }
         }
 
         this._pushNode(VariableSetKind.Scope);
-        for(let n = 0; n < resolvedVariables.length; ++n){
+        for (let n = 0; n < resolvedVariables.length; ++n) {
             this.setType(resolvedVariables[n].name, resolvedVariables[n].type);
         }
     }
 
-    popScope(){
+    popScope() {
         this._node = this._node.parent;
     }
 
@@ -596,11 +626,15 @@ export class VariableTable {
         let vars: { [index: string]: ResolvedVariable };
         let node = this._node;
 
+        if (varName === '$this') {
+            return util.top<TypeString>(this._thisTypeStack);
+        }
+
         while (node) {
 
             if (node.value.vars.hasOwnProperty(varName)) {
                 return node.value.vars[varName].type;
-            } else if (node.value.kind !== VariableSetKind.Scope){
+            } else if (node.value.kind !== VariableSetKind.Scope) {
                 node = node.parent;
             } else {
                 break;
@@ -612,7 +646,7 @@ export class VariableTable {
 
     }
 
-    private _pushNode(kind:VariableSetKind){
+    private _pushNode(kind: VariableSetKind) {
         let node = new Tree<VariableSet>({
             kind: kind,
             vars: {}

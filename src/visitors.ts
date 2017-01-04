@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray } from './types';
+import { Position, Range, Predicate, Tree, TreeVisitor, Event, BinarySearch, SuffixArray } from './types';
 import { Phrase, PhraseType, PhraseFlag, Token, TokenType } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag, MethodTag, ParsedDocument } from './parse';
 import * as util from './util';
@@ -14,7 +14,7 @@ import {
 } from './symbol';
 
 
-function namespaceNameToString(node: Tree<Phrase | Token>) {
+function namespaceNameNodeToString(node: Tree<Phrase | Token>) {
 
     if (!node.children) {
         return null;
@@ -31,13 +31,13 @@ function namespaceNameToString(node: Tree<Phrase | Token>) {
     return parts.join('\\');
 }
 
-function nameToFqnString(nameNode: Tree<Phrase | Token>, nameResolver: NameResolver, kind: SymbolKind) {
+function nameNodeToFqnString(nameNode: Tree<Phrase | Token>, nameResolver: NameResolver, kind: SymbolKind) {
 
-    if (nameNode.value === null || !nameNode.children) {
-        return null;
+    if (!nameNode.value || !nameNode.children) {
+        return '';
     }
 
-    let namespaceName = namespaceNameToString(nameNode.children[0]);
+    let namespaceName = namespaceNameNodeToString(nameNode.children[0]);
 
     switch ((<Phrase>nameNode.value).flag) {
         case PhraseFlag.NameRelative:
@@ -50,14 +50,37 @@ function nameToFqnString(nameNode: Tree<Phrase | Token>, nameResolver: NameResol
     }
 }
 
-function variableToString(variableNode: Tree<Phrase | Token>) {
+function variableNodeToString(variableNode: Tree<Phrase | Token>) {
     let child = variableNode.children[0] as Tree<Token>;
 
-    if (child.value === null || child.value.tokenType !== TokenType.T_VARIABLE) {
-        return null;
+    if (!child.value || child.value.tokenType !== TokenType.T_VARIABLE) {
+        return '';
     }
 
     return child.value.text;
+}
+
+function namespaceNodeToString(namespaceNode: Tree<Phrase | Token>) {
+    return namespaceNameNodeToString(namespaceNode.children[0]);
+}
+
+function anonymousName(anonNode: Tree<Phrase | Token>) {
+    let start: Position, end: Position;
+    let type = (<Phrase>anonNode.value).phraseType;
+    let positionString = [start.line, start.char, end.line, end.char].join('.');
+
+    if (type === PhraseType.AnonymousClassDeclaration) {
+        return 'AnonymousClass.' + positionString;
+    } else if (type === PhraseType.Closure) {
+        return 'Closure.' + positionString;
+    } else {
+        throw new Error('Invalid Argument');
+    }
+
+}
+
+function tokenNodeToString(node: Tree<Phrase | Token>) {
+    return (<Token>node.value).tokenType && node.value ? (<Token>node.value).text : '';
 }
 
 export class SymbolReader implements TreeVisitor<Phrase | Token> {
@@ -172,7 +195,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     }
 
     private _useGroup(node: Tree<Phrase | Token>) {
-        this._prefix = namespaceNameToString(node.children[0]);
+        this._prefix = namespaceNameNodeToString(node.children[0]);
         this._kind = this._useFlagToSymbolKind((<Phrase>node.value).flag);
     }
 
@@ -184,7 +207,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     private _useElement(node: Tree<Phrase | Token>) {
 
         let rule = {
-            fqn: namespaceNameToString(node.children[0]),
+            fqn: namespaceNameNodeToString(node.children[0]),
             alias: node.children[1].value ? (<Token>node.children[1].value).text : null,
             kind: this._useFlagToSymbolKind((<Phrase>node.value).flag)
         }
@@ -242,7 +265,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     private _namespace(node: Tree<Phrase | Token>) {
 
-        let name = namespaceNameToString(node.children[0]);
+        let name = namespaceNameNodeToString(node.children[0]);
         this.nameResolver.namespace = name;
         //empty name valid - global namespace
         let s = new PhpSymbol(SymbolKind.Namespace, name);
@@ -460,7 +483,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
         if (node.children[0].value === null) {
             return;
         } else if ((<Phrase>node.children[0].value).phraseType === PhraseType.Name) {
-            type = nameToFqnString(node.children[0], this.nameResolver, SymbolKind.Class);
+            type = nameNodeToFqnString(node.children[0], this.nameResolver, SymbolKind.Class);
             if (!type) {
                 return;
             }
@@ -484,7 +507,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
         let name: string;
         let names: string[] = [];
         for (let n = 0; n < node.children.length; ++n) {
-            name = nameToFqnString(node.children[n], this.nameResolver, SymbolKind.Class);
+            name = nameNodeToFqnString(node.children[n], this.nameResolver, SymbolKind.Class);
             if (name) {
                 names.push(name);
             }
@@ -515,7 +538,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
         //extends
         if (node.children[1].value) {
-            let baseClassName = nameToFqnString(node.children[1], this.nameResolver, SymbolKind.Class);
+            let baseClassName = nameNodeToFqnString(node.children[1], this.nameResolver, SymbolKind.Class);
             if (baseClassName) {
                 s.associated.push(baseClassName);
             }
@@ -649,31 +672,51 @@ export class SymbolAtLineSearch implements TreeVisitor<PhpSymbol> {
             node.value.end <= this._line &&
             (!this._kindMask || (node.value.kind & this._kindMask) > 0)) {
             this._node = node;
-            return true;
+            return TreeVisitorResult.None;
         }
-        return false;
+        return TreeVisitorResult.DoNotDescend;
 
     }
 
 }
 
-export class PhraseAtPositionSearch implements TreeVisitor<Phrase | Token>{
+export class AstContextVisitor implements TreeVisitor<Phrase | Token>{
 
-    private _node: Tree<Phrase | Token>;
     private _position: Position;
+    private _token: Tree<Phrase | Token>;
+    private _phrase: Tree<Phrase | Token>;
+    private _scope: Tree<Phrase | Token>;
+    private _thisPhrase: Tree<Phrase | Token>;
+    private _namespace: Tree<Phrase | Token>;
 
     constructor(position: Position) {
         this._position = position;
     }
 
-    get node() {
-        return this._node;
+    get token() {
+        return this._token;
+    }
+
+    get phraseNode() {
+        return this._phrase;
+    }
+
+    get scopeNode() {
+        return this._scope;
+    }
+
+    get thisNode() {
+        return this._thisPhrase;
+    }
+
+    get namespaceNode() {
+        return this._namespace;
     }
 
     preOrder(node: Tree<Phrase | Token>) {
 
-        if (node.value !== null) {
-            return false;
+        if (!node.value) {
+            return TreeVisitorResult.DoNotDescend;
         }
 
         let start: Position, end: Position;
@@ -681,15 +724,44 @@ export class PhraseAtPositionSearch implements TreeVisitor<Phrase | Token>{
             start = (<Phrase>node.value).startToken.range.start;
             end = (<Phrase>node.value).endToken.range.end;
         } else {
-            return false;
+            //Token
+            start = (<Token>node.value).range.start;
+            end = (<Token>node.value).range.end;
+        }
+
+        if ((<Phrase>node.value).phraseType === PhraseType.Namespace) {
+            this._namespace = node;
         }
 
         if (util.isInRange(this._position, start, end) === 0) {
-            this._node = <Tree<Phrase>>node;
-            return true;
+
+            switch ((<Phrase>node.value).phraseType) {
+                case PhraseType.TopStatementList:
+                    this._phrase = this._scope = node;
+                    break;
+                case PhraseType.InterfaceDeclaration:
+                case PhraseType.TraitDeclaration:
+                case PhraseType.ClassDeclaration:
+                case PhraseType.AnonymousClassDeclaration:
+                    this._phrase = this._scope = this._thisPhrase = node;
+                    break;
+                case PhraseType.FunctionDeclaration:
+                case PhraseType.MethodDeclaration:
+                case PhraseType.Closure:
+                    this._phrase = this._scope = node;
+                    break;
+                case undefined:
+                    this._token = node;
+                    return TreeVisitorResult.HaltTraverse;
+                default:
+                    this._phrase = node;
+                    break;
+            }
+
+            return TreeVisitorResult.None;
         }
 
-        return false;
+        return TreeVisitorResult.DoNotDescend;
 
     }
 
@@ -701,8 +773,9 @@ export class PhraseAtPositionSearch implements TreeVisitor<Phrase | Token>{
 export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
     private _haltAtNode: Tree<Phrase | Token>;
-    private _haltTraverse: boolean;
-    private _exprResolver:ExpressionTypeResolver;
+    private _exprResolver: ExpressionTypeResolver;
+
+    haltTraverse: boolean;
 
     constructor(public variableTable: VariableTable,
         public nameResolver: NameResolver,
@@ -711,21 +784,17 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
         haltAtNode: Tree<Phrase | Token> = null) {
         this._exprResolver = new ExpressionTypeResolver(this.variableTable, this.nameResolver, this.symbolStore);
         this._haltAtNode = haltAtNode;
-        this._haltTraverse = false;
+        this.haltTraverse = false;
     }
 
     preOrder(node: Tree<Phrase | Token>) {
 
-        if (this._haltTraverse) {
-            return false;
-        }
-
         if (this._haltAtNode === node) {
-            this._haltTraverse = true;
+            this.haltTraverse = true;
             return false;
         }
 
-        if (node.value === null) {
+        if (!node.value) {
             return false;
         }
 
@@ -771,7 +840,7 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
     postOrder(node: Tree<Phrase | Token>) {
 
-        if (this._haltTraverse || node.value === null) {
+        if (!node.value) {
             return;
         }
 
@@ -799,17 +868,16 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
     }
 
-    private _methodOrFunction(node: Tree<Phrase | Token>, kind:SymbolKind) {
+    private _methodOrFunction(node: Tree<Phrase | Token>, kind: SymbolKind) {
 
         this.variableTable.pushScope();
-        let name = node.children && node.children[0].value ?
-            (<Token>node.children[0].value).text : null;
+        let name = tokenNodeToString(node.children[0]);
 
         if (!name) {
             return;
         }
 
-        if(kind === SymbolKind.Function){
+        if (kind === SymbolKind.Function) {
             name = this.nameResolver.resolveRelative(name);
         }
 
@@ -833,25 +901,25 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
     }
 
-    private _closure(node:Tree<Phrase|Token>){   
+    private _closure(node: Tree<Phrase | Token>) {
 
+        let name = anonymousName(node);
         let symbol = this.docSymbols.symbolTree.find((x) => {
-            return x.value.kind === SymbolKind.Function && 
-                x.value.modifiers === SymbolModifier.Anonymous &&
-                (<Phrase>node.value).startToken.range.start.line === x.value.start;
+            return x.value.kind === SymbolKind.Function &&
+                (x.value.modifiers & SymbolModifier.Anonymous) > 0 &&
+                x.value.name === name;
         });
 
         if (!symbol) {
             return;
         }
 
-        let use = symbol.children.filter((v,i,a)=>{
+        let use = symbol.children.filter((v, i, a) => {
             return v.value.kind === SymbolKind.Variable &&
-                v.value.modifiers === SymbolModifier.Use;
-        }).map((v,i,a)=>{
+                (v.value.modifiers & SymbolModifier.Use) > 0;
+        }).map((v, i, a) => {
             return v.value.name;
         });
-
 
         this.variableTable.pushScope(use);
 
@@ -908,9 +976,9 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
     }
 
-     private _assignType(node: Tree<Phrase | Token>, typeString: TypeString) {
+    private _assignType(node: Tree<Phrase | Token>, typeString: TypeString) {
 
-        if (node.value === null) {
+        if (!node.value) {
             return;
         }
 
@@ -965,17 +1033,76 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
 }
 
-export class ExpressionTypeResolver {
-
-constructor(public variableTable:VariableTable,
-    public nameResolver:NameResolver,
-    public symbolStore:SymbolStore){
+export interface LookupVariableTypeDelegate {
+    (node: Tree<Phrase | Token>): TypeString;
 }
 
-resolveType(node: Tree<Phrase | Token>): TypeString {
+export interface LookupSymbolDelegate {
+    (name: string, kindMask: number, tree?: Tree<PhpSymbol>): Tree<PhpSymbol>;
+}
 
-        if (node.value === null) {
-            return null;
+export class ExpressionTypeResolver implements TreeVisitor<Phrase | Token>{
+
+    private _skipStack: Tree<Phrase | Token>[];
+    private _type: TypeString;
+    private _lookupVariableTypeDelegate: LookupVariableTypeDelegate;
+    private _lookupSymbolDelegate: LookupSymbolDelegate;
+
+    constructor(public nameResolver: NameResolver,
+        lookupSymbolDelegate: LookupSymbolDelegate,
+        lookupVariableTypeDelegate: LookupVariableTypeDelegate) {
+        this._skipStack = [];
+        this._lookupVariableTypeDelegate = lookupVariableTypeDelegate;
+        this._lookupSymbolDelegate = lookupSymbolDelegate;
+    }
+
+    get type() {
+        return this._type;
+    }
+
+    preOrder(node: Tree<Phrase | Token>) {
+
+        if (!node.value || util.top<Tree<Phrase | Token>>(this._skipStack) === node) {
+            return false;
+        }
+
+        switch ((<Phrase>node.value).phraseType) {
+
+            case PhraseType.Variable:
+                return false;
+            case PhraseType.Dimension:
+                //skip dimension offset
+                this._skipStack.push(node.children[1]);
+                return true;
+            case PhraseType.StaticProperty:
+            case PhraseType.Property:
+                //skip property name
+                this._skipStack.push(node.children[1]);
+                return true;
+            case PhraseType.StaticMethodCall:
+            case PhraseType.MethodCall:
+                //skip method name and args
+                this._skipStack.push(node.children[1], node.children[2]);
+                return true;
+            case PhraseType.Call:
+            case PhraseType.Name:
+                return false;
+            default:
+                return true;
+        }
+
+    }
+
+    postOrder(node: Tree<Phrase | Token>) {
+
+        if (util.top<Tree<Phrase | Token>>(this._skipStack) === node) {
+            this._skipStack.pop();
+            return;
+        }
+
+        if (!node.value) {
+            this._type = null;
+            return;
         }
 
         switch ((<Phrase>node.value).phraseType) {
@@ -994,20 +1121,17 @@ resolveType(node: Tree<Phrase | Token>): TypeString {
                 return this._call(node);
             case PhraseType.Name:
                 return this._name(node);
-            case PhraseType.BinaryExpression:
-            //todo assignment chain
-            case PhraseType.TernaryExpression:
-            //todo ternary
             default:
-                return null;
+                break;
         }
 
     }
 
     private _dimension(node: Tree<Phrase | Token>) {
 
-        let typeString = this.resolveType(node.children[0]);
-        return typeString ? typeString.arrayDereference() : null;
+        if (this._type) {
+            this._type = this._type.arrayDereference();
+        }
 
     }
 
@@ -1016,60 +1140,58 @@ resolveType(node: Tree<Phrase | Token>): TypeString {
         let nameNode = node.children[0];
 
         if (!nameNode.value || (<Phrase>nameNode.value).phraseType !== PhraseType.Name) {
-            return null;
+            this._type = null;
+            return;
         }
 
-        let name = nameToFqnString(nameNode, this.nameResolver, SymbolKind.Function);
+        let name = nameNodeToFqnString(nameNode, this.nameResolver, SymbolKind.Function);
         if (!name) {
-            return null;
+            this._type = null;
+            return;
         }
 
-        let functionSymbol = this.symbolStore.match(name, SymbolKind.Function).shift();
-        return functionSymbol ? functionSymbol.value.type : null;
+        let functionSymbol = this._lookupSymbolDelegate(name, SymbolKind.Function);
+        if (functionSymbol && functionSymbol.value.type && !functionSymbol.value.type.isEmpty()) {
+            this._type = functionSymbol.value.type;
+        } else {
+            this._type = null;
+        }
 
     }
 
     private _methodCall(node: Tree<Phrase | Token>) {
 
         let methodNameToken = node.children[1].value as Token;
-        if (!methodNameToken) {
-            return null;
+        if (!methodNameToken || !this._type) {
+            this._type = null;
+            return;
         }
 
-        let classTypeString = this.resolveType(node);
-        if (!classTypeString) {
-            return null;
-        }
-
-        let methodSymbol = this._lookupMemberSymbol(
-            this._lookupTypeSymbols(classTypeString),
+        let methodSymbols = this._lookupMemberSymbols(
+            this._lookupTypeSymbols(this._type),
             methodNameToken.text,
             SymbolKind.Method
         );
 
-        return methodSymbol ? methodSymbol.value.type : null;
+            this._type = this._mergeTypes(methodSymbols);
 
     }
 
     private _property(node: Tree<Phrase | Token>) {
 
-        let propName = variableToString(node.children[1]);
-        if (!propName) {
+        let propName = variableNodeToString(node.children[1]);
+        if (!propName || !this._type) {
             return null;
         }
 
-        let classTypeString = this.resolveType(node);
-        if (!classTypeString) {
-            return null;
-        }
-
-        let propSymbol = this._lookupMemberSymbol(
-            this._lookupTypeSymbols(classTypeString),
+        let propSymbols = this._lookupMemberSymbols(
+            this._lookupTypeSymbols(this._type),
             propName,
             SymbolKind.Property
         );
 
-        return propSymbol ? propSymbol.value.type : null;
+        this._type = this._mergeTypes(propSymbols);
+
     }
 
     private _variable(node: Tree<Phrase | Token>) {
@@ -1077,16 +1199,20 @@ resolveType(node: Tree<Phrase | Token>): TypeString {
         let child = node.children[0] as Tree<Token>;
 
         if (!child.value || child.value.tokenType !== TokenType.T_VARIABLE) {
-            return null;
+            this._type = null;
         }
 
-        return this.variableTable.getType(child.value.text);
+        this._type = this._lookupVariableTypeDelegate(node);
 
     }
 
     private _name(node: Tree<Phrase | Token>) {
-        let name = nameToFqnString(node, this.nameResolver, SymbolKind.Class);
-        return name ? new TypeString(name) : null;
+        let name = nameNodeToFqnString(node, this.nameResolver, SymbolKind.Class);
+        if (name) {
+            this._type = new TypeString(name);
+        } else {
+            this._type = null;
+        }
     }
 
     private _lookupTypeSymbols(typeString: TypeString) {
@@ -1094,157 +1220,86 @@ resolveType(node: Tree<Phrase | Token>): TypeString {
         let typeNameArray = typeString ? typeString.atomicClassArray() : [];
         let typeSymbols: Tree<PhpSymbol>[] = [];
         let typeSymbol: Tree<PhpSymbol>;
-        let kindMask = SymbolKind.Class | SymbolKind.Trait;
+        let kindMask = SymbolKind.Class | SymbolKind.Trait | SymbolKind.Interface;
 
         for (let n = 0; n < typeNameArray.length; ++n) {
-            typeSymbol = this.symbolStore.match(typeNameArray[n], kindMask).shift();
+
+            typeSymbol = this._lookupSymbolDelegate(typeNameArray[n], kindMask);
             if (typeSymbol) {
                 typeSymbols.push(typeSymbol);
             }
+
         }
 
         return typeSymbols;
 
     }
 
-    private _lookupMemberSymbol(types: Tree<PhpSymbol>[], memberName: string, kind: SymbolKind): Tree<PhpSymbol> {
+    private _lookupMemberSymbols(types: Tree<PhpSymbol>[], memberName: string, kind: SymbolKind) {
 
-        let predicate: Predicate<Tree<PhpSymbol>> = (x) => {
-            return x.value.name === memberName &&
-                x.value.kind === kind;
-        };
-
-        let type: Tree<PhpSymbol>;
         let member: Tree<PhpSymbol>;
-        let associated = new Set<string>();
+        let members: Tree<PhpSymbol>[] = [];
 
         for (let n = 0; n < types.length; ++n) {
-            type = types[n];
-            member = type.find(predicate);
+
+            member = this._lookupSymbolDelegate(memberName, kind, types[n]);
             if (member) {
-                return member;
-            }
-
-            if (type.value.associated) {
-                Set.prototype.add.apply(associated, type.value.associated);
+                members.push(member);
             }
 
         }
 
-        //lookup in base class/traits
-        if (associated.size) {
-            return this._lookupMemberSymbol(
-                this._lookupTypeSymbols(new TypeString(Array.from(associated).join('|'))),
-                memberName,
-                kind
-            );
+        return members;
+
+    }
+
+    private _mergeTypes(symbols: Tree<PhpSymbol>[]) {
+
+        let type: TypeString = null;
+        let symbol: PhpSymbol;
+
+        for (let n = 0; n < symbols.length; ++n) {
+            symbol = symbols[n].value;
+            if (symbol.type) {
+                type = type ? type.merge(symbol.type) : symbol.type;
+            }
         }
 
-        return null;
-
+        return type;
     }
-
-}
-
-export class TypeAssigner {
-
-    private _table: VariableTable;
-
-    constructor(table: VariableTable) {
-        this._table = table;
-    }
-
-    assignType(node: Tree<Phrase | Token>, typeString: TypeString) {
-
-        if (node.value === null) {
-            return;
-        }
-
-        switch ((<Phrase>node.value).phraseType) {
-            case PhraseType.Array:
-                this._array(node, typeString);
-            case PhraseType.ArrayPair:
-                this._arrayPair(node.children[1], typeString);
-                break;
-            case PhraseType.Dimension:
-                this._dimension(node, typeString);
-                break;
-            case PhraseType.Variable:
-                this._variable(node, typeString);
-                break;
-            default:
-                break;
-        }
-
-    }
-
-    private _dimension(node: Tree<Phrase | Token>, typeString: TypeString) {
-        this.assignType(node.children[0], typeString.array());
-    }
-
-    private _array(node: Tree<Phrase | Token>, typeString: TypeString) {
-        let type = typeString.arrayDereference();
-
-        if (!node.children) {
-            return;
-        }
-
-        for (let n = 0; n < node.children.length; ++n) {
-            this._arrayPair(node.children[n], type);
-        }
-    }
-
-    private _arrayPair(node: Tree<Phrase | Token>, typeString: TypeString) {
-        this.assignType(node.children[1], typeString);
-    }
-
-    private _variable(node: Tree<Phrase | Token>, typeString: TypeString) {
-
-        if (node.children && node.children.length &&
-            (<Token>node.children[0].value).tokenType === TokenType.T_VARIABLE &&
-            typeString &&
-            !typeString.isEmpty()) {
-            this._table.setType((<Token>node.children[0].value).text, typeString);
-        }
-
-    }
-
 
 }
 
 export class DocumentContext {
 
     private _tokenIndex: number;
-    private _symbol: Tree<PhpSymbol>;
-    private _phrase: Tree<Phrase | Token>;
+    private _token: Token;
+    private _phraseNode: Tree<Phrase | Token>;
+    private _scopeNode: Tree<Phrase | Token>;
+    private _thisNode: Tree<Phrase | Token>;
+    private _namespaceNode: Tree<Phrase | Token>;
 
     constructor(public position: Position,
         public parsedDoc: ParsedDocument,
-        public docSymbols: DocumentSymbols,
         public symbolStore: SymbolStore) {
-
-    }
-
-    get phrase() {
-        if (this._phrase === undefined) {
-            let search = new PhraseAtPositionSearch(this.position);
-            this.parsedDoc.parseTree.traverse(search);
-            this._phrase = search.node;
-        }
-        return this._phrase;
-    }
-
-    get symbol() {
-        if (this._symbol === undefined) {
-            let search = new SymbolAtLineSearch(this.position.line, 0);
-            this.docSymbols.symbolTree.traverse(search);
-            this._symbol = search.node;
-        }
-        return this._symbol;
+        let visitor = new AstContextVisitor(this.position);
+        this.parsedDoc.parseTree.traverse(visitor);
+        this._phraseNode = visitor.phraseNode;
+        this._scopeNode = visitor.scopeNode;
+        this._namespaceNode = visitor.namespaceNode;
+        this._thisNode = visitor.thisNode;
     }
 
     get token() {
         return this.parsedDoc.tokens[this.tokenIndex];
+    }
+
+    get phraseNode() {
+        return this._phraseNode;
+    }
+
+    get scopeNode() {
+        return this._scopeNode;
     }
 
     get tokenIndex() {
@@ -1254,74 +1309,82 @@ export class DocumentContext {
         return this._tokenIndex;
     }
 
-    get namespace() {
-        let s = this.symbol;
-
-        if (!s) {
-            return null;
-        }
-
-        if (s.value.kind === SymbolKind.Namespace) {
-            return s;
-        }
-
-        return s.ancestor((x) => {
-            return x.value.kind === SymbolKind.Namespace;
-        });
+    get namespaceNode() {
+        return this._namespaceNode;
     }
 
-    get classSymbol() {
+    get thisNode() {
+        return this._thisNode;
+    }
 
-        let s = this.symbol;
+    get namespaceName() {
+        return this._namespaceNode ? namespaceNodeToString(this._namespaceNode) : '';
+    }
 
-        if (!s) {
-            return null;
+    get thisName() {
+        if (!this._thisNode) {
+            return '';
         }
 
-        let kindMask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait;
-
-        if ((s.value.kind & kindMask) > 0) {
-            return s;
+        let thisName: string
+        if ((<Phrase>this._thisNode.value).phraseType === PhraseType.AnonymousClassDeclaration) {
+            thisName = anonymousName(this._thisNode);
+        } else {
+            thisName = tokenNodeToString(this._thisNode.children[0]);
+            let nsName = this.namespaceName;
+            if (thisName && nsName) {
+                thisName = nsName + '\\' + thisName;
+            }
         }
-
-        return s.ancestor((x) => {
-            return (s.value.kind & kindMask) > 0;
-        });
 
     }
 
-    resolveType(node: Tree<Phrase | Token>) {
+    typeResolveExpression(node: Tree<Phrase | Token>) {
 
-        if ((<Phrase>node.value).phraseType === PhraseType.Name) {
-            return this._typeResolveName(<Tree<Phrase>>node);
-        } else if ((<Token>node.value).tokenType === TokenType.T_VARIABLE &&
-            (<Token>node.value).text === '$this') {
-            return this._typeResolveThis(<Tree<Token>>node);
-        }
-
-        let nameResolver = new NameResolver(this.docSymbols.importTable);
-        let ns = this.namespace;
-        let classSymbol = this.classSymbol;
-        nameResolver.namespace = ns ? ns.value.name : '';
-        nameResolver.thisName = classSymbol ? classSymbol.value.name : '';
+        let docSymbols = this.symbolStore.getDocumentSymbols(this.parsedDoc.uri);
+        let nameResolver = new NameResolver(docSymbols.importTable);
         let varTable = new VariableTable();
-        let typeResolver = new VariableTypeResolver(new VariableTable(),
-            nameResolver,
-            new TypeResolver(nameResolver, varTable, this.symbolStore),
-            new TypeAssigner(varTable),
-            node);
+        nameResolver.namespace = this.namespaceName;
+        nameResolver.thisName = this.thisName;
+        if (nameResolver.thisName) {
+            varTable.pushThisType(new TypeString(nameResolver.thisName));
+        }
+
+        //if theres no variable in the expression then no need to resolve variable types
+        let varNode = node.find((x) => {
+            return x.value &&
+                (<Token>x.value).tokenType === TokenType.T_VARIABLE &&
+                (<Token>x.value).text !== '$this';
+        });
+
+        if (varNode) {
+            let typeResolver = new VariableTypeResolver(
+                varTable,
+                nameResolver,
+                this.symbolStore,
+                docSymbols,
+                node);
+
+            //if scope is closure and has var use list then start from closure parent scope 
+            let scope = this.scopeNode as Tree<Phrase>;
+            if (scope.value.phraseType === PhraseType.Closure &&
+                scope.children[1].value) {
+                let types = [PhraseType.TopStatementList, PhraseType.MethodDeclaration, PhraseType.FunctionDeclaration];
+                scope = scope.ancestor((x) => {
+                    return types.indexOf(x.value.phraseType) !== -1;
+                });
+            }
+            scope.traverse(typeResolver);
+        }
+
+        let exprTypeResolver = new ExpressionTypeResolver(varTable, nameResolver, this.symbolStore);
+        return exprTypeResolver.resolveType(node);
 
     }
 
-    private _namesp
+    typeResolveVariable()
 
-    private _typeResolveThis(token: Tree<Token>) {
 
-    }
-
-    private _typeResolveName(name: Tree<Phrase>) {
-
-    }
 
 }
 
