@@ -356,29 +356,40 @@ export class TypeString {
 
 export class SymbolTree {
 
-    private static _parametersPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
+    static parametersPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
         return x.value.kind === SymbolKind.Parameter;
     };
 
-    private static _closureUseVariablesPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
+    static closureUseVariablesPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
         return x.value.kind === SymbolKind.Variable &&
             (x.value.modifiers & SymbolModifier.Use) > 0;
     };
 
-    private static _variablesPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
+    static variablesPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
         return x.value.kind === SymbolKind.Variable;
     };
 
+    static instanceExternalMembersPredicate:Predicate<Tree<PhpSymbol>> = (x) => {
+        return (x.value.kind === SymbolKind.Property || x.value.kind === SymbolKind.Method) &&
+            (x.value.modifiers & SymbolModifier.Public) > 0 && 
+            !(x.value.modifiers & SymbolModifier.Static);
+    }
+
+    static instanceInternalMembersPredicate:Predicate<Tree<PhpSymbol>> = (x) => {
+        return (x.value.kind === SymbolKind.Property || x.value.kind === SymbolKind.Method) && 
+            !(x.value.modifiers & SymbolModifier.Static);
+    }
+
     static parameters(node: Tree<PhpSymbol>) {
-        return node.children.filter(SymbolTree._parametersPredicate);
+        return node.children.filter(SymbolTree.parametersPredicate);
     }
 
     static closureUseVariables(node: Tree<PhpSymbol>) {
-        return node.children.filter(SymbolTree._closureUseVariablesPredicate);
+        return node.children.filter(SymbolTree.closureUseVariablesPredicate);
     }
 
     static variables(node: Tree<PhpSymbol>) {
-        return node.children.filter(SymbolTree._variablesPredicate);
+        return node.children.filter(SymbolTree.variablesPredicate);
     }
 
 }
@@ -505,25 +516,9 @@ export class SymbolStore {
         return filtered;
     }
 
-    lookupTypeMembers(typeName: string, kindMask: SymbolKind = SymbolKind.Constant | SymbolKind.Method | SymbolKind.Parameter, memberName: string = null) {
+    lookupTypeMembers(type: Tree<PhpSymbol>, predicate:Predicate<Tree<PhpSymbol>>) {
 
-        let members: Tree<PhpSymbol>[] = [];
-        let type = this.match(typeName, SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait).shift();
-
-        if (!type) {
-            return members;
-        }
-
-        let predicate: Predicate<Tree<PhpSymbol>> = (x) => {
-            return (!memberName || x.value.name === memberName) &&
-                (x.value.kind & kindMask) > 0;
-        };
-
-        let member = type.find(predicate);
-
-        if (member) {
-            members.push(member);
-        }
+        let members = type.children.filter(predicate);
 
         if (!type.value.associated) {
             return members;
@@ -532,16 +527,23 @@ export class SymbolStore {
         //lookup in base class/traits
         let associated: Tree<PhpSymbol>;
         let baseKindMask = type.value.kind === SymbolKind.Class ? SymbolKind.Class | SymbolKind.Trait : SymbolKind.Interface;
+        let basePredicate:Predicate<Tree<PhpSymbol>> = (x) => {
+            return predicate(x) && !(x.value.modifiers & SymbolModifier.Private);
+        };
 
         for (let n = 0; n < type.value.associated.length; ++n) {
-            Array.prototype.push.apply(members, this.lookupTypeMembers(type.value.associated[n], baseKindMask, memberName));
+            associated = this.match(type.value.associated[n], baseKindMask).shift();
+            if(associated){
+                Array.prototype.push.apply(members, this.lookupTypeMembers(associated, basePredicate));
+            }
+            
         }
 
         return members;
     }
 
-    lookupTypeMember(typeName: string, kindMask: SymbolKind, memberName: string) {
-        return this.lookupTypeMembers(typeName, kindMask, memberName).shift();
+    lookupTypeMember(type: Tree<PhpSymbol>, predicate:Predicate<Tree<PhpSymbol>>) {
+        return this.lookupTypeMembers(type, predicate).shift();
     }
 
     private _indexSymbols(symbolTree: Tree<PhpSymbol>) {
