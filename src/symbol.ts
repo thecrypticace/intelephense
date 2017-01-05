@@ -356,38 +356,29 @@ export class TypeString {
 
 export class SymbolTree {
 
-    static lookupMemberSymbols(store: SymbolStore, typeSymbol: Tree<PhpSymbol>, kindMask: SymbolKind, memberName: string = null) {
+    private static _parametersPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
+        return x.value.kind === SymbolKind.Parameter;
+    };
 
-        let predicate: Predicate<Tree<PhpSymbol>> = (x) => {
-            return (!memberName || x.value.name === memberName) &&
-                (x.value.kind & kindMask) > 0;
-        };
+    private static _closureUseVariablesPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
+        return x.value.kind === SymbolKind.Variable &&
+            (x.value.modifiers & SymbolModifier.Use) > 0;
+    };
 
-        let member = typeSymbol.find(predicate);
-        let members: Tree<PhpSymbol>[] = [];
+    private static _variablesPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
+        return x.value.kind === SymbolKind.Variable;
+    };
 
-        if (member) {
-            members.push(member);
-        }
+    static parameters(node: Tree<PhpSymbol>) {
+        return node.children.filter(SymbolTree._parametersPredicate);
+    }
 
-        if (!typeSymbol.value.associated) {
-            return members;
-        }
+    static closureUseVariables(node: Tree<PhpSymbol>) {
+        return node.children.filter(SymbolTree._closureUseVariablesPredicate);
+    }
 
-        //lookup in base class/traits
-        let associated: Tree<PhpSymbol>;
-        let typeKindMask = SymbolKind.Class | SymbolKind.Trait;
-        for (let n = 0; n < typeSymbol.value.associated.length; ++n) {
-
-            associated = store.match(typeSymbol.value.associated[n], typeKindMask).shift();
-            if (associated) {
-                Array.prototype.push.apply(members, SymbolTree.lookupMemberSymbols(store, associated, kindMask, memberName));
-            }
-
-        }
-
-        return members;
-
+    static variables(node: Tree<PhpSymbol>) {
+        return node.children.filter(SymbolTree._variablesPredicate);
     }
 
 }
@@ -479,7 +470,7 @@ export class SymbolStore {
             throw new Error(`Duplicate key ${documentSymbols.uri}`);
         }
         this._map[documentSymbols.uri] = documentSymbols;
-        this._index.addMany(this._externalSymbols(documentSymbols.symbolTree));
+        this._index.addMany(this._indexSymbols(documentSymbols.symbolTree));
     }
 
     remove(uri: string) {
@@ -487,12 +478,12 @@ export class SymbolStore {
         if (!doc) {
             return;
         }
-        this._index.removeMany(this._externalSymbols(doc.symbolTree));
+        this._index.removeMany(this._indexSymbols(doc.symbolTree));
         delete this._map[uri];
     }
 
     /**
-     * Matches external symbols only
+     * Matches any symbol by name or partial name (excluding parameters and variables) 
      */
     match(text: string, kindMask?: SymbolKind) {
         let matched = this._index.match(text);
@@ -514,15 +505,51 @@ export class SymbolStore {
         return filtered;
     }
 
-    private _externalSymbols(symbolTree: Tree<PhpSymbol>) {
+    lookupTypeMembers(typeName: string, kindMask: SymbolKind = SymbolKind.Constant | SymbolKind.Method | SymbolKind.Parameter, memberName: string = null) {
 
-        let notKindMask = SymbolKind.Parameter | SymbolKind.Variable;
-        let notModifierMask = SymbolModifier.Anonymous | SymbolModifier.Private;
+        let members: Tree<PhpSymbol>[] = [];
+        let type = this.match(typeName, SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait).shift();
+
+        if (!type) {
+            return members;
+        }
 
         let predicate: Predicate<Tree<PhpSymbol>> = (x) => {
-            return x.value !== null &&
-                !(x.value.kind & notKindMask) &&
-                !(x.value.modifiers & notModifierMask);
+            return (!memberName || x.value.name === memberName) &&
+                (x.value.kind & kindMask) > 0;
+        };
+
+        let member = type.find(predicate);
+
+        if (member) {
+            members.push(member);
+        }
+
+        if (!type.value.associated) {
+            return members;
+        }
+
+        //lookup in base class/traits
+        let associated: Tree<PhpSymbol>;
+        let baseKindMask = type.value.kind === SymbolKind.Class ? SymbolKind.Class | SymbolKind.Trait : SymbolKind.Interface;
+
+        for (let n = 0; n < type.value.associated.length; ++n) {
+            Array.prototype.push.apply(members, this.lookupTypeMembers(type.value.associated[n], baseKindMask, memberName));
+        }
+
+        return members;
+    }
+
+    lookupTypeMember(typeName: string, kindMask: SymbolKind, memberName: string) {
+        return this.lookupTypeMembers(typeName, kindMask, memberName).shift();
+    }
+
+    private _indexSymbols(symbolTree: Tree<PhpSymbol>) {
+
+        let notKindMask = SymbolKind.Parameter | SymbolKind.Variable;
+
+        let predicate: Predicate<Tree<PhpSymbol>> = (x) => {
+            return x.value && !(x.value.kind & notKindMask);
         };
 
         return symbolTree.match(predicate);
