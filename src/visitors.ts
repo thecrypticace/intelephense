@@ -699,7 +699,7 @@ export class AstContextVisitor implements TreeVisitor<Phrase | Token>{
     private _thisPhrase: Tree<Phrase | Token>;
     private _namespace: Tree<Phrase | Token>;
 
-    haltTraverse:boolean;
+    haltTraverse: boolean;
 
     constructor(position: Position) {
         this._position = position;
@@ -718,7 +718,7 @@ export class AstContextVisitor implements TreeVisitor<Phrase | Token>{
         return this._scope;
     }
 
-    get concreteScopeNode(){
+    get concreteScopeNode() {
         return this._concreteScope;
     }
 
@@ -1366,40 +1366,40 @@ export class DocumentContext {
         let nameResolver = new NameResolver(docSymbols.importTable);
         nameResolver.namespace = this.namespaceName;
         nameResolver.thisName = this.thisName;
-        let symbolStore = this.symbolStore;
-        let scope = this._concreteScopeNode;
-        
-        let lookupVarTypeDelegate:LookupVariableTypeDelegate = (x) => {
-            let varName = variableNodeToString(x);
-
-            if(!varName){
-                return null;
-            } else if(varName === '$this'){
-                return new TypeString(nameResolver.thisName);
-            } else {
-
-                let varTable = new VariableTable();
-                if (nameResolver.thisName) {
-                    varTable.pushThisType(new TypeString(nameResolver.thisName));
-                }
-                let varTypeResolver = new VariableTypeResolver(varTable, nameResolver, 
-                symbolStore, new ExpressionTypeResolver(nameResolver, symbolStore, lookupVarTypeDelegate),
-                x, varName);
-
-                scope.traverse(varTypeResolver);
-                return varTypeResolver.variableTable.getType(varName);
-
-            }
-
-        };
-
-        let exprTypeResolver = new ExpressionTypeResolver(nameResolver, this.symbolStore, lookupVarTypeDelegate);
+        let exprTypeResolver = new ExpressionTypeResolver(nameResolver, this.symbolStore, this.typeResolveVariable);
         node.traverse(exprTypeResolver);
         return exprTypeResolver.type;
 
     }
 
+    typeResolveVariable = (varNode: Tree<Phrase|Token>) => {
 
+        let docSymbols = this.symbolStore.getDocumentSymbols(this.parsedDoc.uri);
+        let nameResolver = new NameResolver(docSymbols.importTable);
+        nameResolver.namespace = this.namespaceName;
+        nameResolver.thisName = this.thisName;
+        let varName = variableNodeToString(varNode);
+        
+        if (!varName) {
+            return null;
+        } else if (varName === '$this') {
+            return new TypeString(nameResolver.thisName);
+        } else {
+
+            let varTable = new VariableTable();
+            if (nameResolver.thisName) {
+                varTable.pushThisType(new TypeString(nameResolver.thisName));
+            }
+            let varTypeResolver = new VariableTypeResolver(varTable, nameResolver,
+                this.symbolStore, new ExpressionTypeResolver(nameResolver, this.symbolStore, this.typeResolveVariable),
+                varNode, varName);
+
+            this._concreteScopeNode.traverse(varTypeResolver);
+            return varTypeResolver.variableTable.getType(varName);
+
+        }
+
+    }
 
 }
 
