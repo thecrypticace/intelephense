@@ -1360,6 +1360,19 @@ export class DocumentContext {
 
     }
 
+    get thisExtendsName() {
+        let thisNode = this.thisNode;
+        if(!thisNode || (<Phrase>thisNode.value).phraseType !== PhraseType.ClassDeclaration){
+            return '';
+        }
+
+        let docSymbols = this.symbolStore.getDocumentSymbols(this.parsedDoc.uri);
+        let nameResolver = new NameResolver(docSymbols.importTable);
+        nameResolver.namespace = this.namespaceName;
+        return nameNodeToFqnString(thisNode.children[2], nameResolver, SymbolKind.Class);
+
+    }
+
     typeResolveExpression(node: Tree<Phrase | Token>) {
 
         let docSymbols = this.symbolStore.getDocumentSymbols(this.parsedDoc.uri);
