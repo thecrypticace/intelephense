@@ -5,24 +5,24 @@
 'use strict';
 
 import { Tree, BinarySearch } from './types';
-import { Token, Phrase, AstNodeFactory, Position } from 'php7parser';
+import { Token, TokenType, Phrase, AstNodeFactory, Position } from 'php7parser';
 import * as util from './util';
 
 export class ParsedDocument {
 
     private _tokens: Token[];
-    private _parseTree: ParseTree;
-    private _tokenSearch:BinarySearch<Token>;
-    private _uri:string;
+    private _parseTree: Tree<Phrase | Token>;
+    private _tokenSearch: BinarySearch<Token>;
+    private _uri: string;
 
-    constructor(uri:string, tokens: Token[], parseTree: ParseTree) {
+    constructor(uri: string, tokens: Token[], parseTree: Tree<Phrase | Token>) {
         this._uri = uri;
         this._tokens = tokens;
         this._parseTree = parseTree;
         this._tokenSearch = new BinarySearch<Token>(this._tokens);
     }
 
-    get uri(){
+    get uri() {
         return this._uri;
     }
 
@@ -34,8 +34,8 @@ export class ParsedDocument {
         return this._parseTree;
     }
 
-    tokenIndexAtPosition(pos:Position){
-        return this._tokenSearch.rank((t)=>{
+    tokenIndexAtPosition(pos: Position) {
+        return this._tokenSearch.rank((t) => {
             return util.isInRange(pos, t.range.start, t.range.end);
         });
     }
@@ -43,38 +43,52 @@ export class ParsedDocument {
 
 export class AstStore {
 
-    private _map:{[index:string]:ParsedDocument};
+    private _map: { [index: string]: ParsedDocument };
 
-    constructor(){
+    constructor() {
         this._map = {};
     }
 
-    add(parsedDoc:ParsedDocument){
+    add(parsedDoc: ParsedDocument) {
         this._map[parsedDoc.uri] = parsedDoc;
     }
 
-    remove(uri:string){
+    remove(uri: string) {
         delete this._map[uri];
     }
 
-    getParsedDocument(uri:string){
+    getParsedDocument(uri: string) {
         return this._map[uri];
     }
 
 }
 
-export class ParseTree extends Tree<Phrase | Token> {
+export class Ast {
 
-    private _uri;
-
-    constructor(uri) {
-        super(null);
-        this._uri = uri;
+    static isFullyQualifiedName(node: Tree<Phrase | Token>) {
+        return node.children[0].value &&
+            (<Token>node.children[0].value).tokenType === TokenType.T_NS_SEPARATOR;
     }
 
-    get uri() {
-        return this._uri;
+    static isNotFullyQualifiedName(node: Tree<Phrase | Token>) {
+        return !node.children[0].value;
     }
+
+    static isRelativeName(node: Tree<Phrase | Token>) {
+        return node.children[0].value &&
+            (<Token>node.children[0].value).tokenType === TokenType.T_NAMESPACE;
+    }
+
+    static namespaceNameToString(node: Tree<Phrase | Token>) {
+        if (!node.children) {
+            return '';
+        }
+
+        return node.children.map((x) => {
+            return (<Token>node.value).text;
+        }).join('\\');
+    }
+
 }
 
 export var astNodeFactory: AstNodeFactory<Tree<Phrase | Token>> = function (value, children) {

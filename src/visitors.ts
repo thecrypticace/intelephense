@@ -14,23 +14,6 @@ import {
 } from './symbol';
 
 
-function namespaceNameNodeToString(node: Tree<Phrase | Token>) {
-
-    if (!node.children) {
-        return null;
-    }
-
-    let parts: string[] = [];
-    let child: Tree<Token>;
-    for (let n = 0; n < node.children.length; ++n) {
-        child = node.children[n] as Tree<Token>;
-        if (child.value !== null) {
-            parts.push(child.value.text);
-        }
-    }
-    return parts.join('\\');
-}
-
 function nameNodeToFqnString(nameNode: Tree<Phrase | Token>, nameResolver: NameResolver, kind: SymbolKind) {
 
     if (!nameNode.value || !nameNode.children) {
