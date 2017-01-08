@@ -40,54 +40,45 @@ export interface CompletionItem {
     range?: Range;
 }
 
-interface CompletionProvider {
-    canComplete(context: DocumentContext): boolean;
-    completions(context: DocumentContext): CompletionItem[];
-}
+export namespace CompletionProvider {
 
-export class MasterCompletionProvider {
+    export var maxSuggestions = 100;
+    export var symbolStore:SymbolStore;
 
-    static maxSuggestions = 100;
-    private _providers: CompletionProvider[];
+    export function completions(context:DocumentContext) {
 
-    constructor(public astStore: AstStore, public symbolStore: SymbolStore) {
-        this._providers = [
+        switch ((<Phrase>context.phraseNode.value).phraseType) {
+            case PhraseType.NamespaceName:
 
-        ];
+            case PhraseType.Identifier:
+
+            case PhraseType.Property:
+            case PhraseType.MethodCall:
+
+            case PhraseType.ErrorStaticMember:
+
+            case PhraseType.Variable:
+                return variable(context);
+            default:
+                return [];
+
     }
 
-    completions(pos: Position, uri: string) {
+    function variable(context:DocumentContext){
 
-        let parsedDoc = this.astStore.getParsedDocument(uri);
-        let docSymbols = this.symbolStore.getDocumentSymbols(uri);
+        let varContext = context.phraseNode.parent;
 
-        if (!parsedDoc || !docSymbols) {
-            return [];
-        }
-
-        let context = new DocumentContext(pos, parsedDoc, this.symbolStore);
-        let items: CompletionItem[] = [];
-
-        switch (context.token.tokenType) {
-            case TokenType.T_OBJECT_OPERATOR:
-                items = this._objectOperator(context);
-                break;
-            case TokenType.T_PAAMAYIM_NEKUDOTAYIM:
-
-                break;
-            case TokenType.T_VARIABLE:
-            case '$':
-
-                break;
-            case TokenType.T_STRING:
-            case TokenType.T_NS_SEPARATOR:
-
-                break;
+        (<Phrase>varContext.value).phraseType){
+            case PhraseType.StaticProperty:
+                return staticPropertyCompletions(context);
             default:
-                break;
+                return variableCompletions(context);
         }
 
-        return items;
+
+    }
+
+    function staticProperty(context:DocumentContext){
 
     }
 
@@ -100,25 +91,43 @@ class TypeCompletionProvider implements CompletionProvider {
 
     canComplete(context: DocumentContext) {
 
-        let token = context.token;
-        let phrase = context.phraseNode;
-
-        return (token.tokenType === TokenType.T_STRING ||
-            token.tokenType === TokenType.T_NS_SEPARATOR) &&
-            phrase.parent && (<Phrase>phrase.parent.value).phraseType === PhraseType.Name;
+        return (<Phrase>context.phraseNode.value).phraseType === PhraseType.NamespaceName &&
+            (<Phrase>context.phraseNode.parent.value).phraseType !== PhraseType.Namespace;
 
     }
 
-    completions(context:DocumentContext){
+    completions(context: DocumentContext) {
 
-        let nameNode = context.phraseNode.parent;
+        let namespaceNameNode = context.phraseNode;
+        let nameNode = (<Phrase>namespaceNameNode.parent.value).phraseType === PhraseType.Name ? 
+            namespaceNameNode.parent : null;
+        let contextNode = this._typeContext(namespaceNameNode);
         let nChars = 1 + context.position.char - (<Phrase>context.phraseNode.value).startToken.range.start.char;
         let text = Ast.namespaceNameToString(context.phraseNode).substr(0, nChars);
-        let replaceRange:Range = {
-            start:(<Phrase>context.phraseNode.value).startToken.range.start,
+        let replaceRange: Range = {
+            start: (<Phrase>context.phraseNode.value).startToken.range.start,
             end: context.position
         };
 
+        switch((<Phrase>contextNode.value).phraseType){
+            case PhraseType.UseDeclaration:
+                return this._useDeclaration(contextNode, text, replaceRange);
+            case PhraseType.New:
+                return this._new(nameNode, text, replaceRange);
+            case PhraseType.CatchNameList:
+                return this._catchNames(nameNode, text, replaceRange);
+            case PhraseType.Implements:
+                return this._implements(nameNode, text, replaceRange);
+            case PhraseType.UseTrait:
+                return this._useTrait(nameNode, text, replaceRange);
+            case PhraseType.BinaryExpression:
+                return this._binaryExpression(nameNode, text, replaceRange);        
+            case PhraseType.Extends:
+                return this._extends(nameNode, text, replaceRange);
+            case 
+        }
+
+        //new
         //catch name list
         //extends
         //type expr
@@ -126,7 +135,66 @@ class TypeCompletionProvider implements CompletionProvider {
         //use traits
         //static func
         //use
+        //instanceof
 
+
+    }
+
+    private _extends(nameNode:Tree<Phrase|Token>, text:string, replaceRange:Range){
+
+    }
+
+    private _binaryExpression(nameNode:Tree<Phrase|Token>, text:string, replaceRange:Range){
+
+    }
+
+    private _useTrait(nameNode:Tree<Phrase|Token>, text:string, replaceRange:Range){
+
+    }
+
+    private _implements(nameNode:Tree<Phrase|Token>, text:string, replaceRange:Range){
+
+    }
+
+    private _catchNames(nameNode:Tree<Phrase|Token>, text:string, replaceRange:Range){
+
+    }
+
+    private _new(nameNode:Tree<Phrase|Token>, text:string, replaceRange:Range){
+
+    }
+
+    private _useDeclaration(contextNode:Tree<Phrase|Token>, text:string, replaceRange:Range){
+        //todo
+        return [];
+    }
+
+    private _typeContext(namespaceNameNode:Tree<Phrase|Token>){
+
+        let p:Predicate<Tree<Phrase|Token>> = (x) => {
+
+            switch((<Phrase>x.value).phraseType){
+                case PhraseType.New:
+                case PhraseType.ExtendsClass:
+                case PhraseType.TypeExpression:
+                case PhraseType.Implements:
+                case PhraseType.CatchNameList:
+                case PhraseType.BinaryExpression:
+                case PhraseType.UseDeclaration:
+                case PhraseType.UseTrait:
+                case PhraseType.ErrorVariable:
+                case PhraseType.Constant:
+                case PhraseType.StaticMethodCall:
+                case PhraseType.StaticProperty:
+                case PhraseType.ClassConstant:
+                    return true;
+                default:
+                    return false;
+            }
+
+        }
+
+        return namespaceNameNode.ancestor(p);
 
     }
 
