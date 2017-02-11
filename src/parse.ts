@@ -97,6 +97,36 @@ export var astNodeFactory: AstNodeFactory<Tree<Phrase | Token>> = function (valu
     return tree;
 }
 
+export class PhpDoc {
+
+    private static paramRegExp = /@param/;
+
+    static text(docComment:Token){
+
+    }
+
+    static paramTag(docComment:Token, name:string){
+
+    }
+
+    static varTag(docComment:Token, name:string){
+
+    }
+
+    static returnTag(docComment:Token, name:string){
+
+    }
+
+    static propertyTags(docComment:Token){
+
+    }
+
+    static methodTags(docComment:Token){
+
+    }
+
+}
+
 export class PhpDocParser {
 
     private static stripPattern: RegExp = /^\/\*\*\s*|\s*\*\/$|^[ \t]*\*[ \t]*/mg;

@@ -102,7 +102,7 @@ class TypeCompletionProvider implements CompletionProvider {
         let nameNode = (<Phrase>namespaceNameNode.parent.value).phraseType === PhraseType.Name ? 
             namespaceNameNode.parent : null;
         let contextNode = this._typeContext(namespaceNameNode);
-        let nChars = 1 + context.position.char - (<Phrase>context.phraseNode.value).startToken.range.start.char;
+        let nChars = 1 + context.position.character - (<Phrase>context.phraseNode.value).startToken.range.start.char;
         let text = Ast.namespaceNameToString(context.phraseNode).substr(0, nChars);
         let replaceRange: Range = {
             start: (<Phrase>context.phraseNode.value).startToken.range.start,
@@ -248,7 +248,7 @@ class MemberCompletionProvider implements CompletionProvider {
             token.tokenType === TokenType.T_VARIABLE ||
             token.tokenType === '$' ||
             (<Phrase>context.phraseNode.value).phraseType === PhraseType.Identifier) {
-            let nChars = 1 + context.position.char - token.range.start.char;
+            let nChars = 1 + context.position.character - token.range.start.char;
             text = token.text.substr(0, nChars);
             replaceRange = { start: token.range.start, end: context.position };
         } else if (token.tokenType === TokenType.T_OBJECT_OPERATOR) {

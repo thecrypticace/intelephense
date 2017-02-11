@@ -10,5 +10,12 @@
   "license": "MIT",
   "dependencies": {
       "php7parser":"file:../php7parser"
+  },
+  "devDependencies": {
+    "@types/chai":"^3.4.34",
+    "@types/mocha":"^2.2.39",
+    "chai": "^3.5.0",
+    "mocha": "^3.2.0",
+    "typescript": "^2.1.6"
   }
 }

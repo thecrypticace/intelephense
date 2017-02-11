@@ -4,8 +4,8 @@
 
 'use strict';
 
-import { Position, Range, Predicate, Tree, TreeVisitor, BinarySearch, SuffixArray } from './types';
-import { Phrase, PhraseType, PhraseFlag, Token } from 'php7parser';
+import { Position, Range, Location, Predicate, TreeTraverser, TreeVisitor, BinarySearch, SuffixArray } from './types';
+import { Phrase, PhraseType, Token } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag } from './parse';
 import * as util from './util';
 
@@ -44,17 +44,12 @@ export interface PhpSymbol {
 
     kind: SymbolKind;
     name: string;
-    uri?: string;
-    start?: number;
-    end?: number;
+    location?:Location;
     modifiers?: SymbolModifier;
     description?: string;
     type?: TypeString;
-    returnType?: TypeString;
-    extends?: string[];
-    implements?: string[];
-    traits?: string[];
-    signature?: string;
+    associated?:Symbol[];
+    children?:Symbol[];
 
 }
 
@@ -182,7 +177,8 @@ export class TypeString {
     private static _keywords: string[] = [
         'string', 'integer', 'int', 'boolean', 'bool', 'float',
         'double', 'object', 'mixed', 'array', 'resource',
-        'void', 'null', 'callback', 'false', 'true', 'self'
+        'void', 'null', 'callback', 'false', 'true', 'self',
+        'callable'
     ];
 
     private _parts: string[];
@@ -411,10 +407,10 @@ export class SymbolTree {
 export class DocumentSymbols {
 
     private _importTable: ImportTable;
-    private _symbolTree: Tree<PhpSymbol>;
+    private _symbolTree: PhpSymbol;
     private _uri: string;
 
-    constructor(uri: string, importTable: ImportTable, symbolTree: Tree<PhpSymbol>) {
+    constructor(uri: string, importTable: ImportTable, symbolTree: PhpSymbol) {
         this._uri = uri;
         this._importTable = importTable;
         this._symbolTree = symbolTree;
@@ -438,8 +434,8 @@ export class DocumentSymbols {
  * Get suffixes after $, namespace separator, underscore and on capitals
  * Includes acronym using non namespaced portion of string
  */
-function symbolSuffixes(node: Tree<PhpSymbol>) {
-    let symbol = node.value;
+function symbolSuffixes(symbol: PhpSymbol) {
+    
     let text = symbol.toString();
     let lcText = text.toLowerCase();
     let suffixes = [lcText];
@@ -479,11 +475,11 @@ function symbolSuffixes(node: Tree<PhpSymbol>) {
 export class SymbolStore {
 
     private _map: { [index: string]: DocumentSymbols };
-    private _index: SuffixArray<Tree<PhpSymbol>>;
+    private _index: SuffixArray<PhpSymbol>;
 
     constructor() {
         this._map = {};
-        this._index = new SuffixArray<Tree<PhpSymbol>>(symbolSuffixes);
+        this._index = new SuffixArray<PhpSymbol>(symbolSuffixes);
     }
 
     getDocumentSymbols(uri: string) {

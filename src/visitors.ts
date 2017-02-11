@@ -55,7 +55,7 @@ function namespaceNodeToString(namespaceNode: Tree<Phrase | Token>) {
 function anonymousName(anonNode: Tree<Phrase | Token>) {
     let start: Position, end: Position;
     let type = (<Phrase>anonNode.value).phraseType;
-    let suffix = [start.line, start.char, end.line, end.char].join('.');
+    let suffix = [start.line, start.character, end.line, end.character].join('.');
 
     if (type === PhraseType.AnonymousClassDeclaration) {
         return '.anonymous.class.' + suffix;
@@ -83,15 +83,10 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     private _prefix: string;
 
     constructor(public uri: string, public importTable: ImportTable,
-        public nameResolver: NameResolver, public docBlockParser: PhpDocParser,
-        public tree: Tree<PhpSymbol>) {
+        public nameResolver: NameResolver, public spine: PhpSymbol[]) {
     }
 
-    preOrder(node: Tree<Phrase | Token>) {
-
-        if (node.value === null) {
-            return false;
-        }
+    preOrder(node: Phrase | Token) {
 
         switch ((<Phrase>node.value).phraseType) {
             case PhraseType.UseStatement:
@@ -435,7 +430,22 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     }
 
-    private _functionOrMethodDeclaration(node: Tree<Phrase | Token>, kind: SymbolKind) {
+    private _functionDeclaration(node:Phrase){
+
+        this.spine.push({
+            kind:SymbolKind.Function,
+            name:null
+        });
+
+    }
+
+    private _functionDeclarationHeader(node: Phrase|Token){
+
+        let s = util.top<PhpSymbol>(this.spine);
+
+    }
+
+    private _functionOrMethodDeclaration(node: Phrase | Token, kind: SymbolKind) {
 
         let name = node.children[0].value ? (<Token>node.children[0].value).text : null;
 

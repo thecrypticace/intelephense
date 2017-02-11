@@ -6,12 +6,17 @@
 
 export interface Position {
     line: number;
-    char: number;
+    character: number;
 }
 
 export interface Range {
     start: Position;
     end: Position;
+}
+
+export interface Location {
+    uri: string;
+    range: Range;
 }
 
 export interface Predicate<T> {
@@ -53,11 +58,193 @@ export class Event<T> {
 
 }
 
-export interface TreeVisitor<T> {
+export interface TreeLike {
+    children?: TreeLike[]
+}
 
-    haltTraverse?:boolean;
-    preOrder?(t: Tree<T>): boolean;
-    postOrder?(t: Tree<T>): void;
+export class TreeTraverser<T extends TreeLike> {
+
+    private _spine: T[];
+
+    constructor(spine: T[]) {
+        this._spine = spine.splice(0);
+    }
+
+    get node() {
+        return this._spine.length ? this._spine[this._spine.length - 1] : null;
+    }
+
+    traverse(visitor: TreeVisitor<T>) {
+        this._traverse(this.node, visitor, this._spine.slice(0));
+    }
+
+    filter(predicate: Predicate<T>) {
+
+        let visitor = new FilterVisitor<T>(predicate);
+        this.traverse(visitor);
+        return visitor.array;
+
+    }
+
+    find(predicate: Predicate<T>) {
+
+        let visitor = new FindVisitor<T>(predicate);
+        this.traverse(visitor);
+
+        if (visitor.found) {
+            this._spine = visitor.found;
+            return this.node;
+        }
+
+        return null;
+
+    }
+
+    prevSibling() {
+
+        if (this._spine.length < 2) {
+            return null;
+        }
+
+        let parent = this._spine[this._spine.length - 2];
+        let childIndex = parent.children.indexOf(this);
+
+        if (childIndex > 0) {
+            this._spine.pop();
+            this._spine.push(<T>parent.children[childIndex - 1]);
+            return this.node;
+        } else {
+            return null;
+        }
+
+    }
+
+    nextSibling() {
+
+        if (this._spine.length < 2) {
+            return null;
+        }
+
+        let parent = this._spine[this._spine.length - 2];
+        let childIndex = parent.children.indexOf(this);
+
+        if (childIndex < parent.children.length - 1) {
+            this._spine.pop();
+            this._spine.push(<T>parent.children[childIndex + 1]);
+            return this.node;
+        } else {
+            return null;
+        }
+
+    }
+
+    ancestor(predicate: Predicate<T>) {
+
+        for (let n = this._spine.length - 2; n >= 0; --n) {
+            if (predicate(this._spine[n])) {
+                this._spine = this._spine.slice(0, n + 1);
+                return this.node;
+            }
+        }
+
+        return null;
+
+    }
+
+    private _traverse(treeNode: T, visitor: TreeVisitor<T>, spine: T[]) {
+
+        if (visitor.haltTraverse) {
+            return;
+        }
+
+        let descend = true;
+
+        if (visitor.hasOwnProperty('preOrder')) {
+            descend = visitor.preOrder(treeNode, spine);
+            if (visitor.haltTraverse) {
+                return;
+            }
+        }
+
+        if (treeNode.children && descend) {
+
+            spine.push(treeNode);
+            for (let n = 0, l = treeNode.children.length; n < l; ++n) {
+                this._traverse(<T>treeNode.children[n], visitor, spine);
+                if (visitor.haltTraverse) {
+                    return;
+                }
+            }
+            spine.pop();
+
+        }
+
+        if (visitor.hasOwnProperty('postOrder')) {
+            visitor.postOrder(treeNode, spine);
+        }
+
+    }
+
+}
+
+export interface TreeVisitor<T extends TreeLike> {
+
+    haltTraverse?: boolean;
+    preOrder?(node: T, spine: T[]): boolean;
+    postOrder?(node: T, spine: T[]): void;
+
+}
+
+class FilterVisitor<T> implements TreeVisitor<T>{
+
+    private _predicate: Predicate<T>;
+    private _array: T[];
+
+    constructor(predicate: Predicate<T>) {
+        this._predicate = predicate;
+        this._array = [];
+    }
+
+    get array() {
+        return this._array;
+    }
+
+    preOrder(node: T, spine: T[]) {
+        if (this._predicate(node)) {
+            this._array.push(node);
+        }
+        return true;
+    }
+
+}
+
+class FindVisitor<T> implements TreeVisitor<T> {
+
+    private _predicate: Predicate<T>;
+    private _found: T[];
+
+    haltTraverse: boolean;
+
+    constructor(predicate: Predicate<T>) {
+        this._predicate = predicate;
+        this.haltTraverse = false;
+    }
+
+    get found() {
+        return this._found;
+    }
+
+    preOrder(node: T, spine: T[]) {
+
+        if (this._predicate(node)) {
+            this._found = spine.slice(0);
+            this.found.push(node);
+            this.haltTraverse = true;
+            return false;
+        }
+
+        return true;
+    }
 
 }
 
@@ -96,188 +283,7 @@ export class Debounce<T> {
 
 }
 
-export class Tree<T> {
-
-    private _children: Tree<T>[];
-    private _value: T;
-
-    parent: Tree<T>;
-
-    constructor(value: T) {
-        this._value = value;
-        this._children = [];
-    }
-
-    get value() {
-        return this._value;
-    }
-
-    get children() {
-        return this._children;
-    }
-
-    child(n: number) {
-        return n < this._children.length ? this._children[n] : null;
-    }
-
-    addChild(child: Tree<T>) {
-        this._children.push(child);
-        child.parent = this;
-        return child;
-    }
-
-    addChildren(children: Tree<T>[]) {
-        for (let n = 0; n < children.length; ++n) {
-            this.addChild(children[n]);
-        }
-    }
-
-    removeChild(child: Tree<T>) {
-        let i = this._children.indexOf(child);
-        if (i !== -1) {
-            child.parent = null;
-            return this._children.splice(i, 1)[0];
-        }
-        return null;
-    }
-
-    /**
-     * Pre-order flatten of tree
-     */
-    toArray() {
-        let visitor = new ToArrayVisitor<T>();
-        this.traverse(visitor);
-        return visitor.array;
-    }
-
-    toString() {
-        return this._value !== undefined && this._value !== null ? this._value.toString() : '';
-    }
-
-    find(predicate: Predicate<Tree<T>>) {
-
-        let node: Tree<T>;
-        let visitor: BreadthFirstTreeVisitor<T> = (x) => {
-            if (predicate(x)) {
-                node = x;
-                return false;
-            }
-            return true;
-        };
-        this.breadthFirstTraverse(visitor);
-        return node;
-
-    }
-
-    match(predicate: Predicate<Tree<T>>) {
-
-        let visitor = new FilterVisitor<T>(predicate);
-        this.traverse(visitor);
-        return visitor.array;
-
-    }
-
-    traverse(visitor: TreeVisitor<T>) {
-
-        if(visitor.haltTraverse){
-            return;
-        }
-
-        let descend = true;
-
-        if (visitor.hasOwnProperty('preOrder')) {
-            descend = visitor.preOrder(this);
-            if(visitor.haltTraverse){
-                return;
-            }
-        }
-
-        if (this._children.length && descend) {
-
-            for (let n = 0, l = this._children.length; n < l; ++n) {
-                this._children[n].traverse(visitor);
-                if(visitor.haltTraverse){
-                    return;
-                }
-            }
-
-        }
-
-        if (visitor.hasOwnProperty('postOrder')) {
-            visitor.postOrder(this);
-        }
-
-    }
-
-    breadthFirstTraverse(breadthFirstVisitor: BreadthFirstTreeVisitor<T>) {
-
-        let stack: Tree<T>[] = [this];
-        let node: Tree<T>;
-
-        while (stack.length > 0) {
-
-            node = stack.shift();
-            if (!breadthFirstVisitor(node)) {
-                break;
-            }
-
-            if (node.children) {
-                Array.prototype.push.apply(stack, node.children);
-            }
-
-        }
-
-    }
-
-    previousSibling() {
-        let parent = this.parent;
-        if (!parent) {
-            return null;
-        }
-        let i = parent.children.indexOf(this);
-        return i > 0 ? parent.children[i] : null;
-    }
-
-    ancestor(predicate: Predicate<Tree<T>>) {
-
-        let ancestor = this as Tree<T>;
-        while ((ancestor = ancestor.parent)) {
-            if (predicate(ancestor)) {
-                break;
-            }
-        }
-
-        return ancestor;
-    }
-
-}
-
-export interface BreadthFirstTreeVisitor<T> {
-    (node: Tree<T>): boolean;
-}
-
-class FilterVisitor<T> implements TreeVisitor<T>{
-
-    private _predicate: Predicate<Tree<T>>;
-    private _array: Tree<T>[];
-
-    constructor(predicate: Predicate<Tree<T>>) {
-        this._predicate = predicate;
-        this._array = [];
-    }
-
-    get array() {
-        return this._array;
-    }
-
-    preOrder(node: Tree<T>) {
-        if (this._predicate(node)) {
-            this._array.push(node);
-        }
-        return true;
-    }
-
-}
+/*
 
 class ToArrayVisitor<T> implements TreeVisitor<T>{
 
@@ -297,6 +303,7 @@ class ToArrayVisitor<T> implements TreeVisitor<T>{
     }
 
 }
+
 
 class MultiVisitor<T> implements TreeVisitor<T> {
 
@@ -368,6 +375,7 @@ class MultiVisitor<T> implements TreeVisitor<T> {
 
 
 }
+*/
 
 export class BinarySearch<T> {
 
