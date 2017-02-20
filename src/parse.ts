@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Tree, BinarySearch } from './types';
+import { BinarySearch } from './types';
 import { Token, TokenType, Phrase, AstNodeFactory, Position } from 'php7parser';
 import * as util from './util';
 
@@ -95,36 +95,6 @@ export var astNodeFactory: AstNodeFactory<Tree<Phrase | Token>> = function (valu
     let tree = new Tree<Phrase | Token>(value);
     tree.addChildren(children);
     return tree;
-}
-
-export class PhpDoc {
-
-    private static paramRegExp = /@param/;
-
-    static text(docComment:Token){
-
-    }
-
-    static paramTag(docComment:Token, name:string){
-
-    }
-
-    static varTag(docComment:Token, name:string){
-
-    }
-
-    static returnTag(docComment:Token, name:string){
-
-    }
-
-    static propertyTags(docComment:Token){
-
-    }
-
-    static methodTags(docComment:Token){
-
-    }
-
 }
 
 export class PhpDocParser {

@@ -14,9 +14,9 @@ import {
 } from './symbol';
 
 
-function nameNodeToFqnString(nameNode: Tree<Phrase | Token>, nameResolver: NameResolver, kind: SymbolKind) {
+function nameNodeToFqnString(nameNode: Phrase, nameResolver: NameResolver, kind: SymbolKind) {
 
-    if (!nameNode.value || !nameNode.children) {
+    if (!nameNode || !nameNode.children) {
         return '';
     }
 
@@ -77,13 +77,14 @@ function tokenNodeToString(node: Tree<Phrase | Token>) {
 
 export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
-    private _doc: PhpDoc;
+    private _phpDocMap: PhpDoc;
     private _modifiers: SymbolModifier;
     private _kind: SymbolKind;
     private _prefix: string;
 
     constructor(public uri: string, public importTable: ImportTable,
-        public nameResolver: NameResolver, public spine: PhpSymbol[]) {
+        public nameResolver: NameResolver, public spine: PhpSymbol[],
+        public tokenTextDelegate:(t:Token)=>string) {
     }
 
     preOrder(node: Phrase | Token) {

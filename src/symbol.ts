@@ -44,12 +44,12 @@ export interface PhpSymbol {
 
     kind: SymbolKind;
     name: string;
-    location?:Location;
+    tokenRange?: [Token, Token];
     modifiers?: SymbolModifier;
     description?: string;
     type?: TypeString;
-    associated?:Symbol[];
-    children?:Symbol[];
+    associated?: PhpSymbol[];
+    children?: PhpSymbol[];
 
 }
 
@@ -369,8 +369,8 @@ export class SymbolTree {
 
     static staticInternalMembersPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
         return (x.value.kind === SymbolKind.Property ||
-                x.value.kind === SymbolKind.Method ||
-                x.value.kind === SymbolKind.Constant) &&
+            x.value.kind === SymbolKind.Method ||
+            x.value.kind === SymbolKind.Constant) &&
             (x.value.modifiers & SymbolModifier.Static) > 0;
     }
 
@@ -435,7 +435,7 @@ export class DocumentSymbols {
  * Includes acronym using non namespaced portion of string
  */
 function symbolSuffixes(symbol: PhpSymbol) {
-    
+
     let text = symbol.toString();
     let lcText = text.toLowerCase();
     let suffixes = [lcText];
@@ -526,33 +526,33 @@ export class SymbolStore {
         return filtered;
     }
 
-    lookupTypeMembers(typeName:string, predicate:Predicate<Tree<PhpSymbol>>){
+    lookupTypeMembers(typeName: string, predicate: Predicate<Tree<PhpSymbol>>) {
         let type = this.match(typeName, SymbolKind.Class | SymbolKind.Interface).shift();
         return this._lookupTypeMembers(type, predicate);
     }
 
-    lookupTypeMember(typeName:string, predicate: Predicate<Tree<PhpSymbol>>) {
+    lookupTypeMember(typeName: string, predicate: Predicate<Tree<PhpSymbol>>) {
         return this.lookupTypeMembers(typeName, predicate).shift();
     }
 
     private _lookupTypeMembers(type: Tree<PhpSymbol>, predicate: Predicate<Tree<PhpSymbol>>) {
 
-        if(!type){
+        if (!type) {
             return [];
         }
 
         let members = type.children.filter(predicate);
-        let memberNames = members.map((x)=>{
+        let memberNames = members.map((x) => {
             return x.value.name;
         });
 
-        let associatedNames:string[] = [];
-        
-        if(type.value.extends){
+        let associatedNames: string[] = [];
+
+        if (type.value.extends) {
             Array.prototype.push.apply(associatedNames, type.value.extends);
         }
-        
-        if(type.value.traits){
+
+        if (type.value.traits) {
             Array.prototype.push.apply(associatedNames, type.value.traits);
         }
 
