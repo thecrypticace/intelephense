@@ -103,12 +103,11 @@ export class ImportTable {
 
 export class NameResolver {
 
-    private _importTable: ImportTable;
-    namespace: string;
+    namespace: string; 
     thisName: string;
 
-    constructor(importTable: ImportTable) {
-        this._importTable = importTable;
+    constructor(
+        public importTable: ImportTable) {
         this.namespace = '';
         this.thisName = '';
     }
@@ -127,7 +126,7 @@ export class NameResolver {
         }
 
         let pos = notFqName.indexOf('\\');
-        if (pos === -1) {
+        if (pos < 0) {
             return this._resolveUnqualified(notFqName, kind);
         } else {
             this._resolveQualified(name, pos, kind);
@@ -136,7 +135,7 @@ export class NameResolver {
 
     private _resolveQualified(name: string, pos: number, kind: SymbolKind) {
 
-        let rule = this._importTable.match(name.slice(0, pos), kind);
+        let rule = this.importTable.match(name.slice(0, pos), kind);
         if (rule) {
             return rule.fqn + name.slice(pos);
         } else {
@@ -147,22 +146,10 @@ export class NameResolver {
 
     private _resolveUnqualified(name: string, kind: SymbolKind) {
 
-        let rule = this._importTable.match(name, kind);
+        let rule = this.importTable.match(name, kind);
         if (rule) {
             return rule.fqn;
         } else {
-
-            /*
-                http://php.net/manual/en/language.namespaces.rules.php
-                For unqualified names, if no import rule applies and the name refers to a 
-                function or constant and the code is outside the global namespace, the name is 
-                resolved at runtime. Assuming the code is in namespace A\B, here is how a call 
-                to function foo() is resolved:
-
-                It looks for a function from the current namespace: A\B\foo().
-                It tries to find and call the global function foo().
-            */
-
             return this.resolveRelative(name);
         }
 

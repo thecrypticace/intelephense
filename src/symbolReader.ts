@@ -5,9 +5,13 @@
 'use strict';
 
 import { Position, Range, Predicate, TreeVisitor, Event, BinarySearch, SuffixArray } from './types';
-import { Phrase, Token, PhraseType, TokenType } from 'php7parser';
+import {
+    Phrase, Token, PhraseType, TokenType, NamespaceName, FunctionDeclarationHeader,
+    ReturnType, TypeDeclaration, QualifiedName, ParameterDeclarationList,
+    ParameterDeclaration, ConstElement
+} from 'php7parser';
 import { ParseTree } from './document';
-import { PhpDocParser, PhpDoc } from './phpDoc';
+import { PhpDocParser, PhpDoc, Tag } from './phpDoc';
 import {
     PhpSymbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString,
     SymbolModifier, SymbolTree, VariableTable, SymbolStore, DocumentSymbols
@@ -79,61 +83,163 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
 export namespace SymbolReader {
 
-    export function functionDeclarationHeader(node: Phrase, nameResolver: NameResolver,
-        tokenTextDelegate: (t: Token) => string, phpDoc: PhpDoc) : PhpSymbol {
+    export var nameResolver: NameResolver;
+    export var tokenTextDelegate: (t: Token) => string;
 
-        let name: string;
-        let returnType:string;
-        let child: Token | Phrase;
+    export function functionDeclarationHeader(
+        node: FunctionDeclarationHeader,
+        nameResolver: NameResolver,
+        tokenTextDelegate: (t: Token) => string, phpDoc: PhpDoc
+    ) {
 
-        for (let n = 0, l = node.children.length; n < l; ++n) {
-            child = node.children[n];
-            if ((<Token>child).tokenType === TokenType.Name){
-                name = tokenTextDelegate(<Token>child);
-            } else if((<Phrase>child).phraseType === PhraseType.ParameterDeclarationList){
+        if (!node) {
+            return null;
+        }
 
-            } else if((<Phrase>child).phraseType === PhraseType.ReturnType){
+        let s: PhpSymbol = {
+            kind: SymbolKind.Function,
+            name: tokenTextDelegate(node.name)
+        }
 
+        if (node.parameterList) {
+            s.children = parameterList(node.parameterList, phpDoc);
+        }
+
+        if (node.returnType) {
+            let returnTypeString = returnType(node.returnType);
+            if(returnTypeString){
+                s.type = new TypeString(returnTypeString);
             }
         }
 
-        return {
-            kind:SymbolKind.Function,
-            name
-        };
+        if (phpDoc) {
+            s.description = phpDoc.text;
+            if (phpDoc.returnTag) {
+                s.type = s.type ? s.type.merge(phpDoc.returnTag.typeString) :
+                    new TypeString(phpDoc.returnTag.typeString);
+            }
+        }
+
+        if (s.type) {
+            s.type = s.type.nameResolve(nameResolver);
+        }
+
+        return s;
+    }
+
+    export function parameterList(node:ParameterDeclarationList, phpDoc:PhpDoc){
+
+        let parameters:PhpSymbol[] = [];
+        let p:PhpSymbol;
+
+        if(!node || !node.elements){
+            return parameters;
+        }
+
+        for(let n = 0, l = node.elements.length; n < l; ++n){
+            p = parameterDeclaration(node.elements[n], phpDoc);
+            if(p){
+                parameters.push(p);
+            }
+        }
+
+        return parameters;
 
     }
 
-    export function constElement(node: Phrase, tokenTextDelegate: (t: Token) => string) {
+    export function parameterDeclaration(node:ParameterDeclaration, phpDoc:PhpDoc){
+        if(!node || !node.name){
+            return null;
+        }
 
-        let nameToken = node.children ? node.children[0] as Token : null;
-        if (!nameToken || nameToken.tokenType !== TokenType.Name) {
+        let s:PhpSymbol = {
+            kind:SymbolKind.Parameter,
+            name: tokenTextDelegate(node.name)
+        };
+
+        if(node.type){
+            let paramTypeString = typeDeclaration(node.type);
+            if(paramTypeString){
+                s.type = new TypeString(paramTypeString);
+            }
+        }
+
+        if(phpDoc){
+            let tag = phpDoc.findParamTag(s.name);
+            if(tag){
+                s.description = tag.description;
+                s.type = s.type ? s.type.merge(tag.typeString) : new TypeString(tag.typeString);
+            }
+        }
+
+        return s;
+    }
+
+    export function returnType(node: ReturnType) {
+
+        if (!node || !node.type) {
+            return null;
+        }
+
+        return typeDeclaration(node.type);
+
+    }
+
+    export function typeDeclaration(node: TypeDeclaration){
+
+        if(!node || !node.name){
+            return null;
+        }
+
+        return (<Phrase>node.name).phraseType ? 
+            qualifiedName(<QualifiedName>node.name, SymbolKind.Class) : 
+            tokenTextDelegate(<Token>node.name);
+
+    }
+
+    export function qualifiedName(node:QualifiedName, kind:SymbolKind){
+        if(!node || !node.name){
+            return null;
+        }
+
+        let name = namespaceName(node.name);
+        switch(node.phraseType){
+            case PhraseType.QualifiedName:
+                return nameResolver.resolveNotFullyQualified(name, kind);
+            case PhraseType.RelativeQualifiedName:
+                return nameResolver.resolveRelative(name);
+            case PhraseType.FullyQualifiedName:
+            default:
+                return name;
+        }
+    }
+
+    export function constElement(node: ConstElement) {
+
+        if (!node || !node.name) {
             return null;
         }
 
         return {
             kind: SymbolKind.Constant,
-            name: tokenTextDelegate(nameToken),
+            name: tokenTextDelegate(node.name),
             tokenRange: ParseTree.tokenRange(node)
         };
 
     }
 
-    export function namespaceName(node: Phrase, tokenTextDelegate: (t: Token) => string) {
+    export function namespaceName(node: NamespaceName) {
 
-        let name = '';
-        let child: Token;
-
-        for (let n = 0, l = node.children.length; n < l; ++n) {
-            child = node.children[n] as Token;
-            if (child.tokenType === TokenType.Text) {
-                name += tokenTextDelegate(child);
-            } else if (child.tokenType === TokenType.ForwardSlash) {
-                name += '/';
-            }
+        if (!node || !node.parts || node.parts.length < 1) {
+            return null;
         }
 
-        return name;
+        let parts: string[] = [];
+        for (let n = 0, l = node.parts.length; n < l; ++n) {
+            parts.push(tokenTextDelegate(node.parts[n]));
+        }
+
+        return parts.join('\\');
 
     }
 
