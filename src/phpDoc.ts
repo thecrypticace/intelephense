@@ -23,13 +23,10 @@ export namespace PhpDocParser {
 
         let stripped = input.replace(stripPattern, '');
         let split = stripped.split(tagBoundaryPattern);
-        let summary: string = null;
-        let description: string = null;
+        let text: string = null;
 
         if (split[0] && split[0][0] !== '@') {
-            let textParts = split.shift().split(summaryBoundaryPattern);
-            summary = textParts.shift();
-            description = textParts.shift();
+            text = split.shift();
         }
 
         let match: RegExpMatchArray;
@@ -53,12 +50,12 @@ export namespace PhpDocParser {
             tags.push(tag);
         }
 
-        //must have at least summary or a tag
-        if (!summary && !tags.length) {
+        //must have at least text or a tag
+        if (!text && !tags.length) {
             return null;
         }
 
-        return new PhpDoc(summary, description, tags);
+        return new PhpDoc(text, tags);
 
     }
 
@@ -126,7 +123,7 @@ export interface Tag {
 
 export class PhpDoc {
 
-    constructor(public summary: string, public description: string, public tags: Tag[]) { }
+    constructor(public text:string, public tags: Tag[]) { }
 
     get returnTag() {
         return this.tags.find(PhpDoc.isReturnTag);
