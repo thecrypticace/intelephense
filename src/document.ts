@@ -1,4 +1,4 @@
-/* Copyright © Ben Mewburn ben@mewburn.id.au
+/* Copyright (c) Ben Mewburn ben@mewburn.id.au
  * Licensed under the MIT Licence.
  */
 
@@ -38,11 +38,11 @@ export class TextDocument {
     positionAtOffset(offset: number) {
 
         let search = new BinarySearch<number>(this._lineOffsets);
-        let rank = search.rank((x) => {
+        let compareFn = (x) => {
             return offset - x;
-        });
+        };
+        let rank = search.rank(compareFn);
         let index = Math.max(rank - 1, 0);
-
 
         if (rank < this._lineOffsets.length) {
 
