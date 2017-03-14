@@ -47,12 +47,11 @@ export class TextDocument {
         };
         let rank = search.rank(compareFn);
         let index = Math.max(rank - 1, 0);
-
-        if (rank < this._lineOffsets.length) {
-
-        } else {
-            return
-        }
+        
+        return <Position>{
+            line: index,
+            character:offset - this._lineOffsets[index]
+        };
 
     }
 
