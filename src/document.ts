@@ -35,6 +35,10 @@ export class TextDocument {
         return this._lineOffsets;
     }
 
+    tokenText(t:Token){
+        return t ? this.textAtOffset(t.offset, t.length) : null;
+    }
+
     textAtOffset(offset: number, length: number) {
         return this._text.substr(offset, length);
     }

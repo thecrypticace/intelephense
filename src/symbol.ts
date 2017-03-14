@@ -44,7 +44,7 @@ export interface PhpSymbol {
 
     kind: SymbolKind;
     name: string;
-    tokenRange?: [Token, Token];
+    range?: Range;
     modifiers?: SymbolModifier;
     description?: string;
     type?: TypeString;

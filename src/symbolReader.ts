@@ -8,7 +8,7 @@ import { Position, Range, Predicate, TreeVisitor, Event, BinarySearch, SuffixArr
 import {
     Phrase, Token, PhraseType, TokenType, NamespaceName, FunctionDeclarationHeader,
     ReturnType, TypeDeclaration, QualifiedName, ParameterDeclarationList,
-    ParameterDeclaration, ConstElement
+    ParameterDeclaration, ConstElement, FunctionDeclaration,
 } from 'php7parser';
 import { ParseTree, TextDocument } from './document';
 import { PhpDocParser, PhpDoc, Tag } from './phpDoc';
@@ -22,12 +22,11 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     lastPhpDoc: PhpDoc;
 
     constructor(
-        public uri: string,
+        public textDocument: TextDocument,
         public nameResolver: NameResolver,
-        public spine: PhpSymbol[],
-        public textDocument: TextDocument
+        public spine: PhpSymbol[]
     ) {
-        
+
     }
 
     preOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
@@ -86,22 +85,33 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 export namespace SymbolReader {
 
     export var nameResolver: NameResolver;
-    export var tokenTextDelegate: (t: Token) => string;
+    export var textDocument: TextDocument;
 
-    export function functionDeclarationHeader(
-        node: FunctionDeclarationHeader,
-        nameResolver: NameResolver,
-        tokenTextDelegate: (t: Token) => string, phpDoc: PhpDoc
-    ) {
+    function tokenText(t:Token){
+        
+    }
 
+    export function functionDeclaration(node: FunctionDeclaration) {
         if (!node) {
             return null;
         }
 
         let s: PhpSymbol = {
             kind: SymbolKind.Function,
-            name: tokenTextDelegate(node.name)
+            name: null
         }
+
+
+
+    }
+
+    export function functionDeclarationHeader(s:PhpSymbol, node: FunctionDeclarationHeader, phpDoc: PhpDoc) {
+
+        if (!node) {
+            return null;
+        }
+
+        s.name = textDocument.tokenText(node.name);
 
         if (node.parameterList) {
             s.children = parameterList(node.parameterList, phpDoc);
@@ -354,7 +364,7 @@ export namespace SymbolReader {
         return {
             kind: SymbolKind.Namespace,
             name: nsName,
-            tokenRange: ParseTree.tokenRange(node),
+            range: ParseTree.tokenRange(node),
             children: []
         };
 
