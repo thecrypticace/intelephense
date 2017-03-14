@@ -13,10 +13,9 @@ export class TextDocument {
     private _text: string;
     private _lineOffsets: number[];
 
-    constructor(uri: string, fullText: string) {
+    constructor(uri: string, text: string) {
         this._uri = uri;
-        this._text = fullText;
-        this._lineOffsets = this._textLineOffsets(fullText, 0);
+        this.fullText = text;
     }
 
     get uri() {
@@ -25,6 +24,11 @@ export class TextDocument {
 
     get fullText() {
         return this._text;
+    }
+
+    set fullText(text:string){
+        this._text = text;
+        this._lineOffsets = this._textLineOffsets(text, 0);
     }
 
     get lineOffsets() {
