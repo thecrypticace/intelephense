@@ -10,7 +10,7 @@ import {
     ReturnType, TypeDeclaration, QualifiedName, ParameterDeclarationList,
     ParameterDeclaration, ConstElement
 } from 'php7parser';
-import { ParseTree } from './document';
+import { ParseTree, TextDocument } from './document';
 import { PhpDocParser, PhpDoc, Tag } from './phpDoc';
 import {
     PhpSymbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString,
@@ -20,12 +20,14 @@ import {
 export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     lastPhpDoc: PhpDoc;
-    externalOnly: boolean;
 
-    constructor(public uri: string, public importTable: ImportTable,
-        public nameResolver: NameResolver, public spine: PhpSymbol[],
-        public tokenTextDelegate: (t: Token) => string) {
-        this.externalOnly = true;
+    constructor(
+        public uri: string,
+        public nameResolver: NameResolver,
+        public spine: PhpSymbol[],
+        public textDocument: TextDocument
+    ) {
+        
     }
 
     preOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
@@ -107,7 +109,7 @@ export namespace SymbolReader {
 
         if (node.returnType) {
             let returnTypeString = returnType(node.returnType);
-            if(returnTypeString){
+            if (returnTypeString) {
                 s.type = new TypeString(returnTypeString);
             }
         }
@@ -127,18 +129,18 @@ export namespace SymbolReader {
         return s;
     }
 
-    export function parameterList(node:ParameterDeclarationList, phpDoc:PhpDoc){
+    export function parameterList(node: ParameterDeclarationList, phpDoc: PhpDoc) {
 
-        let parameters:PhpSymbol[] = [];
-        let p:PhpSymbol;
+        let parameters: PhpSymbol[] = [];
+        let p: PhpSymbol;
 
-        if(!node || !node.elements){
+        if (!node || !node.elements) {
             return parameters;
         }
 
-        for(let n = 0, l = node.elements.length; n < l; ++n){
+        for (let n = 0, l = node.elements.length; n < l; ++n) {
             p = parameterDeclaration(node.elements[n], phpDoc);
-            if(p){
+            if (p) {
                 parameters.push(p);
             }
         }
@@ -147,26 +149,26 @@ export namespace SymbolReader {
 
     }
 
-    export function parameterDeclaration(node:ParameterDeclaration, phpDoc:PhpDoc){
-        if(!node || !node.name){
+    export function parameterDeclaration(node: ParameterDeclaration, phpDoc: PhpDoc) {
+        if (!node || !node.name) {
             return null;
         }
 
-        let s:PhpSymbol = {
-            kind:SymbolKind.Parameter,
+        let s: PhpSymbol = {
+            kind: SymbolKind.Parameter,
             name: tokenTextDelegate(node.name)
         };
 
-        if(node.type){
+        if (node.type) {
             let paramTypeString = typeDeclaration(node.type);
-            if(paramTypeString){
+            if (paramTypeString) {
                 s.type = new TypeString(paramTypeString);
             }
         }
 
-        if(phpDoc){
+        if (phpDoc) {
             let tag = phpDoc.findParamTag(s.name);
-            if(tag){
+            if (tag) {
                 s.description = tag.description;
                 s.type = s.type ? s.type.merge(tag.typeString) : new TypeString(tag.typeString);
             }
@@ -185,25 +187,25 @@ export namespace SymbolReader {
 
     }
 
-    export function typeDeclaration(node: TypeDeclaration){
+    export function typeDeclaration(node: TypeDeclaration) {
 
-        if(!node || !node.name){
+        if (!node || !node.name) {
             return null;
         }
 
-        return (<Phrase>node.name).phraseType ? 
-            qualifiedName(<QualifiedName>node.name, SymbolKind.Class) : 
+        return (<Phrase>node.name).phraseType ?
+            qualifiedName(<QualifiedName>node.name, SymbolKind.Class) :
             tokenTextDelegate(<Token>node.name);
 
     }
 
-    export function qualifiedName(node:QualifiedName, kind:SymbolKind){
-        if(!node || !node.name){
+    export function qualifiedName(node: QualifiedName, kind: SymbolKind) {
+        if (!node || !node.name) {
             return null;
         }
 
         let name = namespaceName(node.name);
-        switch(node.phraseType){
+        switch (node.phraseType) {
             case PhraseType.QualifiedName:
                 return nameResolver.resolveNotFullyQualified(name, kind);
             case PhraseType.RelativeQualifiedName:
