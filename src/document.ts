@@ -35,10 +35,6 @@ export class TextDocument {
         return this._lineOffsets;
     }
 
-    tokenText(t:Token){
-        return t ? this.textAtOffset(t.offset, t.length) : null;
-    }
-
     textAtOffset(offset: number, length: number) {
         return this._text.substr(offset, length);
     }
@@ -132,88 +128,7 @@ export interface TextDocumentChange {
 }
 
 
-export class ParseTree {
 
-    private _textDocument: TextDocument;
-
-    constructor(textDocument: TextDocument) {
-        this._textDocument = textDocument;
-    }
-
-    get textDocument() {
-        return this._textDocument;
-    }
-
-    applyEdits(changes: TextDocumentChange[]) {
-
-        changes.sort(this._compareChanges);
-        let changeStartOffset: number, changeEndOffset: number;
-
-        for (let n = 0; n < changes.length; ++n) {
-
-            changeStartOffset = this._textDocument.offsetAtPosition(changes[n].range.start);
-            changeEndOffset = this._textDocument.offsetAtPosition(changes[n].range.end);
-
-
-
-        }
-
-    }
-
-    private _compareChanges = (a: TextDocumentChange, b: TextDocumentChange) => {
-
-        if (a.range.end.line > b.range.end.line) {
-            return -1;
-        } else if (a.range.end.line < b.range.end.line) {
-            return 1;
-        } else {
-            return b.range.end.character - a.range.end.character;
-        }
-
-    }
-
-}
-
-export namespace ParseTree {
-
-    export function tokenRange(node: Phrase | Token): [Token, Token] {
-        return [firstToken(node), lastToken(node)];
-    }
-
-    export function firstToken(node: Phrase | Token) {
-
-        if ((<Token>node).tokenType !== undefined) {
-            return node as Token;
-        }
-
-        let t: Token;
-        for (let n = 0, l = (<Phrase>node).children.length; n < l; ++n) {
-            t = firstToken((<Phrase>node).children[n]);
-            if (t !== null) {
-                return t;
-            }
-        }
-
-        return null;
-    }
-
-    export function lastToken(node: Phrase | Token) {
-        if ((<Token>node).tokenType !== undefined) {
-            return node as Token;
-        }
-
-        let t: Token;
-        for (let n = (<Phrase>node).children.length - 1; n >= 0; --n) {
-            t = lastToken((<Phrase>node).children[n]);
-            if (t !== null) {
-                return t;
-            }
-        }
-
-        return null;
-    }
-
-}
 
 interface DocumentMap {
     [uri: string]: TextDocument
