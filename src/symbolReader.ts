@@ -10,11 +10,17 @@ import {
     ReturnType, TypeDeclaration, QualifiedName, ParameterDeclarationList,
     ParameterDeclaration, ConstElement, FunctionDeclaration, ClassDeclaration,
     ClassDeclarationHeader, ClassBaseClause, ClassInterfaceClause, QualifiedNameList,
-    InterfaceDeclaration, InterfaceDeclarationHeader, InterfaceBaseClause
+    InterfaceDeclaration, InterfaceDeclarationHeader, InterfaceBaseClause,
+    TraitDeclaration, TraitDeclarationHeader, ClassConstDeclaration, ClassConstElementList,
+    ClassConstElement, Identifier, MethodDeclaration, MethodDeclarationHeader,
+    PropertyDeclaration, PropertyElement, MemberModifierList, NamespaceDefinition,
+    NamespaceUseDeclaration, NamespaceUseClause, NamespaceAliasingClause, AnonymousClassDeclaration,
+    AnonymousClassDeclarationHeader, AnonymousFunctionCreationExpression, AnonymousFunctionHeader,
+    TraitUseClause, 
 } from 'php7parser';
 import { TextDocument } from './document';
 import { ParseTree } from './parseTree';
-import { PhpDocParser, PhpDoc, Tag } from './phpDoc';
+import { PhpDocParser, PhpDoc, Tag, MethodTagParam } from './phpDoc';
 import {
     PhpSymbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString,
     SymbolModifier, SymbolTree, VariableTable, SymbolStore, DocumentSymbols
@@ -94,7 +100,7 @@ export namespace SymbolReader {
         return t ? textDocument.textAtOffset(t.offset, t.length) : null;
     }
 
-    function nameTokenToFqn(t:Token){
+    function nameTokenToFqn(t: Token) {
         let name = tokenText(t);
         return name ? nameResolver.resolveRelative(name) : null;
     }
@@ -117,77 +123,42 @@ export namespace SymbolReader {
         }
     }
 
-    export function functionDeclaration(node: FunctionDeclaration) {
-        if (!node) {
+    function tagTypeToFqn(type: string) {
+        if (!type) {
             return null;
+        } else if (type[0] === '\\') {
+            return type.slice(1);
+        } else {
+            return nameResolver.resolveRelative(type);
         }
-
-        return <PhpSymbol>{
-            kind: SymbolKind.Function,
-            name: null,
-            range: phraseRange(node)
-        }
-
     }
 
-    export function functionDeclarationHeader(s: PhpSymbol, node: FunctionDeclarationHeader, phpDoc: PhpDoc) {
+    export function functionDeclaration(node: FunctionDeclaration, phpDoc: PhpDoc) {
 
-        if (!node) {
-            return null;
-        }
-
-        s.name = nameTokenToFqn(node.name);
-
-        if (node.parameterList) {
-            s.children = parameterList(node.parameterList, phpDoc);
-        }
-
-        if (node.returnType) {
-            let returnTypeString = returnType(node.returnType);
-            if (returnTypeString) {
-                s.type = new TypeString(returnTypeString);
-            }
+        let s: PhpSymbol = {
+            kind: SymbolKind.Function,
+            name: null,
+            range: phraseRange(node),
+            children: []
         }
 
         if (phpDoc) {
             s.description = phpDoc.text;
-            if (phpDoc.returnTag) {
-                s.type = s.type ? s.type.merge(phpDoc.returnTag.typeString) :
-                    new TypeString(phpDoc.returnTag.typeString);
+            let returnTag = phpDoc.returnTag;
+            if (returnTag) {
+                s.type = new TypeString(tagTypeToFqn(returnTag.typeString));
             }
-        }
-
-        if (s.type) {
-            s.type = s.type.nameResolve(nameResolver);
         }
 
         return s;
+
     }
 
-    export function parameterList(node: ParameterDeclarationList, phpDoc: PhpDoc) {
-
-        let parameters: PhpSymbol[] = [];
-        let p: PhpSymbol;
-
-        if (!node || !node.elements) {
-            return parameters;
-        }
-
-        for (let n = 0, l = node.elements.length; n < l; ++n) {
-            p = parameterDeclaration(node.elements[n], phpDoc);
-            if (p) {
-                parameters.push(p);
-            }
-        }
-
-        return parameters;
-
+    export function functionDeclarationHeader(node: FunctionDeclarationHeader) {
+        return nameTokenToFqn(node.name);
     }
 
     export function parameterDeclaration(node: ParameterDeclaration, phpDoc: PhpDoc) {
-        if (!node || !node.name) {
-            return null;
-        }
 
         let s: PhpSymbol = {
             kind: SymbolKind.Parameter,
@@ -195,39 +166,19 @@ export namespace SymbolReader {
             range: phraseRange(node)
         };
 
-        if (node.type) {
-            let paramTypeString = typeDeclaration(node.type);
-            if (paramTypeString) {
-                s.type = new TypeString(paramTypeString);
-            }
-        }
-
         if (phpDoc) {
             let tag = phpDoc.findParamTag(s.name);
             if (tag) {
                 s.description = tag.description;
-                s.type = s.type ? s.type.merge(tag.typeString) : new TypeString(tag.typeString);
+                let type = tagTypeToFqn(tag.typeString);
+                s.type = s.type ? s.type.merge(type) : new TypeString(type);
             }
         }
 
         return s;
     }
 
-    export function returnType(node: ReturnType) {
-
-        if (!node || !node.type) {
-            return null;
-        }
-
-        return typeDeclaration(node.type);
-
-    }
-
     export function typeDeclaration(node: TypeDeclaration) {
-
-        if (!node || !node.name) {
-            return null;
-        }
 
         return (<Phrase>node.name).phraseType ?
             qualifiedName(<QualifiedName>node.name, SymbolKind.Class) :
@@ -252,50 +203,233 @@ export namespace SymbolReader {
         }
     }
 
-    export function constElement(node: ConstElement) {
+    export function constElement(node: ConstElement, phpDoc: PhpDoc) {
 
-        if (!node || !node.name) {
-            return null;
-        }
-
-        return <PhpSymbol>{
+        let s: PhpSymbol = {
             kind: SymbolKind.Constant,
             name: nameTokenToFqn(node.name),
             range: phraseRange(node)
         };
 
+        if (phpDoc) {
+            let tag = phpDoc.findVarTag(s.name);
+            if (tag) {
+                s.description = tag.description;
+                s.type = new TypeString(tagTypeToFqn(tag.typeString));
+            }
+        }
+
+        return s;
+
     }
 
-    export function interfaceDeclaration(node:InterfaceDeclaration, phpDoc:PhpDoc){
+    export function classConstantDeclaration(node: ClassConstDeclaration) {
+        return node.modifierList ?
+            modifierListElementsToSymbolModifier(node.modifierList.elements) :
+            SymbolModifier.None;
+    }
 
-        let s:PhpSymbol = {
-            kind:SymbolKind.Interface,
-            name:null,
+    export function classConstElement(modifiers: SymbolModifier, node: ClassConstElement, phpDoc: PhpDoc) {
+
+        let s: PhpSymbol = {
+            kind: SymbolKind.Constant,
+            modifiers: modifiers,
+            name: identifier(node.name),
             range: phraseRange(node)
         }
 
-        return s;
-
-    }
-
-    export function interfaceDeclarationHeader(s:PhpSymbol, node:InterfaceDeclarationHeader){
-
-        s.name = nameTokenToFqn(node.name);
-        if(node.baseClause){
-            let mapFn = (name:string)=>{
-                return <PhpSymbol>{
-                    kind:SymbolKind.Interface,
-                    name:name
-                };
+        if (phpDoc) {
+            let tag = phpDoc.findVarTag(s.name);
+            if (tag) {
+                s.description = tag.description;
+                s.type = new TypeString(tagTypeToFqn(tag.typeString));
             }
-            s.associated = interfaceBaseClause(node.baseClause).map<PhpSymbol>(mapFn);
         }
+
         return s;
 
     }
 
-    export function interfaceBaseClause(node:InterfaceBaseClause){
-        return qualifiedNameList(node.nameList);
+    export function methodDeclaration(node: MethodDeclaration, phpDoc: PhpDoc) {
+
+        let s: PhpSymbol = {
+            kind: SymbolKind.Method,
+            name: null,
+            range: phraseRange(node),
+            children: []
+        }
+
+        if (phpDoc) {
+            s.description = phpDoc.text;
+            let returnTag = phpDoc.returnTag;
+            if (returnTag) {
+                s.type = new TypeString(tagTypeToFqn(returnTag.typeString));
+            }
+        }
+
+        return s;
+
+    }
+
+    export function memberModifierList(node: MemberModifierList) {
+        return modifierListElementsToSymbolModifier(node.elements);
+    }
+
+    export function methodDeclarationHeader(node: MethodDeclarationHeader) {
+        return identifier(node.name);
+    }
+
+    export function propertyDeclaration(node: PropertyDeclaration) {
+        return node.modifierList ?
+            modifierListElementsToSymbolModifier(node.modifierList.elements) :
+            SymbolModifier.None;
+    }
+
+    export function propertyElement(modifiers: SymbolModifier, node: PropertyElement, phpDoc: PhpDoc) {
+
+        let s: PhpSymbol = {
+            kind: SymbolKind.Property,
+            name: tokenText(node.name),
+            modifiers: modifiers,
+            range: phraseRange(node)
+        }
+
+        if (phpDoc) {
+            let tag = phpDoc.findVarTag(s.name);
+            if (tag) {
+                s.description = tag.description;
+                s.type = new TypeString(tagTypeToFqn(tag.typeString));
+            }
+        }
+
+        return s;
+
+    }
+
+    export function identifier(node: Identifier) {
+        return tokenText(node.name);
+    }
+
+    export function interfaceDeclaration(node: InterfaceDeclaration, phpDoc: PhpDoc) {
+
+        let s: PhpSymbol = {
+            kind: SymbolKind.Interface,
+            name: null,
+            range: phraseRange(node),
+            children: []
+        }
+
+        if (phpDoc) {
+            s.description = phpDoc.text;
+            Array.prototype.push.apply(s.children, phpDocMembers(phpDoc));
+        }
+
+        return s;
+
+    }
+
+    export function phpDocMembers(phpDoc: PhpDoc) {
+
+        let magic: Tag[] = phpDoc.propertyTags;
+        let symbols: PhpSymbol[] = [];
+
+        for (let n = 0, l = magic.length; n < l; ++n) {
+            symbols.push(propertyTagToSymbol(magic[n]));
+        }
+
+        magic = phpDoc.methodTags;
+        for (let n = 0, l = magic.length; n < l; ++n) {
+            symbols.push(methodTagToSymbol(magic[n]));
+        }
+
+        return symbols;
+    }
+
+    export function methodTagToSymbol(tag: Tag) {
+        let s: PhpSymbol = {
+            kind: SymbolKind.Method,
+            modifiers: SymbolModifier.Magic,
+            name: tag.name,
+            type: new TypeString(tagTypeToFqn(tag.typeString)),
+            description: tag.description,
+            children: []
+        };
+
+        if (!tag.parameters) {
+            return s;
+        }
+
+        for (let n = 0, l = tag.parameters.length; n < l; ++n) {
+            s.children.push(magicMethodParameterToSymbol(tag.parameters[n]));
+        }
+
+        return s;
+    }
+
+    export function magicMethodParameterToSymbol(p: MethodTagParam) {
+
+        return <PhpSymbol>{
+            kind: SymbolKind.Parameter,
+            name: p.name,
+            modifiers: SymbolModifier.Magic,
+            type: new TypeString(tagTypeToFqn(p.typeString))
+        }
+
+    }
+
+    export function propertyTagToSymbol(t: Tag) {
+        return <PhpSymbol>{
+            kind: SymbolKind.Property,
+            name: t.name,
+            modifiers: magicPropertyModifier(t) | SymbolModifier.Magic,
+            type: new TypeString(tagTypeToFqn(t.typeString)),
+            description: t.description
+        };
+    }
+
+    export function magicPropertyModifier(t: Tag) {
+        switch (t.tagName) {
+            case '@property-read':
+                return SymbolModifier.ReadOnly;
+            case '@property-write':
+                return SymbolModifier.WriteOnly;
+            default:
+                return SymbolModifier.None;
+        }
+    }
+
+    export function interfaceDeclarationHeader(node: InterfaceDeclarationHeader) {
+        return nameTokenToFqn(node.name);
+    }
+
+    export function interfaceBaseClause(node: InterfaceBaseClause) {
+        let mapFn = (name: string) => {
+            return <PhpSymbol>{
+                kind: SymbolKind.Interface,
+                name: name
+            };
+        }
+        return qualifiedNameList(node.nameList).map<PhpSymbol>(mapFn);
+    }
+
+    export function traitDeclaration(node: TraitDeclaration, phpDoc: PhpDoc) {
+        let s: PhpSymbol = {
+            kind: SymbolKind.Trait,
+            name: null,
+            range: phraseRange(node),
+            children: []
+        }
+
+        if (phpDoc) {
+            s.description = phpDoc.text;
+            Array.prototype.push.apply(s.children, phpDocMembers(phpDoc));
+        }
+
+        return s;
+    }
+
+    export function traitDeclarationHeader(node: TraitDeclarationHeader) {
+        return nameTokenToFqn(node.name);
     }
 
     export function classDeclaration(node: ClassDeclaration, phpDoc: PhpDoc) {
@@ -303,9 +437,14 @@ export namespace SymbolReader {
         let s: PhpSymbol = {
             kind: SymbolKind.Class,
             name: null,
-            range: phraseRange(node)
+            range: phraseRange(node),
+            children:[]
         };
 
+        if (phpDoc) {
+            s.description = phpDoc.text;
+            Array.prototype.push.apply(s.children, phpDocMembers(phpDoc));
+        }
 
         return s;
 
@@ -313,36 +452,16 @@ export namespace SymbolReader {
 
     export function classDeclarationHeader(s: PhpSymbol, node: ClassDeclarationHeader) {
 
-        if (!node) {
-            return s;
-        }
-
         if (node.modifier) {
             s.modifiers = modifierTokenToSymbolModifier(node.modifier);
         }
 
         s.name = nameTokenToFqn(node.name);
-        let assoc: PhpSymbol[] = [];
-        let bc = classBaseClause(node.baseClause);
-        if (bc) {
-            assoc.push(bc);
-        }
-
-        Array.prototype.push.apply(assoc, classInterfaceClause(node.interfaceClause));
-
-        if (assoc.length > 0) {
-            s.associated = assoc;
-        }
-
         return s;
 
     }
 
     export function classBaseClause(node: ClassBaseClause) {
-        if (!node) {
-            return null;
-        }
-
         return <PhpSymbol>{
             kind: SymbolKind.Class,
             name: qualifiedName(node.name, SymbolKind.Class)
@@ -351,21 +470,29 @@ export namespace SymbolReader {
 
     export function classInterfaceClause(node: ClassInterfaceClause) {
 
-        let interfaces: PhpSymbol[] = [];
-        if (!node) {
-            return [];
-        }
-
-        let mapFn = (v: string) => {
+        let mapFn = (name: string) => {
             return <PhpSymbol>{
                 kind: SymbolKind.Interface,
-                name: v
+                name: name
             }
         }
 
         return qualifiedNameList(node.nameList).map<PhpSymbol>(mapFn);
 
     }
+
+    export function traitUseClause(node:TraitUseClause){
+        let mapFn = (name:string) => {
+            return <PhpSymbol>{
+                kind:SymbolKind.Trait,
+                name:name
+            };
+        };
+
+        return qualifiedNameList(node.nameList).map<PhpSymbol>(mapFn);
+    }
+
+    export function anonymousClassDeclaration()
 
     export function qualifiedNameList(node: QualifiedNameList) {
 
@@ -384,7 +511,7 @@ export namespace SymbolReader {
 
     }
 
-    export function modifiersTokenListToSymbolModifier(tokens: Token[]) {
+    export function modifierListElementsToSymbolModifier(tokens: Token[]) {
 
         let flag = SymbolModifier.None;
         if (!tokens || tokens.length < 1) {
@@ -434,116 +561,52 @@ export namespace SymbolReader {
 
     }
 
-    function namespaceAliasingClause(node: Phrase, tokenTextDelegate: (t: Token) => string) {
-
-        let child: Token;
-        for (let n = 0, l = node.children.length; n < l; ++n) {
-            child = node.children[n] as Token;
-            if (child.tokenType === TokenType.Name) {
-                return tokenTextDelegate(child);
-            }
+    function concatNamespaceName(prefix:string, name:string){
+        if(!name){
+            return null;
+        } else if(!prefix){
+            return name;
+        } else {
+            return prefix + '\\' + name;
         }
-
-        return null;
-
     }
 
-    function namespaceUseClause(node: Phrase, kind: SymbolKind, prefix: string, tokenTextDelegate: (t: Token) => string) {
+    function namespaceUseClause(node: NamespaceUseClause, kind: SymbolKind, prefix: string) {
 
-        let child: Token | Phrase;
-        let rule: ImportRule = {
-            kind: kind,
-            fqn: null,
-            alias: null
+        return <ImportRule> {
+            kind: kind ? kind : SymbolKind.Class,
+            fqn: concatNamespaceName(prefix, namespaceName(node.name)),
+            alias: node.aliasingClause ? tokenText(node.aliasingClause.alias) : null
         };
 
-        for (let n = 0, l = node.children.length; n < l; ++n) {
-            child = node.children[n];
-            if ((<Token>child).tokenType === TokenType.Const) {
-                rule.kind = SymbolKind.Constant;
-            } else if ((<Token>child).tokenType === TokenType.Function) {
-                rule.kind = SymbolKind.Function;
-            } else if ((<Phrase>child).phraseType === PhraseType.NamespaceName) {
-                rule.fqn = namespaceName(<Phrase>child, tokenTextDelegate);
-                if (prefix && rule.fqn) {
-                    rule.fqn = prefix + '/' + rule.fqn;
-                }
-            } else if ((<Phrase>child).phraseType === PhraseType.NamespaceAliasingClause) {
-                rule.alias = namespaceAliasingClause(<Phrase>child, tokenTextDelegate);
-                break;
-            }
-        }
+    }
 
-        return rule;
+    export function tokenToSymbolKind(t:Token){
+        switch(t.tokenType){
+            case TokenType.Function:
+                return SymbolKind.Function;
+            case TokenType.Const:
+                return SymbolKind.Constant;
+            default:
+                return SymbolKind.None;
+        }
+    }
+
+    export function namespaceUseDeclaration(node: NamespaceUseDeclaration) : [SymbolKind, string] {
+
+        return [
+            node.kind ? tokenToSymbolKind(node.kind) : SymbolKind.None,
+            node.prefix ? namespaceName(node.prefix) : null
+        ];
 
     }
 
-    function namespaceUseClauseList(node: Phrase, kind: SymbolKind, prefix: string, tokenTextDelegate: (t: Token) => string) {
+    export function namespaceDefinition(node: NamespaceDefinition) {
 
-        let child: Phrase;
-        let rule: ImportRule;
-        let rules: ImportRule[] = [];
-
-        if (!kind) {
-            kind = SymbolKind.Class;
-        }
-
-        for (let n = 0, l = node.children.length; n < l; ++n) {
-            child = node.children[n] as Phrase;
-            if (child.phraseType === PhraseType.NamespaceUseClause ||
-                child.phraseType === PhraseType.NamespaceUseGroupClause) {
-                rule = namespaceUseClause(child, kind, prefix, tokenTextDelegate);
-                if (rule.fqn) {
-                    rules.push(rule);
-                }
-            }
-        }
-
-        return rules;
-
-    }
-
-    export function namespaceUseDeclaration(node: Phrase, tokenTextDelegate: (t: Token) => string) {
-
-        let child: Phrase | Token;
-        let kind = SymbolKind.None;
-        let prefix = '';
-
-        for (let n = 0, l = node.children.length; n < l; ++n) {
-            child = node.children[n];
-
-            if ((<Phrase>child).phraseType === PhraseType.NamespaceName) {
-                prefix = namespaceName(<Phrase>child, tokenTextDelegate);
-            } else if ((<Token>child).tokenType === TokenType.Const) {
-                kind = SymbolKind.Constant;
-            } else if ((<Token>child).tokenType === TokenType.Function) {
-                kind = SymbolKind.Function;
-            } else if ((<Phrase>child).phraseType === PhraseType.NamespaceUseClauseList ||
-                (<Phrase>child).phraseType === PhraseType.NamespaceUseGroupClauseList) {
-                return namespaceUseClauseList(<Phrase>child, kind, prefix, tokenTextDelegate);
-            }
-        }
-
-        return [];
-
-    }
-
-    export function namespaceDefinition(node: Phrase, tokenTextDelegate: (t: Token) => string): PhpSymbol {
-
-        let child: Phrase;
-        let nsName = null;
-        for (let n = 0, l = node.children.length; n < l; ++n) {
-            child = node.children[n] as Phrase;
-            if (child.phraseType === PhraseType.NamespaceName) {
-                nsName = namespaceName(child, tokenTextDelegate);
-                break;
-            }
-        }
-
-        return {
+        return <PhpSymbol>{
             kind: SymbolKind.Namespace,
-            name: nsName,
-            range: ParseTree.tokenRange(node),
+            name: namespaceName(node.name),
+            range: phraseRange(node),
             children: []
         };
 
