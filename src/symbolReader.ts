@@ -15,8 +15,8 @@ import {
     ClassConstElement, Identifier, MethodDeclaration, MethodDeclarationHeader,
     PropertyDeclaration, PropertyElement, MemberModifierList, NamespaceDefinition,
     NamespaceUseDeclaration, NamespaceUseClause, NamespaceAliasingClause, AnonymousClassDeclaration,
-    AnonymousClassDeclarationHeader, AnonymousFunctionCreationExpression, AnonymousFunctionHeader,
-    TraitUseClause, 
+    AnonymousClassDeclarationHeader, AnonymousFunctionCreationExpression, AnonymousFunctionUseVariable,
+    TraitUseClause, SimpleVariable
 } from 'php7parser';
 import { TextDocument } from './document';
 import { ParseTree } from './parseTree';
@@ -43,22 +43,13 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
         switch ((<Phrase>node).phraseType) {
 
             case PhraseType.NamespaceUseDeclaration:
-                this.importTable.addRuleMany(SymbolReader.namespaceUseDeclaration(<Phrase>node, this.tokenTextDelegate));
-                return false;
+                
             case PhraseType.NamespaceDefinition:
-                let nsSymbol = SymbolReader.namespaceDefinition(<Phrase>node, this.tokenTextDelegate);
-                this.nameResolver.namespace = nsSymbol.name;
-                if (this.spine[this.spine.length - 1].kind === SymbolKind.Namespace) {
-                    this.spine.pop();
-                }
-                this._addSymbol(nsSymbol, true);
-                return true;
+                
             case PhraseType.ConstElement:
-                this._addSymbol(SymbolReader.constElement(<Phrase>node, this.tokenTextDelegate), false);
-                return false;
+                
             case PhraseType.FunctionDeclarationHeader:
 
-                return true;
             case undefined:
                 this._token(<Token>node);
                 return false;
@@ -70,7 +61,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     private _token(t: Token) {
         if (t.tokenType === TokenType.DocumentComment) {
-            this.lastPhpDoc = PhpDocParser.parse(this.tokenTextDelegate(t));
+            this.lastPhpDoc = PhpDocParser.parse(SymbolReader.tokenText(t));
         }
     }
 
@@ -96,16 +87,16 @@ export namespace SymbolReader {
     export var nameResolver: NameResolver;
     export var textDocument: TextDocument;
 
-    function tokenText(t: Token) {
+    export function tokenText(t: Token) {
         return t ? textDocument.textAtOffset(t.offset, t.length) : null;
     }
 
-    function nameTokenToFqn(t: Token) {
+    export function nameTokenToFqn(t: Token) {
         let name = tokenText(t);
         return name ? nameResolver.resolveRelative(name) : null;
     }
 
-    function phraseRange(p: Phrase) {
+    export function phraseRange(p: Phrase) {
         if (!p) {
             return null;
         }
@@ -123,7 +114,7 @@ export namespace SymbolReader {
         }
     }
 
-    function tagTypeToFqn(type: string) {
+    export function tagTypeToFqn(type: string) {
         if (!type) {
             return null;
         } else if (type[0] === '\\') {
@@ -131,6 +122,16 @@ export namespace SymbolReader {
         } else {
             return nameResolver.resolveRelative(type);
         }
+    }
+
+    /**
+     * 
+     * Uses phrase range to provide "unique" name
+     */
+    export function anonymousName(node: Phrase) {
+        let range = phraseRange(node);
+        let suffix = [range.start.line, range.end.line, range.end.line, range.end.character].join('.');
+        return '.anonymous.' + suffix;
     }
 
     export function functionDeclaration(node: FunctionDeclaration, phpDoc: PhpDoc) {
@@ -438,7 +439,7 @@ export namespace SymbolReader {
             kind: SymbolKind.Class,
             name: null,
             range: phraseRange(node),
-            children:[]
+            children: []
         };
 
         if (phpDoc) {
@@ -481,18 +482,55 @@ export namespace SymbolReader {
 
     }
 
-    export function traitUseClause(node:TraitUseClause){
-        let mapFn = (name:string) => {
+    export function traitUseClause(node: TraitUseClause) {
+        let mapFn = (name: string) => {
             return <PhpSymbol>{
-                kind:SymbolKind.Trait,
-                name:name
+                kind: SymbolKind.Trait,
+                name: name
             };
         };
 
         return qualifiedNameList(node.nameList).map<PhpSymbol>(mapFn);
     }
 
-    export function anonymousClassDeclaration()
+    export function anonymousClassDeclaration(node: AnonymousClassDeclaration) {
+
+        return <PhpSymbol>{
+            kind: SymbolKind.Class,
+            name: anonymousName(node),
+            modifiers: SymbolModifier.Anonymous,
+            range: phraseRange(node)
+        };
+    }
+
+    export function anonymousFunctionCreationExpression(node: AnonymousFunctionCreationExpression) {
+
+        return <PhpSymbol>{
+            kind: SymbolKind.Function,
+            name: anonymousName(node),
+            modifiers: SymbolModifier.Anonymous,
+            range: phraseRange(node)
+        };
+
+    }
+
+    export function anonymousFunctionUseVariable(node: AnonymousFunctionUseVariable) {
+        return <PhpSymbol>{
+            kind: SymbolKind.Variable,
+            name: tokenText(node.name)
+        };
+    }
+
+    export function simpleVariable(node: SimpleVariable) {
+        if (!node.name || (<Token>node.name).tokenType !== TokenType.VariableName) {
+            return null;
+        }
+
+        return <PhpSymbol>{
+            kind: SymbolKind.Variable,
+            name: tokenText(<Token>node.name)
+        };
+    }
 
     export function qualifiedNameList(node: QualifiedNameList) {
 
@@ -561,10 +599,10 @@ export namespace SymbolReader {
 
     }
 
-    function concatNamespaceName(prefix:string, name:string){
-        if(!name){
+    function concatNamespaceName(prefix: string, name: string) {
+        if (!name) {
             return null;
-        } else if(!prefix){
+        } else if (!prefix) {
             return name;
         } else {
             return prefix + '\\' + name;
@@ -573,7 +611,7 @@ export namespace SymbolReader {
 
     function namespaceUseClause(node: NamespaceUseClause, kind: SymbolKind, prefix: string) {
 
-        return <ImportRule> {
+        return <ImportRule>{
             kind: kind ? kind : SymbolKind.Class,
             fqn: concatNamespaceName(prefix, namespaceName(node.name)),
             alias: node.aliasingClause ? tokenText(node.aliasingClause.alias) : null
@@ -581,8 +619,8 @@ export namespace SymbolReader {
 
     }
 
-    export function tokenToSymbolKind(t:Token){
-        switch(t.tokenType){
+    export function tokenToSymbolKind(t: Token) {
+        switch (t.tokenType) {
             case TokenType.Function:
                 return SymbolKind.Function;
             case TokenType.Const:
@@ -592,7 +630,7 @@ export namespace SymbolReader {
         }
     }
 
-    export function namespaceUseDeclaration(node: NamespaceUseDeclaration) : [SymbolKind, string] {
+    export function namespaceUseDeclaration(node: NamespaceUseDeclaration): [SymbolKind, string] {
 
         return [
             node.kind ? tokenToSymbolKind(node.kind) : SymbolKind.None,
