@@ -10,7 +10,7 @@ import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag, MethodTag, ParsedDo
 import * as util from './util';
 import {
     PhpSymbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString,
-    SymbolModifier, SymbolTree, VariableTable, SymbolStore, DocumentSymbols
+    SymbolModifier, SymbolTree, VariableTable, SymbolStore, SymbolTable
 } from './symbol';
 
 
