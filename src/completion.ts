@@ -4,7 +4,7 @@
 
 import { Position, Token, TokenType, Phrase, PhraseFlag, PhraseType, Range } from 'php7parser';
 import { DocumentContext } from './visitors';
-import { PhpSymbol, SymbolStore, DocumentSymbols, SymbolTree, SymbolKind, SymbolModifier, TypeString } from './symbol';
+import { PhpSymbol, SymbolStore, SymbolTable, SymbolTree, SymbolKind, SymbolModifier, TypeString } from './symbol';
 import { ParsedDocument, AstStore, Ast } from './parse';
 import { Tree, Predicate } from './types';
 

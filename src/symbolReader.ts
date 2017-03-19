@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Position, Range, Predicate, TreeVisitor, Event, BinarySearch, SuffixArray } from './types';
+import { Position, Range, TreeVisitor } from './types';
 import {
     Phrase, Token, PhraseType, TokenType, NamespaceName, FunctionDeclarationHeader,
     ReturnType, TypeDeclaration, QualifiedName, ParameterDeclarationList,
@@ -23,7 +23,7 @@ import { ParseTree } from './parseTree';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam } from './phpDoc';
 import {
     PhpSymbol, NameResolver, ImportRule, ImportTable, SymbolKind, TypeString,
-    SymbolModifier, SymbolTree, VariableTable, SymbolStore, DocumentSymbols
+    SymbolModifier, SymbolTree, VariableTable, SymbolStore, SymbolTable
 } from './symbol';
 
 export class SymbolReader implements TreeVisitor<Phrase | Token> {

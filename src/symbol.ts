@@ -6,10 +6,11 @@
 
 import { Position, Range, Location, Predicate, TreeTraverser, TreeVisitor, BinarySearch, SuffixArray } from './types';
 import { Phrase, PhraseType, Token } from 'php7parser';
-import { PhpDocParser, PhpDoc, Tag, MethodTagParam, TypeTag } from './parse';
+import { PhpDocParser, PhpDoc, Tag, MethodTagParam } from './phpDoc';
+import { ParseTree } from './parse';
 import * as util from './util';
 
-export enum SymbolKind {
+export const enum SymbolKind {
     None = 0,
     Class = 1 << 0,
     Interface = 1 << 1,
@@ -23,7 +24,7 @@ export enum SymbolKind {
     Namespace = 1 << 9
 }
 
-export enum SymbolModifier {
+export const enum SymbolModifier {
     None = 0,
     Public = 1 << 0,
     Protected = 1 << 1,
@@ -50,7 +51,7 @@ export interface PhpSymbol {
     type?: TypeString;
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
-    parent?:PhpSymbol;
+    parent?: PhpSymbol;
 
 }
 
@@ -104,7 +105,7 @@ export class ImportTable {
 
 export class NameResolver {
 
-    namespace: string; 
+    namespace: string;
     thisName: string;
 
     constructor(
@@ -323,6 +324,7 @@ export class TypeString {
 
 }
 
+/*
 export class SymbolTree {
 
     static parametersPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
@@ -391,30 +393,18 @@ export class SymbolTree {
     }
 
 }
+*/
 
-export class DocumentSymbols {
+export class SymbolTable {
 
-    private _importTable: ImportTable;
-    private _symbolTree: PhpSymbol;
-    private _uri: string;
+    constructor(
+        public uri: string,
+        public importTable: ImportTable,
+        public root: PhpSymbol) {
 
-    constructor(uri: string, importTable: ImportTable, symbolTree: PhpSymbol) {
-        this._uri = uri;
-        this._importTable = importTable;
-        this._symbolTree = symbolTree;
     }
 
-    get uri() {
-        return this._uri;
-    }
 
-    get symbolTree() {
-        return this._symbolTree;
-    }
-
-    get importTable() {
-        return this._importTable;
-    }
 
 }
 
@@ -462,7 +452,7 @@ function symbolSuffixes(symbol: PhpSymbol) {
 
 export class SymbolStore {
 
-    private _map: { [index: string]: DocumentSymbols };
+    private _map: { [index: string]: SymbolTable };
     private _index: SuffixArray<PhpSymbol>;
 
     constructor() {
@@ -474,7 +464,7 @@ export class SymbolStore {
         return this._map[uri];
     }
 
-    add(documentSymbols: DocumentSymbols) {
+    add(documentSymbols: SymbolTable) {
         if (this.getDocumentSymbols(documentSymbols.uri)) {
             throw new Error(`Duplicate key ${documentSymbols.uri}`);
         }
@@ -576,6 +566,10 @@ export class SymbolStore {
 
 }
 
+
+
+/*
+
 interface ResolvedVariable {
     name: string;
     type: TypeString;
@@ -590,9 +584,7 @@ interface VariableSet {
     vars: { [index: string]: ResolvedVariable };
 }
 
-/**
- * Tracks variable type
- */
+
 export class VariableTable {
 
     private _node: Tree<VariableSet>;
@@ -730,4 +722,4 @@ class TypeConsolidator implements TreeVisitor<VariableSet> {
 
 }
 
-
+*/

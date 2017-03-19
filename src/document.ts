@@ -67,6 +67,7 @@ export class TextDocument {
 
     }
 
+/*
     applyEdit(start: Position, end: Position, text: string) {
 
         let startOffset = this.offsetAtPosition(start);
@@ -83,6 +84,8 @@ export class TextDocument {
         }
 
     }
+
+    */
 
     private _textLineOffsets(text: string, offset: number) {
 
@@ -121,26 +124,9 @@ export class TextDocument {
 
 }
 
-export interface TextDocumentChange {
-    range: Range;
-    rangeLength: number;
-    text: string;
-}
-
-
-
-
-interface DocumentMap {
-    [uri: string]: TextDocument
-}
-
-export interface DocumentChangeEvent {
-    document: TextDocument
-}
-
 export class DocumentStore {
 
-    private _documents: DocumentMap;
+    private _documents: {[uri:string]:TextDocument};
 
     constructor() {
         this._documents = {};
