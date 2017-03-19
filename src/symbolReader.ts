@@ -29,54 +29,293 @@ import {
 export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     lastPhpDoc: PhpDoc;
+    namespaceUseDeclarationKind: SymbolKind;
+    namespaceUseDeclarationPrefix: string;
+    classConstDeclarationModifier: SymbolModifier;
+    propertyDeclarationModifier: SymbolModifier;
 
     constructor(
         public textDocument: TextDocument,
         public nameResolver: NameResolver,
         public spine: PhpSymbol[]
     ) {
-
+        
     }
 
     preOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
+        let s: PhpSymbol;
+
         switch ((<Phrase>node).phraseType) {
 
-            case PhraseType.NamespaceUseDeclaration:
-                
             case PhraseType.NamespaceDefinition:
-                
+                s = SymbolReader.namespaceDefinition(<NamespaceDefinition>node);
+                this.nameResolver.namespace = s.name;
+                this._popNamespace();
+                this._addSymbol(s, true);
+                return true;
+
+            case PhraseType.NamespaceUseDeclaration:
+                [this.namespaceUseDeclarationKind, this.namespaceUseDeclarationPrefix] =
+                    SymbolReader.namespaceUseDeclaration(<NamespaceUseDeclaration>node);
+                return true;
+
+            case PhraseType.NamespaceUseClause:
+                this.nameResolver.importTable.addRule(
+                    SymbolReader.namespaceUseClause(<NamespaceUseClause>node,
+                        this.namespaceUseDeclarationKind,
+                        this.namespaceUseDeclarationPrefix
+                    ));
+                return false;
+
             case PhraseType.ConstElement:
-                
+                this._addSymbol(SymbolReader.constElement(<ConstElement>node, this.lastPhpDoc), false);
+                return false;
+
+            case PhraseType.FunctionDeclaration:
+                this._addSymbol(
+                    SymbolReader.functionDeclaration(<FunctionDeclaration>node, this.lastPhpDoc),
+                    true
+                );
+                return true;
+
             case PhraseType.FunctionDeclarationHeader:
+                this.spine[this.spine.length - 1].name =
+                    SymbolReader.functionDeclarationHeader(<FunctionDeclarationHeader>node);
+                return true;
+
+            case PhraseType.ParameterDeclaration:
+                this._addSymbol(
+                    SymbolReader.parameterDeclaration(<ParameterDeclaration>node, this.lastPhpDoc),
+                    true
+                );
+                return true;
+
+            case PhraseType.TypeDeclaration:
+                s = this.spine[this.spine.length - 1];
+                let typeDeclarationValue = SymbolReader.typeDeclaration(<TypeDeclaration>node);
+                s.type = s.type ? s.type.merge(typeDeclarationValue) : new TypeString(typeDeclarationValue);
+                return false;
+
+            case PhraseType.ClassDeclaration:
+                this._addSymbol(
+                    SymbolReader.classDeclaration(<ClassDeclaration>node, this.lastPhpDoc),
+                    true
+                );
+                return true;
+
+            case PhraseType.ClassDeclarationHeader:
+                SymbolReader.classDeclarationHeader(
+                    this.spine[this.spine.length - 1],
+                    <ClassDeclarationHeader>node
+                );
+                return true;
+
+            case PhraseType.ClassBaseClause:
+                s = this.spine[this.spine.length - 1];
+                let classBaseClause = SymbolReader.classBaseClause(<ClassBaseClause>node);
+                if (s.associated) {
+                    s.associated.push(classBaseClause);
+                } else {
+                    s.associated = [classBaseClause];
+                }
+                return false;
+
+            case PhraseType.ClassInterfaceClause:
+                s = this.spine[this.spine.length - 1];
+                let classInterfaceClause = SymbolReader.classInterfaceClause(<ClassInterfaceClause>node);
+                if (s.associated) {
+                    Array.prototype.push.apply(s.associated, classInterfaceClause);
+                } else {
+                    s.associated = classInterfaceClause;
+                }
+                return false;
+
+            case PhraseType.InterfaceDeclaration:
+                this._addSymbol(
+                    SymbolReader.interfaceDeclaration(<InterfaceDeclaration>node, this.lastPhpDoc),
+                    true
+                );
+                return true;
+
+            case PhraseType.InterfaceDeclarationHeader:
+                this.spine[this.spine.length - 1].name =
+                    SymbolReader.interfaceDeclarationHeader(<InterfaceDeclarationHeader>node);
+                return false;
+
+            case PhraseType.InterfaceBaseClause:
+                s = this.spine[this.spine.length - 1];
+                let interfaceBaseClause = SymbolReader.interfaceBaseClause(<InterfaceBaseClause>node);
+                if (s.associated) {
+                    Array.prototype.push.apply(s.associated, interfaceBaseClause);
+                } else {
+                    s.associated = interfaceBaseClause;
+                }
+                return false;
+
+            case PhraseType.TraitDeclaration:
+                this._addSymbol(
+                    SymbolReader.traitDeclaration(<TraitDeclaration>node, this.lastPhpDoc),
+                    true
+                );
+                return true;
+
+            case PhraseType.TraitDeclarationHeader:
+                this.spine[this.spine.length - 1].name =
+                    SymbolReader.traitDeclarationHeader(<TraitDeclarationHeader>node);
+                return false;
+
+            case PhraseType.ClassConstDeclaration:
+                this.classConstDeclarationModifier =
+                    SymbolReader.classConstantDeclaration(<ClassConstDeclaration>node);
+                return true;
+
+            case PhraseType.ClassConstElement:
+                this._addSymbol(
+                    SymbolReader.classConstElement(
+                        this.classConstDeclarationModifier,
+                        <ClassConstElement>node,
+                        this.lastPhpDoc
+                    ),
+                    false
+                );
+                return false;
+
+            case PhraseType.PropertyDeclaration:
+                this.propertyDeclarationModifier =
+                    SymbolReader.propertyDeclaration(<PropertyDeclaration>node);
+                return true;
+
+            case PhraseType.PropertyElement:
+                this._addSymbol(
+                    SymbolReader.propertyElement(
+                        this.propertyDeclarationModifier,
+                        <PropertyElement>node,
+                        this.lastPhpDoc
+                    ),
+                    false
+                );
+                return false;
+
+            case PhraseType.TraitUseClause:
+                s = this.spine[this.spine.length - 1];
+                let traitUseClause = SymbolReader.traitUseClause(<TraitUseClause>node);
+                if (s.associated) {
+                    Array.prototype.push.apply(s.associated, traitUseClause);
+                } else {
+                    s.associated = traitUseClause;
+                }
+                return false;
+
+            case PhraseType.MethodDeclaration:
+                this._addSymbol(
+                    SymbolReader.methodDeclaration(<MethodDeclaration>node, this.lastPhpDoc),
+                    true
+                );
+                return true;
+
+            case PhraseType.MethodDeclarationHeader:
+                this.spine[this.spine.length - 1].name =
+                    SymbolReader.methodDeclarationHeader(<MethodDeclarationHeader>node);
+                return true;
+
+            case PhraseType.MemberModifierList:
+                this.spine[this.spine.length - 1].modifiers =
+                    SymbolReader.memberModifierList(<MemberModifierList>node);
+                return false;
+
+            case PhraseType.AnonymousClassDeclaration:
+                this._addSymbol(
+                    SymbolReader.anonymousClassDeclaration(<AnonymousClassDeclaration>node),
+                    true
+                );
+                return true;
+
+            case PhraseType.AnonymousFunctionCreationExpression:
+                this._addSymbol(
+                    SymbolReader.anonymousFunctionCreationExpression(<AnonymousFunctionCreationExpression>node),
+                    true
+                );
+                return true;
+
+            case PhraseType.AnonymousFunctionUseVariable:
+                this._addSymbol(
+                    SymbolReader.anonymousFunctionUseVariable(<AnonymousFunctionUseVariable>node),
+                    false
+                );
+                return false;
+
+            case PhraseType.SimpleVariable:
+                s = SymbolReader.simpleVariable(<SimpleVariable>node);
+                if (s && !this._variableExists(s.name)) {
+                    this._addSymbol(s, false);
+                }
+                return false;
 
             case undefined:
                 this._token(<Token>node);
                 return false;
+
             default:
                 return true;
         }
 
     }
 
+    private _variableExists(name: string) {
+        let s = this.spine[this.spine.length - 1];
+
+        if (!s.children) {
+            return false;
+        }
+
+        let mask = SymbolKind.Parameter | SymbolKind.Variable;
+
+        for (let n = 0, l = s.children.length; n < l; ++n) {
+            if ((s.children[n].kind & mask) > 0 && s.name === name) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private _popNamespace() {
+        if (this.spine[this.spine.length - 1].kind === SymbolKind.Namespace) {
+            this.spine.pop();
+        }
+    }
+
     private _token(t: Token) {
-        if (t.tokenType === TokenType.DocumentComment) {
-            this.lastPhpDoc = PhpDocParser.parse(SymbolReader.tokenText(t));
+
+        switch (t.tokenType) {
+            case TokenType.DocumentComment:
+                this.lastPhpDoc = PhpDocParser.parse(SymbolReader.tokenText(t));
+                break;
+            case TokenType.CloseBrace:
+                this.lastPhpDoc = null;
+                break;
+            default:
+                break;
         }
     }
 
     private _addSymbol(symbol: PhpSymbol, pushToSpine: boolean) {
 
-        if (!symbol || !symbol.name) {
+        if (!symbol) {
             return;
         }
 
-        let parent = this.spine[this.spine.length - 1];
-        parent.children.push(symbol);
+        symbol.parent = this.spine[this.spine.length - 1];
+        if (!symbol.parent.children) {
+            symbol.parent.children = [];
+        }
+        symbol.parent.children.push(symbol);
 
         if (pushToSpine) {
             this.spine.push(symbol);
         }
+
     }
 
 }
@@ -599,7 +838,7 @@ export namespace SymbolReader {
 
     }
 
-    function concatNamespaceName(prefix: string, name: string) {
+    export function concatNamespaceName(prefix: string, name: string) {
         if (!name) {
             return null;
         } else if (!prefix) {
@@ -609,7 +848,7 @@ export namespace SymbolReader {
         }
     }
 
-    function namespaceUseClause(node: NamespaceUseClause, kind: SymbolKind, prefix: string) {
+    export function namespaceUseClause(node: NamespaceUseClause, kind: SymbolKind, prefix: string) {
 
         return <ImportRule>{
             kind: kind ? kind : SymbolKind.Class,

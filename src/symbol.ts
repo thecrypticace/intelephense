@@ -50,6 +50,7 @@ export interface PhpSymbol {
     type?: TypeString;
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
+    parent?:PhpSymbol;
 
 }
 
