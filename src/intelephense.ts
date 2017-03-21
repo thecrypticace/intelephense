@@ -15,6 +15,12 @@ export namespace Intelephense {
     var documentStore = new DocumentStore();
     var parseTreeStore = new ParseTreeStore();
     var symbolStore = new SymbolStore();
+    const namespacedSymbolMask =
+        SymbolKind.Interface |
+        SymbolKind.Class |
+        SymbolKind.Trait |
+        SymbolKind.Constant |
+        SymbolKind.Function;
 
     export function openDocument(uri: string, documentText: string) {
 
@@ -42,55 +48,67 @@ export namespace Intelephense {
     export function documentSymbols(uri: string) {
 
         let symbolTable = symbolStore.getSymbolTable(uri);
-        if(!symbolTable){
-            return [];
-        }
-
-        symbolTable.importTable
+        return symbolTable ?
+            symbolTable.symbols.map<lsp.SymbolInformation>(toDocumentSymbolInformation) :
+            [];
 
     }
 
-    function toSymbolInformation(s: PhpSymbol) {
+    function toDocumentSymbolInformation(s: PhpSymbol) {
 
-        return <lsp.SymbolInformation>{
-            kind:lspSymbolKind(s),
-            name:s.name,
+        let si: lsp.SymbolInformation = {
+            kind: null,
+            name: s.name,
             location: s.location,
-            containerName:s.scope
+            containerName: s.scope
         };
 
-    }
-
-    function lspSymbolKind(s: PhpSymbol) {
+        //check for symbol scope to exclude class constants
+        if((s.kind & namespacedSymbolMask) && !s.scope){
+            let nsSeparatorPos = s.name.lastIndexOf('\\');
+            if(nsSeparatorPos >= 0){
+                si.name = s.name.slice(nsSeparatorPos + 1);
+                si.containerName = s.name.slice(0, nsSeparatorPos);
+            }
+        }
 
         switch (s.kind) {
             case SymbolKind.Class:
-                return lsp.SymbolKind.Class;
+                si.kind = lsp.SymbolKind.Class;
+                break;
             case SymbolKind.Constant:
-                return lsp.SymbolKind.Constant;
+                si.kind = lsp.SymbolKind.Constant;
+                break;
             case SymbolKind.Function:
-                return lsp.SymbolKind.Function;
+                si.kind = lsp.SymbolKind.Function;
+                break;
             case SymbolKind.Interface:
-                return lsp.SymbolKind.Interface;
+                si.kind = lsp.SymbolKind.Interface;
+                break;
             case SymbolKind.Method:
-                return s.name === '__construct' ?
-                    lsp.SymbolKind.Constructor :
-                    lsp.SymbolKind.Method;
+                if (s.name === '__construct') {
+                    s.kind = lsp.SymbolKind.Constructor;
+                } else {
+                    s.kind = lsp.SymbolKind.Method;
+                }
+                break;
             case SymbolKind.Namespace:
-                return lsp.SymbolKind.Namespace;
+                s.kind = lsp.SymbolKind.Namespace;
+                break;
             case SymbolKind.Property:
-                return lsp.SymbolKind.Property;
+                s.kind = lsp.SymbolKind.Property;
+                break;
             case SymbolKind.Trait:
-                return lsp.SymbolKind.Module;
+                s.kind = lsp.SymbolKind.Module;
+                break;
             case SymbolKind.Variable:
             case SymbolKind.Parameter:
-                return lsp.SymbolKind.Variable;
+                s.kind = lsp.SymbolKind.Variable;
             default:
                 throw new Error('Invalid Argument');
 
         }
 
+        return si;
     }
-
-
 }

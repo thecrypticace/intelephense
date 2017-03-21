@@ -264,9 +264,8 @@ export class Debounce<T> {
 
 }
 
-/*
 
-class ToArrayVisitor<T> implements TreeVisitor<T>{
+export class ToArrayVisitor<T> implements TreeVisitor<T>{
 
     private _array: T[];
 
@@ -278,14 +277,14 @@ class ToArrayVisitor<T> implements TreeVisitor<T>{
         return this._array;
     }
 
-    preOrder(t) {
-        this._array.push(t.value);
+    preOrder(t:T, spine:T[]) {
+        this._array.push(t);
         return true;
     }
 
 }
 
-
+/*
 class MultiVisitor<T> implements TreeVisitor<T> {
 
     private _visitors: [TreeVisitor<T>, Tree<T>][];

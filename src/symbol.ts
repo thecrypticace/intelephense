@@ -5,7 +5,7 @@
 'use strict';
 
 import { Position, Range, Location } from 'vscode-languageserver-types';
-import { Predicate, TreeTraverser, TreeVisitor, BinarySearch } from './types';
+import { Predicate, TreeTraverser, TreeVisitor, BinarySearch, ToArrayVisitor } from './types';
 import {
     Phrase, PhraseType, Token, TokenType, NamespaceName, FunctionDeclarationHeader,
     ReturnType, TypeDeclaration, QualifiedName, ParameterDeclarationList,
@@ -104,70 +104,19 @@ export namespace PhpSymbol {
 
 }
 
-export interface ImportRule {
-    kind: SymbolKind;
-    alias: string;
-    fqn: string;
-}
-
-export class ImportTable {
-
-    private _rules: ImportRule[];
-    private _uri: string;
-
-    constructor(uri: string, importRules: ImportRule[]) {
-        this._uri = uri;
-        this._rules = importRules;
-    }
-
-    get uri() {
-        return this._uri;
-    }
-
-    addRule(rule: ImportRule) {
-        this._rules.push(rule);
-    }
-
-    addRuleMany(rules: ImportRule[]) {
-        Array.prototype.push.apply(this._rules, rules);
-    }
-
-    match(text: string, kind: SymbolKind) {
-        let r: ImportRule;
-        let name: string;
-        for (let n = 0; n < this._rules.length; ++n) {
-            r = this._rules[n];
-            name = r.alias ? r.alias : this._lastNamespaceNamePart(r.fqn);
-            if (r.kind === kind && text === name) {
-                return r;
-            }
-        }
-        return null;
-    }
-
-    private _lastNamespaceNamePart(text: string) {
-        let pos = text.lastIndexOf('\\');
-        return pos >= 0 ? text.slice(pos + 1) : text;
-    }
-
-}
-
 export class NameResolver {
 
-    namespace: string;
-    thisName: string;
-
     constructor(
-        public importTable: ImportTable) {
-        this.namespace = '';
-        this.thisName = '';
-    }
+        public namespaceName: string,
+        public thisName: string,
+        public importedSymbols: PhpSymbol[]
+    ) { }
 
     resolveRelative(relativeName: string) {
         if (!relativeName) {
             return '';
         }
-        return this.namespace ? this.namespace + '\\' + relativeName : relativeName;
+        return this.namespaceName ? this.namespaceName + '\\' + relativeName : relativeName;
     }
 
     resolveNotFullyQualified(notFqName: string, kind: SymbolKind) {
@@ -177,33 +126,30 @@ export class NameResolver {
         }
 
         let pos = notFqName.indexOf('\\');
-        if (pos < 0) {
-            return this._resolveUnqualified(notFqName, kind);
-        } else {
+        return pos < 0 ?
+            this._resolveUnqualified(notFqName, kind) :
             this._resolveQualified(name, pos);
+    }
+
+    private _matchImportedSymbol(text: string, kind: SymbolKind) {
+        let s: PhpSymbol;
+        for (let n = 0, l = this.importedSymbols.length; n < l; ++n) {
+            s = this.importedSymbols[n];
+            if (s.kind === kind && text === s.name) {
+                return s;
+            }
         }
+        return null;
     }
 
     private _resolveQualified(name: string, pos: number) {
-
-        let rule = this.importTable.match(name.slice(0, pos), SymbolKind.Class);
-        if (rule) {
-            return rule.fqn + name.slice(pos);
-        } else {
-            return this.resolveRelative(name);
-        }
-
+        let s = this._matchImportedSymbol(name.slice(0, pos), SymbolKind.Class);
+        return s ? s.associated[0].name + name.slice(pos) : this.resolveRelative(name);
     }
 
     private _resolveUnqualified(name: string, kind: SymbolKind) {
-
-        let rule = this.importTable.match(name, kind);
-        if (rule) {
-            return rule.fqn;
-        } else {
-            return this.resolveRelative(name);
-        }
-
+        let s = this._matchImportedSymbol(name, kind);
+        return s ? s.associated[0].name : this.resolveRelative(name);
     }
 
 }
@@ -448,26 +394,28 @@ export class SymbolTable {
 
     constructor(
         public uri: string,
-        public importTable: ImportTable,
-        public root: PhpSymbol) {
+        public root: PhpSymbol
+    ) { }
 
+    get symbols() {
+        let traverser = new TreeTraverser([this.root]);
+        let toArrayVisitor = new ToArrayVisitor<PhpSymbol>();
+        traverser.traverse(toArrayVisitor);
+        return toArrayVisitor.array;
     }
-
-
 
     static create(parseTree: ParseTree, textDocument: TextDocument) {
 
         let symbolReader = new SymbolReader(
             textDocument,
-            new NameResolver(new ImportTable(textDocument.uri, [])),
-            [{ kind: SymbolKind.None, name: null, children: [] }]
+            new NameResolver(null, null, []),
+            [{ kind: SymbolKind.None, name:'', children: [] }]
         );
 
         let traverser = new TreeTraverser<Phrase | Token>([parseTree.root]);
         traverser.traverse(symbolReader);
         return new SymbolTable(
             textDocument.uri,
-            symbolReader.nameResolver.importTable,
             symbolReader.spine[0]
         );
 
@@ -773,9 +721,8 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.NamespaceDefinition:
                 s = SymbolReader.namespaceDefinition(<NamespaceDefinition>node);
-                this.nameResolver.namespace = s.name;
-                this._popNamespace();
-                this._addSymbol(s, true);
+                this.nameResolver.namespaceName = s.name;
+                this._addSymbol(s, false);
                 return true;
 
             case PhraseType.NamespaceUseDeclaration:
@@ -784,11 +731,14 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 return true;
 
             case PhraseType.NamespaceUseClause:
-                this.nameResolver.importTable.addRule(
-                    SymbolReader.namespaceUseClause(<NamespaceUseClause>node,
-                        this.namespaceUseDeclarationKind,
-                        this.namespaceUseDeclarationPrefix
-                    ));
+                s = SymbolReader.namespaceUseClause(<NamespaceUseClause>node,
+                    this.namespaceUseDeclarationKind,
+                    this.namespaceUseDeclarationPrefix
+                );
+                this._addSymbol(s, false);
+                if (s.associated && s.associated.length > 0 && s.name) {
+                    this.nameResolver.importedSymbols.push(s);
+                }
                 return false;
 
             case PhraseType.ConstElement:
@@ -990,7 +940,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
         switch ((<Phrase>node).phraseType) {
             case PhraseType.NamespaceDefinition:
                 if ((<NamespaceDefinition>node).statementList) {
-                    this._popNamespace();
+                    this.nameResolver.namespaceName = '';
                 }
                 break;
             default:
@@ -1015,12 +965,6 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
         }
 
         return false;
-    }
-
-    private _popNamespace() {
-        if (this.spine[this.spine.length - 1].kind === SymbolKind.Namespace) {
-            this.spine.pop();
-        }
     }
 
     private _token(t: Token) {
@@ -1070,12 +1014,12 @@ export namespace SymbolReader {
     export var textDocument: TextDocument;
 
     export function tokenText(t: Token) {
-        return t ? textDocument.textAtOffset(t.offset, t.length) : null;
+        return t ? textDocument.textAtOffset(t.offset, t.length) : '';
     }
 
     export function nameTokenToFqn(t: Token) {
         let name = tokenText(t);
-        return name ? nameResolver.resolveRelative(name) : null;
+        return name ? nameResolver.resolveRelative(name) : '';
     }
 
     export function phraseLocation(p: Phrase) {
@@ -1113,7 +1057,7 @@ export namespace SymbolReader {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Function,
-            name: null,
+            name:'',
             location: phraseLocation(node),
             children: []
         }
@@ -1164,7 +1108,7 @@ export namespace SymbolReader {
 
     export function qualifiedName(node: QualifiedName, kind: SymbolKind) {
         if (!node || !node.name) {
-            return null;
+            return '';
         }
 
         let name = namespaceName(node.name);
@@ -1230,7 +1174,7 @@ export namespace SymbolReader {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Method,
-            name: null,
+            name:'',
             location: phraseLocation(node),
             children: []
         }
@@ -1290,7 +1234,7 @@ export namespace SymbolReader {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Interface,
-            name: null,
+            name:'',
             location: phraseLocation(node),
             children: []
         }
@@ -1391,7 +1335,7 @@ export namespace SymbolReader {
     export function traitDeclaration(node: TraitDeclaration, phpDoc: PhpDoc) {
         let s: PhpSymbol = {
             kind: SymbolKind.Trait,
-            name: null,
+            name:'',
             location: phraseLocation(node),
             children: []
         }
@@ -1412,7 +1356,7 @@ export namespace SymbolReader {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Class,
-            name: null,
+            name:'',
             location: phraseLocation(node),
             children: []
         };
@@ -1586,11 +1530,24 @@ export namespace SymbolReader {
 
     export function namespaceUseClause(node: NamespaceUseClause, kind: SymbolKind, prefix: string) {
 
-        return <ImportRule>{
+        let s: PhpSymbol = {
             kind: kind ? kind : SymbolKind.Class,
-            fqn: concatNamespaceName(prefix, namespaceName(node.name)),
-            alias: node.aliasingClause ? tokenText(node.aliasingClause.alias) : null
+            name: node.aliasingClause ? tokenText(node.aliasingClause.alias) : null,
+            associated: [],
+            location: phraseLocation(node)
         };
+
+        let fqn = concatNamespaceName(prefix, namespaceName(node.name));
+        if (!fqn) {
+            return s;
+        }
+
+        s.associated.push({ kind: s.kind, name: fqn });
+        if (!node.aliasingClause) {
+            s.name = fqn.split('\\').pop();
+        }
+
+        return s;
 
     }
 
