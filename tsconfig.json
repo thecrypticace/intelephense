@@ -4,8 +4,8 @@
 		"target": "ES6",
 		"module": "commonjs",
 		"moduleResolution": "node",
-		"sourceMap": true,
-		"outDir": "lib"
+		"outDir": "lib",
+		"declaration": true
 	},
 	"exclude": [
 		"node_modules",
