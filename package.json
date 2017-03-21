@@ -9,7 +9,8 @@
   "author": "Ben Mewburn",
   "license": "MIT",
   "dependencies": {
-      "php7parser":"file:../php7parser"
+      "php7parser":"file:../php7parser",
+      "vscode-languageserver-types":"^3.2.0"
   },
   "devDependencies": {
     "@types/chai":"^3.4.34",

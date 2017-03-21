@@ -1360,7 +1360,7 @@ export class DocumentContext {
             return '';
         }
 
-        let docSymbols = this.symbolStore.getDocumentSymbols(this.parsedDoc.uri);
+        let docSymbols = this.symbolStore.getSymbolTable(this.parsedDoc.uri);
         let nameResolver = new NameResolver(docSymbols.importTable);
         nameResolver.namespace = this.namespaceName;
         return nameNodeToFqnString(thisNode.children[2], nameResolver, SymbolKind.Class);
@@ -1369,7 +1369,7 @@ export class DocumentContext {
 
     typeResolveExpression(node: Tree<Phrase | Token>) {
 
-        let docSymbols = this.symbolStore.getDocumentSymbols(this.parsedDoc.uri);
+        let docSymbols = this.symbolStore.getSymbolTable(this.parsedDoc.uri);
         let nameResolver = new NameResolver(docSymbols.importTable);
         nameResolver.namespace = this.namespaceName;
         nameResolver.thisName = this.thisName;
@@ -1381,7 +1381,7 @@ export class DocumentContext {
 
     typeResolveVariable = (varNode: Tree<Phrase|Token>) => {
 
-        let docSymbols = this.symbolStore.getDocumentSymbols(this.parsedDoc.uri);
+        let docSymbols = this.symbolStore.getSymbolTable(this.parsedDoc.uri);
         let nameResolver = new NameResolver(docSymbols.importTable);
         nameResolver.namespace = this.namespaceName;
         nameResolver.thisName = this.thisName;
