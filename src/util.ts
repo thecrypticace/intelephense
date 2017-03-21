@@ -1,10 +1,10 @@
-/* Copyright © Ben Mewburn ben@mewburn.id.au
+/* Copyright (c) Ben Mewburn ben@mewburn.id.au
  * Licensed under the MIT Licence.
  */
 
 'use strict';
 
-import { Position } from 'php7parser';
+import { Position } from 'vscode-languageserver-types';
 
 export function popMany<T>(array: T[], count: number) {
     let popped: T[] = [];
@@ -25,12 +25,12 @@ export function isString(s: any) {
 export function isInRange(position: Position, startRange: Position, endRange: Position) {
 
     if(position.line < startRange.line || 
-        (position.line === startRange.line && position.char < startRange.char)){
+        (position.line === startRange.line && position.character < startRange.character)){
             return -1;
         }
 
     if(position.line > endRange.line || 
-        (position.line === endRange.line && position.char > endRange.char)){
+        (position.line === endRange.line && position.character > endRange.character)){
             return 1;
         }
 
