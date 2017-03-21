@@ -4,7 +4,8 @@
 
 'use strict';
 
-import { Position, Range, Location, Predicate, TreeTraverser, TreeVisitor, BinarySearch, SuffixArray } from './types';
+import { Position, Range, Location } from 'vscode-languageserver-types';
+import { Predicate, TreeTraverser, TreeVisitor, BinarySearch } from './types';
 import {
     Phrase, PhraseType, Token, TokenType, NamespaceName, FunctionDeclarationHeader,
     ReturnType, TypeDeclaration, QualifiedName, ParameterDeclarationList,
@@ -55,16 +56,51 @@ export const enum SymbolModifier {
 }
 
 export interface PhpSymbol {
-
     kind: SymbolKind;
     name: string;
-    range?: Range;
+    location?: Location;
     modifiers?: SymbolModifier;
     description?: string;
     type?: TypeString;
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
-    parent?: PhpSymbol;
+    scope?: string;
+}
+
+export namespace PhpSymbol {
+
+    export function acronym(s: PhpSymbol) {
+
+        let text = s.name.slice(s.name.lastIndexOf('\\') + 1);
+
+        if (!text) {
+            return null;
+        }
+
+        let lcText = text.toLowerCase();
+        let n = 0;
+        let l = text.length;
+        let c: string;
+        let acronym = lcText[0] !== '_' && lcText[0] !== '$' ? lcText[0] : '';
+
+        while (n < l) {
+
+            c = text[n];
+
+            if ((c === '$' || c === '_') && n + 1 < l && text[n + 1] !== '_') {
+                ++n;
+                acronym += lcText[n];
+            } else if (n > 0 && c !== lcText[n] && text[n - 1] === lcText[n - 1]) {
+                //uppercase
+                acronym += lcText[n];
+            }
+
+            ++n;
+
+        }
+
+        return acronym;
+    }
 
 }
 
@@ -79,7 +115,7 @@ export class ImportTable {
     private _rules: ImportRule[];
     private _uri: string;
 
-    constructor(uri: string, importRules: ImportRule[] = []) {
+    constructor(uri: string, importRules: ImportRule[]) {
         this._uri = uri;
         this._rules = importRules;
     }
@@ -144,13 +180,13 @@ export class NameResolver {
         if (pos < 0) {
             return this._resolveUnqualified(notFqName, kind);
         } else {
-            this._resolveQualified(name, pos, kind);
+            this._resolveQualified(name, pos);
         }
     }
 
-    private _resolveQualified(name: string, pos: number, kind: SymbolKind) {
+    private _resolveQualified(name: string, pos: number) {
 
-        let rule = this.importTable.match(name.slice(0, pos), kind);
+        let rule = this.importTable.match(name.slice(0, pos), SymbolKind.Class);
         if (rule) {
             return rule.fqn + name.slice(pos);
         } else {
@@ -417,92 +453,57 @@ export class SymbolTable {
 
     }
 
-    static fromParseTree(parseTree: ParseTree, textDocument: TextDocument) {
+
+
+    static create(parseTree: ParseTree, textDocument: TextDocument) {
 
         let symbolReader = new SymbolReader(
             textDocument,
-            new NameResolver(new ImportTable(textDocument.uri)),
+            new NameResolver(new ImportTable(textDocument.uri, [])),
             [{ kind: SymbolKind.None, name: null, children: [] }]
         );
 
         let traverser = new TreeTraverser<Phrase | Token>([parseTree.root]);
-        traverser.traverse(symbol)
-
+        traverser.traverse(symbolReader);
+        return new SymbolTable(
+            textDocument.uri,
+            symbolReader.nameResolver.importTable,
+            symbolReader.spine[0]
+        );
 
     }
 
 }
 
-/**
- * Get suffixes after $, namespace separator, underscore and on capitals
- * Includes acronym using non namespaced portion of string
- */
-function symbolSuffixes(symbol: PhpSymbol) {
-
-    let text = symbol.toString();
-    let lcText = text.toLowerCase();
-    let suffixes = [lcText];
-    let n = 0;
-    let c: string;
-    let acronym = lcText[0] !== '_' && lcText[0] !== '$' ? lcText[0] : '';
-
-    while (n < text.length) {
-
-        c = text[n];
-
-        if (c === '\\') {
-            acronym = '';
-        }
-
-        if ((c === '$' || c === '\\' || c === '_') && n + 1 < text.length && text[n + 1] !== '_') {
-            ++n;
-            suffixes.push(lcText.slice(n));
-            acronym += lcText[n];
-        } else if (n > 0 && c !== lcText[n] && text[n - 1] === lcText[n - 1]) {
-            //uppercase
-            suffixes.push(lcText.slice(n));
-            acronym += lcText[n];
-        }
-
-        ++n;
-
-    }
-
-    if (acronym.length > 1) {
-        suffixes.push(acronym);
-    }
-
-    return suffixes;
-}
 
 export class SymbolStore {
 
     private _map: { [index: string]: SymbolTable };
-    private _index: SuffixArray<PhpSymbol>;
+    private _index: SymbolIndex;
 
     constructor() {
         this._map = {};
-        this._index = new SuffixArray<PhpSymbol>(symbolSuffixes);
+        this._index = new SymbolIndex();
     }
 
-    getDocumentSymbols(uri: string) {
+    getSymbolTable(uri: string) {
         return this._map[uri];
     }
 
-    add(documentSymbols: SymbolTable) {
-        if (this.getDocumentSymbols(documentSymbols.uri)) {
-            throw new Error(`Duplicate key ${documentSymbols.uri}`);
+    add(symbolTable: SymbolTable) {
+        if (this.getSymbolTable(symbolTable.uri)) {
+            throw new Error(`Duplicate key ${symbolTable.uri}`);
         }
-        this._map[documentSymbols.uri] = documentSymbols;
-        this._index.addMany(this._indexSymbols(documentSymbols.symbolTree));
+        this._map[symbolTable.uri] = symbolTable;
+        this._index.addMany(this._indexSymbols(symbolTable.root));
     }
 
     remove(uri: string) {
-        let doc = this.getDocumentSymbols(uri);
-        if (!doc) {
+        let symbolTable = this.getSymbolTable(uri);
+        if (!symbolTable) {
             return;
         }
-        this._index.removeMany(this._indexSymbols(doc.symbolTree));
+        this._index.removeMany(this._indexSymbols(symbolTable.root));
         delete this._map[uri];
     }
 
@@ -516,12 +517,12 @@ export class SymbolStore {
             return matched;
         }
 
-        let filtered: Tree<PhpSymbol>[] = [];
-        let s: Tree<PhpSymbol>;
+        let filtered: PhpSymbol[] = [];
+        let s: PhpSymbol;
 
-        for (let n = 0; n < matched.length; ++n) {
+        for (let n = 0, l = matched.length; n < l; ++n) {
             s = matched[n];
-            if ((s.value.kind & kindMask) > 0) {
+            if ((s.kind & kindMask) > 0) {
                 filtered.push(s);
             }
         }
@@ -529,47 +530,45 @@ export class SymbolStore {
         return filtered;
     }
 
-    lookupTypeMembers(typeName: string, predicate: Predicate<Tree<PhpSymbol>>) {
+    lookupTypeMembers(typeName: string, memberPredicate: Predicate<PhpSymbol>) {
         let type = this.match(typeName, SymbolKind.Class | SymbolKind.Interface).shift();
-        return this._lookupTypeMembers(type, predicate);
+        return this._lookupTypeMembers(type, memberPredicate);
     }
 
-    lookupTypeMember(typeName: string, predicate: Predicate<Tree<PhpSymbol>>) {
-        return this.lookupTypeMembers(typeName, predicate).shift();
+    lookupTypeMember(typeName: string, memberPredicate: Predicate<PhpSymbol>) {
+        return this.lookupTypeMembers(typeName, memberPredicate).shift();
     }
 
-    private _lookupTypeMembers(type: Tree<PhpSymbol>, predicate: Predicate<Tree<PhpSymbol>>) {
+    private _lookupTypeMembers(type: PhpSymbol, predicate: Predicate<PhpSymbol>) {
 
         if (!type) {
             return [];
         }
 
         let members = type.children.filter(predicate);
-        let memberNames = members.map((x) => {
-            return x.value.name;
-        });
+        let associated: PhpSymbol[] = [];
+        let associatedKindMask = SymbolKind.Class ? SymbolKind.Class | SymbolKind.Trait : SymbolKind.Interface;
+        let baseSymbol: PhpSymbol;
 
-        let associatedNames: string[] = [];
-
-        if (type.value.extends) {
-            Array.prototype.push.apply(associatedNames, type.value.extends);
-        }
-
-        if (type.value.traits) {
-            Array.prototype.push.apply(associatedNames, type.value.traits);
+        if (type.associated) {
+            for (let n = 0, l = type.associated.length; n < l; ++n) {
+                baseSymbol = type.associated[n];
+                if ((baseSymbol.kind & associatedKindMask) > 0 && baseSymbol.name) {
+                    associated.push(baseSymbol);
+                }
+            }
         }
 
         //lookup in base class/traits
-        let associated: Tree<PhpSymbol>;
-        let baseKindMask = type.value.kind === SymbolKind.Class ? SymbolKind.Class | SymbolKind.Trait : SymbolKind.Interface;
-        let basePredicate: Predicate<Tree<PhpSymbol>> = (x) => {
-            return predicate(x) && !(x.value.modifiers & SymbolModifier.Private) && memberNames.indexOf(x.value.name) < 0;
+        let basePredicate: Predicate<PhpSymbol> = (x) => {
+            return predicate(x) && !(x.modifiers & SymbolModifier.Private);
         };
 
-        for (let n = 0; n < associatedNames.length; ++n) {
-            associated = this.match(associatedNames[n], baseKindMask).shift();
-            if (associated) {
-                Array.prototype.push.apply(members, this._lookupTypeMembers(associated, basePredicate));
+        for (let n = 0, l = associated.length; n < l; ++n) {
+            baseSymbol = associated[n];
+            baseSymbol = this.match(baseSymbol.name, baseSymbol.kind).shift();
+            if (baseSymbol) {
+                Array.prototype.push.apply(members, this._lookupTypeMembers(baseSymbol, basePredicate));
             }
 
         }
@@ -577,21 +576,22 @@ export class SymbolStore {
         return members;
     }
 
-    private _indexSymbols(symbolTree: Tree<PhpSymbol>) {
+    private _indexSymbols(root: PhpSymbol) {
 
         let notKindMask = SymbolKind.Parameter | SymbolKind.Variable;
 
-        let predicate: Predicate<Tree<PhpSymbol>> = (x) => {
-            return x.value && !(x.value.kind & notKindMask);
+        let predicate: Predicate<PhpSymbol> = (x) => {
+            return !(x.kind & notKindMask) && !!x.name;
         };
 
-        return symbolTree.match(predicate);
+        let traverser = new TreeTraverser([root]);
+        return traverser.filter(predicate);
 
     }
 
+
+
 }
-
-
 
 /*
 
@@ -985,6 +985,20 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     }
 
+    postOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+
+        switch ((<Phrase>node).phraseType) {
+            case PhraseType.NamespaceDefinition:
+                if ((<NamespaceDefinition>node).statementList) {
+                    this._popNamespace();
+                }
+                break;
+            default:
+                break;
+        }
+
+    }
+
     private _variableExists(name: string) {
         let s = this.spine[this.spine.length - 1];
 
@@ -1029,11 +1043,17 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             return;
         }
 
-        symbol.parent = this.spine[this.spine.length - 1];
-        if (!symbol.parent.children) {
-            symbol.parent.children = [];
+        let parent = this.spine[this.spine.length - 1];
+
+        if (!parent.children) {
+            parent.children = [];
         }
-        symbol.parent.children.push(symbol);
+
+        if (parent.name) {
+            symbol.scope = parent.name;
+        }
+
+        parent.children.push(symbol);
 
         if (pushToSpine) {
             this.spine.push(symbol);
@@ -1058,7 +1078,7 @@ export namespace SymbolReader {
         return name ? nameResolver.resolveRelative(name) : null;
     }
 
-    export function phraseRange(p: Phrase) {
+    export function phraseLocation(p: Phrase) {
         if (!p) {
             return null;
         }
@@ -1070,19 +1090,12 @@ export namespace SymbolReader {
             return null;
         }
 
-        return <Range>{
-            start: textDocument.positionAtOffset(startToken.offset),
-            end: textDocument.positionAtOffset(endToken.offset + endToken.length)
-        }
-    }
-
-    export function tagTypeToFqn(type: string) {
-        if (!type) {
-            return null;
-        } else if (type[0] === '\\') {
-            return type.slice(1);
-        } else {
-            return nameResolver.resolveRelative(type);
+        return <Location>{
+            uri: textDocument.uri,
+            range: {
+                start: textDocument.positionAtOffset(startToken.offset),
+                end: textDocument.positionAtOffset(endToken.offset + endToken.length)
+            }
         }
     }
 
@@ -1091,7 +1104,7 @@ export namespace SymbolReader {
      * Uses phrase range to provide "unique" name
      */
     export function anonymousName(node: Phrase) {
-        let range = phraseRange(node);
+        let range = phraseLocation(node).range;
         let suffix = [range.start.line, range.end.line, range.end.line, range.end.character].join('.');
         return '.anonymous.' + suffix;
     }
@@ -1101,7 +1114,7 @@ export namespace SymbolReader {
         let s: PhpSymbol = {
             kind: SymbolKind.Function,
             name: null,
-            range: phraseRange(node),
+            location: phraseLocation(node),
             children: []
         }
 
@@ -1109,7 +1122,7 @@ export namespace SymbolReader {
             s.description = phpDoc.text;
             let returnTag = phpDoc.returnTag;
             if (returnTag) {
-                s.type = new TypeString(tagTypeToFqn(returnTag.typeString));
+                s.type = new TypeString(returnTag.typeString).nameResolve(nameResolver);
             }
         }
 
@@ -1126,15 +1139,15 @@ export namespace SymbolReader {
         let s: PhpSymbol = {
             kind: SymbolKind.Parameter,
             name: tokenText(node.name),
-            range: phraseRange(node)
+            location: phraseLocation(node)
         };
 
         if (phpDoc) {
             let tag = phpDoc.findParamTag(s.name);
             if (tag) {
                 s.description = tag.description;
-                let type = tagTypeToFqn(tag.typeString);
-                s.type = s.type ? s.type.merge(type) : new TypeString(type);
+                let type = new TypeString(tag.typeString).nameResolve(nameResolver);
+                s.type = s.type ? s.type.merge(type) : type;
             }
         }
 
@@ -1171,14 +1184,14 @@ export namespace SymbolReader {
         let s: PhpSymbol = {
             kind: SymbolKind.Constant,
             name: nameTokenToFqn(node.name),
-            range: phraseRange(node)
+            location: phraseLocation(node)
         };
 
         if (phpDoc) {
             let tag = phpDoc.findVarTag(s.name);
             if (tag) {
                 s.description = tag.description;
-                s.type = new TypeString(tagTypeToFqn(tag.typeString));
+                s.type = new TypeString(tag.typeString).nameResolve(nameResolver);
             }
         }
 
@@ -1198,14 +1211,14 @@ export namespace SymbolReader {
             kind: SymbolKind.Constant,
             modifiers: modifiers,
             name: identifier(node.name),
-            range: phraseRange(node)
+            location: phraseLocation(node)
         }
 
         if (phpDoc) {
             let tag = phpDoc.findVarTag(s.name);
             if (tag) {
                 s.description = tag.description;
-                s.type = new TypeString(tagTypeToFqn(tag.typeString));
+                s.type = new TypeString(tag.typeString).nameResolve(nameResolver);
             }
         }
 
@@ -1218,7 +1231,7 @@ export namespace SymbolReader {
         let s: PhpSymbol = {
             kind: SymbolKind.Method,
             name: null,
-            range: phraseRange(node),
+            location: phraseLocation(node),
             children: []
         }
 
@@ -1226,7 +1239,7 @@ export namespace SymbolReader {
             s.description = phpDoc.text;
             let returnTag = phpDoc.returnTag;
             if (returnTag) {
-                s.type = new TypeString(tagTypeToFqn(returnTag.typeString));
+                s.type = new TypeString(returnTag.typeString).nameResolve(nameResolver);
             }
         }
 
@@ -1254,14 +1267,14 @@ export namespace SymbolReader {
             kind: SymbolKind.Property,
             name: tokenText(node.name),
             modifiers: modifiers,
-            range: phraseRange(node)
+            location: phraseLocation(node)
         }
 
         if (phpDoc) {
             let tag = phpDoc.findVarTag(s.name);
             if (tag) {
                 s.description = tag.description;
-                s.type = new TypeString(tagTypeToFqn(tag.typeString));
+                s.type = new TypeString(tag.typeString).nameResolve(nameResolver);
             }
         }
 
@@ -1278,7 +1291,7 @@ export namespace SymbolReader {
         let s: PhpSymbol = {
             kind: SymbolKind.Interface,
             name: null,
-            range: phraseRange(node),
+            location: phraseLocation(node),
             children: []
         }
 
@@ -1313,7 +1326,7 @@ export namespace SymbolReader {
             kind: SymbolKind.Method,
             modifiers: SymbolModifier.Magic,
             name: tag.name,
-            type: new TypeString(tagTypeToFqn(tag.typeString)),
+            type: new TypeString(tag.typeString).nameResolve(nameResolver),
             description: tag.description,
             children: []
         };
@@ -1335,7 +1348,7 @@ export namespace SymbolReader {
             kind: SymbolKind.Parameter,
             name: p.name,
             modifiers: SymbolModifier.Magic,
-            type: new TypeString(tagTypeToFqn(p.typeString))
+            type: new TypeString(p.typeString).nameResolve(nameResolver)
         }
 
     }
@@ -1345,7 +1358,7 @@ export namespace SymbolReader {
             kind: SymbolKind.Property,
             name: t.name,
             modifiers: magicPropertyModifier(t) | SymbolModifier.Magic,
-            type: new TypeString(tagTypeToFqn(t.typeString)),
+            type: new TypeString(t.typeString).nameResolve(nameResolver),
             description: t.description
         };
     }
@@ -1379,7 +1392,7 @@ export namespace SymbolReader {
         let s: PhpSymbol = {
             kind: SymbolKind.Trait,
             name: null,
-            range: phraseRange(node),
+            location: phraseLocation(node),
             children: []
         }
 
@@ -1400,7 +1413,7 @@ export namespace SymbolReader {
         let s: PhpSymbol = {
             kind: SymbolKind.Class,
             name: null,
-            range: phraseRange(node),
+            location: phraseLocation(node),
             children: []
         };
 
@@ -1461,7 +1474,7 @@ export namespace SymbolReader {
             kind: SymbolKind.Class,
             name: anonymousName(node),
             modifiers: SymbolModifier.Anonymous,
-            range: phraseRange(node)
+            location: phraseLocation(node)
         };
     }
 
@@ -1471,7 +1484,7 @@ export namespace SymbolReader {
             kind: SymbolKind.Function,
             name: anonymousName(node),
             modifiers: SymbolModifier.Anonymous,
-            range: phraseRange(node)
+            location: phraseLocation(node)
         };
 
     }
@@ -1606,10 +1619,189 @@ export namespace SymbolReader {
         return <PhpSymbol>{
             kind: SymbolKind.Namespace,
             name: namespaceName(node.name),
-            range: phraseRange(node),
+            location: phraseLocation(node),
             children: []
         };
 
     }
 
+}
+
+interface SuffixDelegate<T> {
+    (t: T): string[];
+}
+
+class SymbolIndex {
+
+    private _nodeArray: SymbolIndexNode[];
+    private _binarySearch: BinarySearch<SymbolIndexNode>;
+    private _collator: Intl.Collator;
+
+    constructor() {
+        this._nodeArray = [];
+        this._binarySearch = new BinarySearch<SymbolIndexNode>(this._nodeArray);
+        this._collator = new Intl.Collator();
+    }
+
+    add(item: PhpSymbol) {
+
+        let suffixes = this._symbolSuffixes(item);
+        let node: SymbolIndexNode;
+
+        for (let n = 0; n < suffixes.length; ++n) {
+
+            node = this._nodeFind(suffixes[n]);
+
+            if (node) {
+                node.items.push(item);
+            } else {
+                this._insertNode({ key: suffixes[n], items: [item] });
+            }
+        }
+
+    }
+
+    addMany(items: PhpSymbol[]) {
+        for (let n = 0; n < items.length; ++n) {
+            this.add(items[n]);
+        }
+    }
+
+    remove(item: PhpSymbol) {
+
+        let suffixes = this._symbolSuffixes(item);
+        let node: SymbolIndexNode;
+        let i: number;
+
+        for (let n = 0; n < suffixes.length; ++n) {
+
+            node = this._nodeFind(suffixes[n]);
+            if (!node) {
+                continue;
+            }
+
+            i = node.items.indexOf(item);
+
+            if (i !== -1) {
+                node.items.splice(i, 1);
+                if (!node.items.length) {
+                    this._deleteNode(node);
+                }
+            }
+
+        }
+
+    }
+
+    removeMany(items: PhpSymbol[]) {
+        for (let n = 0; n < items.length; ++n) {
+            this.remove(items[n]);
+        }
+    }
+
+    match(text: string) {
+
+        let nodes = this._nodeMatch(text);
+        let matches: PhpSymbol[] = [];
+
+        for (let n = 0; n < nodes.length; ++n) {
+            Array.prototype.push.apply(matches, nodes[n].items);
+        }
+
+        return Array.from(new Set<PhpSymbol>(matches));
+
+    }
+
+    private _nodeMatch(text: string) {
+
+        let collator = this._collator;
+        let lcText = text.toLowerCase();
+        let compareLowerFn = (n: SymbolIndexNode) => {
+            return collator.compare(lcText, n.key);
+        };
+        let compareUpperFn = (n: SymbolIndexNode) => {
+            return n.key.slice(0, lcText.length) === lcText ? 1 : -1;
+        }
+
+        return this._binarySearch.range(compareLowerFn, compareUpperFn);
+
+    }
+
+    private _nodeFind(text: string) {
+
+        let lcText = text.toLowerCase();
+        let collator = this._collator;
+        let compareFn = (n: SymbolIndexNode) => {
+            return collator.compare(lcText, n.key);
+        }
+
+        return this._binarySearch.find(compareFn);
+
+    }
+
+    private _insertNode(node: SymbolIndexNode) {
+
+        let collator = this._collator;
+        let rank = this._binarySearch.rank((n) => {
+            return collator.compare(node.key, n.key);
+        });
+
+        this._nodeArray.splice(rank, 0, node);
+
+    }
+
+    private _deleteNode(node: SymbolIndexNode) {
+
+        let collator = this._collator;
+        let rank = this._binarySearch.rank((n) => {
+            return collator.compare(node.key, n.key);
+        });
+
+        if (this._nodeArray[rank] === node) {
+            this._nodeArray.splice(rank, 1);
+        }
+
+    }
+
+    /**
+     * Get suffixes after $, namespace separator, underscore and on lowercase uppercase boundary
+     */
+    private _symbolSuffixes(symbol: PhpSymbol) {
+
+        let text = symbol.toString();
+        let lcText = text.toLowerCase();
+        let suffixes = [lcText];
+        let n = 0;
+        let c: string;
+        let l = text.length;
+
+        while (n < l) {
+
+            c = text[n];
+
+            if ((c === '$' || c === '\\' || c === '_') && n + 1 < l && text[n + 1] !== '_') {
+                ++n;
+                suffixes.push(lcText.slice(n));
+            } else if (n > 0 && c !== lcText[n] && text[n - 1] === lcText[n - 1]) {
+                //uppercase
+                suffixes.push(lcText.slice(n));
+            }
+
+            ++n;
+
+        }
+
+        let acronym = PhpSymbol.acronym(symbol);
+        if (acronym) {
+            suffixes.push(acronym);
+        }
+
+        return suffixes;
+    }
+
+}
+
+interface SymbolIndexNode {
+    key: string;
+    items: PhpSymbol[];
 }
