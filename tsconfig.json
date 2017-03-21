@@ -9,6 +9,10 @@
 	},
 	"exclude": [
 		"node_modules",
-		"test"
+		"test",
+		"lib",
+		".vscode",
+		"src/visitors.ts",
+		"src/completion.ts"
 	]
 }

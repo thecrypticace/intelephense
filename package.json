@@ -1,22 +1,25 @@
 {
-  "name": "intelephant",
+  "name": "intelephense",
   "version": "0.9.0",
   "description": "PHP Static Code Analysis",
-  "main": "./lib/intelephant.js",
+  "main": "./lib/intelephense.js",
+  "types": "./lib/intelephense.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha",
+    "build": "rm -f ./lib/* && tsc"
   },
   "author": "Ben Mewburn",
   "license": "MIT",
   "dependencies": {
-      "php7parser":"file:../php7parser",
-      "vscode-languageserver-types":"^3.2.0"
+    "php7parser": "file:../php7parser",
+    "vscode-languageserver-types": "^3.2.0"
   },
   "devDependencies": {
-    "@types/chai":"^3.4.34",
-    "@types/mocha":"^2.2.39",
+    "@types/chai": "^3.4.34",
+    "@types/mocha": "^2.2.39",
     "chai": "^3.5.0",
     "mocha": "^3.2.0",
     "typescript": "^2.1.6"
-  }
+  },
+  "private":true
 }
