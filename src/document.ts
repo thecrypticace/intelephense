@@ -68,7 +68,6 @@ export class TextDocument {
 
     }
 
-/*
     applyEdit(start: Position, end: Position, text: string) {
 
         let startOffset = this.offsetAtPosition(start);
@@ -80,13 +79,11 @@ export class TextDocument {
         this._lineOffsets = newLineOffsets;
         let lengthDiff = text.length - (endOffset - startOffset);
 
-        for (let n = end.line + 1; n < this._lineOffsets.length; ++n) {
+        for (let n = end.line + 1, l = this._lineOffsets.length; n < l; ++n) {
             this._lineOffsets[n] += lengthDiff;
         }
 
     }
-
-    */
 
     private _textLineOffsets(text: string, offset: number) {
 
