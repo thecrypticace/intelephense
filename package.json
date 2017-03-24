@@ -11,7 +11,7 @@
   "author": "Ben Mewburn",
   "license": "MIT",
   "dependencies": {
-    "php7parser": "file:../php7parser",
+    "php7parser": "git+ssh://gituser@s1.funclab.net:/var/git/php7parser.git",
     "vscode-languageserver-types": "^3.2.0"
   },
   "devDependencies": {
