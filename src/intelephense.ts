@@ -10,6 +10,12 @@ import { ParseTree, ParseTreeStore } from './parse';
 import { SymbolStore, SymbolTable, SymbolKind, PhpSymbol } from './symbol';
 import * as lsp from 'vscode-languageserver-types';
 
+export interface Logger {
+    info: (msg: string) => void;
+    warn: (msg: string) => void;
+    error: (msg: string) => void;
+}
+
 export namespace Intelephense {
 
     var documentStore = new DocumentStore();
@@ -22,36 +28,111 @@ export namespace Intelephense {
         SymbolKind.Constant |
         SymbolKind.Function;
 
-    export function openDocument(uri: string, documentText: string) {
+    export var logger: Logger;
+    export var enableDebug: boolean;
 
-        let doc = new TextDocument(uri, documentText);
+    function debug(msg: string) {
+        if (enableDebug && logger) {
+            logger.info(msg);
+        }
+    }
+
+    function info(msg: string) {
+        if (logger) {
+            logger.info(msg);
+        }
+    }
+
+    function warn(msg: string) {
+        if (logger) {
+            logger.warn(msg);
+        }
+    }
+
+    function error(msg: string) {
+        if (logger) {
+            logger.error(msg);
+        }
+    }
+
+    function elapsed(startTimestamp: number, endTimestamp: number) {
+        return endTimestamp - startTimestamp;
+    }
+
+    function timestamp() {
+        return Date.now();
+    }
+
+    export function openDocument(uri: string, text: string) {
+
+        debug(`Opening ${uri}`);
+        let doc = new TextDocument(uri, text);
         documentStore.add(doc);
-        let parseTree = new ParseTree(uri, Parser.parse(documentText));
+        let ts = timestamp();
+        let parseTree = new ParseTree(uri, Parser.parse(text));
+        debug(`${uri} parsed in ${elapsed(ts, timestamp())} ms`);
         parseTreeStore.add(parseTree);
+        ts = timestamp();
         let symbolTable = SymbolTable.create(parseTree, doc);
         symbolStore.add(symbolTable);
+        debug(`${uri} symbols indexed in ${elapsed(ts, timestamp())} ms`);
 
     }
 
     export function closeDocument(uri: string) {
+        debug(`Closing ${uri}`);
         documentStore.remove(uri);
         parseTreeStore.remove(uri);
     }
 
-    export function syncDocument(uri: string, documentText: string) {
-        documentStore.remove(uri);
-        parseTreeStore.remove(uri);
-        symbolStore.remove(uri);
-        openDocument(uri, documentText);
+    export function editDocument(
+        uri: string,
+        changes: lsp.TextDocumentContentChangeEvent[]) {
+
+        let doc = documentStore.find(uri);
+
+        if (!doc) {
+            debug(`Changes to ${uri} not applied`)
+            return;
+        }
+
+        let compareFn = (a: lsp.TextDocumentContentChangeEvent, b: lsp.TextDocumentContentChangeEvent) => {
+            if (a.range.end.line > b.range.end.line) {
+                return -1;
+            } else if (a.range.end.line < b.range.end.line) {
+                return 1;
+            } else {
+                return b.range.end.character - a.range.end.character;
+            }
+        }
+
+        let ts = timestamp();
+        changes.sort(compareFn);
+        let change:lsp.TextDocumentContentChangeEvent;
+        
+        for (let n = 0, l = changes.length; n < l; ++n) {
+            change = changes[n];
+            doc.applyEdit(change.range.start, change.range.end, change.text);
+        }
+
+        debug(`Changes to ${uri} applied in ${elapsed(ts, timestamp())} ms`);
+        debug(doc.fullText);
+
     }
 
     export function documentSymbols(uri: string) {
 
+        let ts = timestamp();
         let symbolTable = symbolStore.getSymbolTable(uri);
-        return symbolTable ?
-            symbolTable.symbols.map<lsp.SymbolInformation>(toDocumentSymbolInformation) :
-            [];
 
+        if (!symbolTable) {
+            debug(`Document symbols for ${uri} not found`);
+            return [];
+        }
+
+        let symbols = symbolTable.symbols.map<lsp.SymbolInformation>(toDocumentSymbolInformation);
+        debug(`Document symbols for ${uri} fetched in ${elapsed(ts, timestamp())} ms`);
+        return symbols;
     }
 
     function toDocumentSymbolInformation(s: PhpSymbol) {
@@ -64,9 +145,9 @@ export namespace Intelephense {
         };
 
         //check for symbol scope to exclude class constants
-        if((s.kind & namespacedSymbolMask) && !s.scope){
+        if ((s.kind & namespacedSymbolMask) && !s.scope) {
             let nsSeparatorPos = s.name.lastIndexOf('\\');
-            if(nsSeparatorPos >= 0){
+            if (nsSeparatorPos >= 0) {
                 si.name = s.name.slice(nsSeparatorPos + 1);
                 si.containerName = s.name.slice(0, nsSeparatorPos);
             }
