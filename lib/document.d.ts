@@ -10,6 +10,7 @@ export declare class TextDocument {
     textAtOffset(offset: number, length: number): string;
     positionAtOffset(offset: number): Position;
     offsetAtPosition(pos: Position): number;
+    applyEdit(start: Position, end: Position, text: string): void;
     private _textLineOffsets(text, offset);
 }
 export declare class DocumentStore {
