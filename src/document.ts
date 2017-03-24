@@ -72,7 +72,7 @@ export class TextDocument {
 
         let startOffset = this.offsetAtPosition(start);
         let endOffset = this.offsetAtPosition(end);
-        this._text = this._text.slice(0, startOffset) + text + this._text.slice(endOffset + 1);
+        this._text = this._text.slice(0, startOffset) + text + this._text.slice(endOffset);
 
         this._lineOffsets = this._textLineOffsets(text, 0);
 /*
