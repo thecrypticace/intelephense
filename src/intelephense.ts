@@ -10,12 +10,6 @@ import { ParseTree, ParseTreeStore } from './parse';
 import { SymbolStore, SymbolTable, SymbolKind, PhpSymbol } from './symbol';
 import * as lsp from 'vscode-languageserver-types';
 
-export interface Logger {
-    info: (msg: string) => void;
-    warn: (msg: string) => void;
-    error: (msg: string) => void;
-}
-
 export namespace Intelephense {
 
     var documentStore = new DocumentStore();
@@ -28,59 +22,22 @@ export namespace Intelephense {
         SymbolKind.Constant |
         SymbolKind.Function;
 
-    export var logger: Logger;
-    export var enableDebug: boolean;
-
-    function debug(msg: string) {
-        if (enableDebug && logger) {
-            logger.info(msg);
-        }
-    }
-
-    function info(msg: string) {
-        if (logger) {
-            logger.info(msg);
-        }
-    }
-
-    function warn(msg: string) {
-        if (logger) {
-            logger.warn(msg);
-        }
-    }
-
-    function error(msg: string) {
-        if (logger) {
-            logger.error(msg);
-        }
-    }
-
-    function elapsed(startTimestamp: number, endTimestamp: number) {
-        return endTimestamp - startTimestamp;
-    }
-
-    function timestamp() {
-        return Date.now();
-    }
-
     export function openDocument(uri: string, text: string) {
 
-        debug(`Opening ${uri}`);
         let doc = new TextDocument(uri, text);
         documentStore.add(doc);
-        let ts = timestamp();
         let parseTree = new ParseTree(uri, Parser.parse(text));
-        debug(`${uri} parsed in ${elapsed(ts, timestamp())} ms`);
         parseTreeStore.add(parseTree);
-        ts = timestamp();
         let symbolTable = SymbolTable.create(parseTree, doc);
         symbolStore.add(symbolTable);
-        debug(`${uri} symbols indexed in ${elapsed(ts, timestamp())} ms`);
 
+    }
+
+    export function isDocumentOpen(uri:string){
+        return documentStore.find(uri) !== null;
     }
 
     export function closeDocument(uri: string) {
-        debug(`Closing ${uri}`);
         documentStore.remove(uri);
         parseTreeStore.remove(uri);
     }
@@ -92,7 +49,6 @@ export namespace Intelephense {
         let doc = documentStore.find(uri);
 
         if (!doc) {
-            debug(`Changes to ${uri} not applied`)
             return;
         }
 
@@ -106,7 +62,6 @@ export namespace Intelephense {
             }
         }
 
-        let ts = timestamp();
         changes.sort(compareFn);
         let change:lsp.TextDocumentContentChangeEvent;
         
@@ -115,23 +70,17 @@ export namespace Intelephense {
             doc.applyEdit(change.range.start, change.range.end, change.text);
         }
 
-        debug(`Changes to ${uri} applied in ${elapsed(ts, timestamp())} ms`);
-        debug(doc.fullText);
-
     }
 
     export function documentSymbols(uri: string) {
 
-        let ts = timestamp();
         let symbolTable = symbolStore.getSymbolTable(uri);
 
         if (!symbolTable) {
-            debug(`Document symbols for ${uri} not found`);
             return [];
         }
 
         let symbols = symbolTable.symbols.map<lsp.SymbolInformation>(toDocumentSymbolInformation);
-        debug(`Document symbols for ${uri} fetched in ${elapsed(ts, timestamp())} ms`);
         return symbols;
     }
 
