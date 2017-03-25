@@ -8,7 +8,7 @@ import { TextDocument, DocumentStore } from './document';
 import { Parser } from 'php7parser';
 import { ParseTree, ParseTreeStore } from './parse';
 import { SymbolStore, SymbolTable, SymbolKind, PhpSymbol } from './symbol';
-import * as lsp from 'vscode-languageserver-types';
+import * as vscode from 'vscode-languageserver-types';
 
 export namespace Intelephense {
 
@@ -37,6 +37,17 @@ export namespace Intelephense {
         return documentStore.find(uri) !== null;
     }
 
+    export function getDocument(uri:string){
+        let doc = documentStore.find(uri);
+        if(!doc){
+            return null;
+        }
+        return <vscode.TextDocumentItem>{
+            uri:doc.uri,
+            text:doc.fullText
+        };
+    }
+
     export function closeDocument(uri: string) {
         documentStore.remove(uri);
         parseTreeStore.remove(uri);
@@ -44,7 +55,7 @@ export namespace Intelephense {
 
     export function editDocument(
         uri: string,
-        changes: lsp.TextDocumentContentChangeEvent[]) {
+        changes: vscode.TextDocumentContentChangeEvent[]) {
 
         let doc = documentStore.find(uri);
 
@@ -52,7 +63,7 @@ export namespace Intelephense {
             return;
         }
 
-        let compareFn = (a: lsp.TextDocumentContentChangeEvent, b: lsp.TextDocumentContentChangeEvent) => {
+        let compareFn = (a: vscode.TextDocumentContentChangeEvent, b: vscode.TextDocumentContentChangeEvent) => {
             if (a.range.end.line > b.range.end.line) {
                 return -1;
             } else if (a.range.end.line < b.range.end.line) {
@@ -63,7 +74,7 @@ export namespace Intelephense {
         }
 
         changes.sort(compareFn);
-        let change:lsp.TextDocumentContentChangeEvent;
+        let change:vscode.TextDocumentContentChangeEvent;
         
         for (let n = 0, l = changes.length; n < l; ++n) {
             change = changes[n];
@@ -80,13 +91,13 @@ export namespace Intelephense {
             return [];
         }
 
-        let symbols = symbolTable.symbols.map<lsp.SymbolInformation>(toDocumentSymbolInformation);
+        let symbols = symbolTable.symbols.map<vscode.SymbolInformation>(toDocumentSymbolInformation);
         return symbols;
     }
 
     function toDocumentSymbolInformation(s: PhpSymbol) {
 
-        let si: lsp.SymbolInformation = {
+        let si: vscode.SymbolInformation = {
             kind: null,
             name: s.name,
             location: s.location,
@@ -104,36 +115,36 @@ export namespace Intelephense {
 
         switch (s.kind) {
             case SymbolKind.Class:
-                si.kind = lsp.SymbolKind.Class;
+                si.kind = vscode.SymbolKind.Class;
                 break;
             case SymbolKind.Constant:
-                si.kind = lsp.SymbolKind.Constant;
+                si.kind = vscode.SymbolKind.Constant;
                 break;
             case SymbolKind.Function:
-                si.kind = lsp.SymbolKind.Function;
+                si.kind = vscode.SymbolKind.Function;
                 break;
             case SymbolKind.Interface:
-                si.kind = lsp.SymbolKind.Interface;
+                si.kind = vscode.SymbolKind.Interface;
                 break;
             case SymbolKind.Method:
                 if (s.name === '__construct') {
-                    s.kind = lsp.SymbolKind.Constructor;
+                    s.kind = vscode.SymbolKind.Constructor;
                 } else {
-                    s.kind = lsp.SymbolKind.Method;
+                    s.kind = vscode.SymbolKind.Method;
                 }
                 break;
             case SymbolKind.Namespace:
-                s.kind = lsp.SymbolKind.Namespace;
+                s.kind = vscode.SymbolKind.Namespace;
                 break;
             case SymbolKind.Property:
-                s.kind = lsp.SymbolKind.Property;
+                s.kind = vscode.SymbolKind.Property;
                 break;
             case SymbolKind.Trait:
-                s.kind = lsp.SymbolKind.Module;
+                s.kind = vscode.SymbolKind.Module;
                 break;
             case SymbolKind.Variable:
             case SymbolKind.Parameter:
-                s.kind = lsp.SymbolKind.Variable;
+                s.kind = vscode.SymbolKind.Variable;
             default:
                 throw new Error('Invalid Argument');
 
