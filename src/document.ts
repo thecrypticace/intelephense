@@ -77,9 +77,6 @@ export class TextDocument {
         let startOffset = this.offsetAtPosition(start);
         let endOffset = this.offsetAtPosition(end);
         this._text = this._text.slice(0, startOffset) + text + this._text.slice(endOffset);
-
-        //this._lineOffsets = this._textLineOffsets(this._text, 0);
-
         let newLineOffsets = this._lineOffsets.slice(0, start.line + 1);
         Array.prototype.push.apply(newLineOffsets, this._textLineOffsets(text, startOffset).slice(1));
         Array.prototype.push.apply(newLineOffsets, this._lineOffsets.slice(end.line + 1));
@@ -121,6 +118,10 @@ export class TextDocument {
 
             ++n;
 
+        }
+
+        if(isLineStart){
+            offsets.push(n + offset);
         }
 
         return offsets;
