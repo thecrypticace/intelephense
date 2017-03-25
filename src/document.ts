@@ -37,7 +37,7 @@ export class TextDocument {
     }
 
     offsetAtLine(line: number) {
-        
+
         if (line <= 0 || this._lineOffsets.length < 1) {
             return 0;
         } else if (line > this._lineOffsets.length - 1) {
@@ -78,15 +78,13 @@ export class TextDocument {
         let endOffset = this.offsetAtPosition(end);
         this._text = this._text.slice(0, startOffset) + text + this._text.slice(endOffset);
         let newLineOffsets = this._lineOffsets.slice(0, start.line + 1);
-        Array.prototype.push.apply(newLineOffsets, this._textLineOffsets(text, startOffset).slice(1));
-        Array.prototype.push.apply(newLineOffsets, this._lineOffsets.slice(end.line + 1));
-        this._lineOffsets = newLineOffsets;
         let lengthDiff = text.length - (endOffset - startOffset);
-
-        for (let n = end.line + 1, l = this._lineOffsets.length; n < l; ++n) {
-            this._lineOffsets[n] += lengthDiff;
+        let applyLengthDiffFn = (v: number) => {
+            return v + lengthDiff;
         }
-
+        Array.prototype.push.apply(newLineOffsets, this._textLineOffsets(text, startOffset).slice(1));
+        Array.prototype.push.apply(newLineOffsets, this._lineOffsets.slice(end.line + 1).map(applyLengthDiffFn));
+        this._lineOffsets = newLineOffsets;
     }
 
     private _textLineOffsets(text: string, offset: number) {
@@ -120,7 +118,7 @@ export class TextDocument {
 
         }
 
-        if(isLineStart){
+        if (isLineStart) {
             offsets.push(n + offset);
         }
 
