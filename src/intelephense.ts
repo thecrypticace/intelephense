@@ -33,7 +33,7 @@ export namespace Intelephense {
 
     }
 
-    export function isDocumentOpen(uri:string){
+    export function hasDocumentOpen(uri:string){
         return documentStore.find(uri) !== null;
     }
 
