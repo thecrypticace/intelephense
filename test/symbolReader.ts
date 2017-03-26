@@ -1,4 +1,4 @@
-import { SymbolReader, NameResolver, PhpSymbol, SymbolKind } from '../src/symbol';
+import { SymbolReader, NameResolver, PhpSymbol, SymbolKind, SymbolTable } from '../src/symbol';
 import { TextDocument } from '../src/document';
 import { ParseTree } from '../src/parse';
 import { Parser } from 'php7parser';
@@ -19,13 +19,16 @@ let symbolRoot: PhpSymbol = { kind: SymbolKind.None, name: '' };
 let sr = new SymbolReader(doc, new NameResolver('', '', []), [symbolRoot]);
 let traverser = new TreeTraverser([tree.root]);
 traverser.traverse(sr);
+let table = new SymbolTable('test', symbolRoot);
 
-console.log(JSON.stringify(symbolRoot, null, 4));
+//console.log(JSON.stringify(symbolRoot, null, 4));
+
+console.log(JSON.stringify(table.symbols, null, 4));
 
 describe('Symbol Reader', () => {
 
     it('symbols', () => {
-        
+
         
     });
 });
