@@ -145,6 +145,7 @@ export namespace Intelephense {
             case SymbolKind.Variable:
             case SymbolKind.Parameter:
                 s.kind = vscode.SymbolKind.Variable;
+                break;
             default:
                 throw new Error('Invalid Argument');
 
