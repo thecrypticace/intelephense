@@ -401,7 +401,10 @@ export class SymbolTable {
         let traverser = new TreeTraverser([this.root]);
         let toArrayVisitor = new ToArrayVisitor<PhpSymbol>();
         traverser.traverse(toArrayVisitor);
-        return toArrayVisitor.array;
+        let array = toArrayVisitor.array;
+        //remove root
+        array.shift();
+        return array;
     }
 
     static create(parseTree: ParseTree, textDocument: TextDocument) {
