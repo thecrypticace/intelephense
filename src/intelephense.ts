@@ -147,7 +147,7 @@ export namespace Intelephense {
                 s.kind = vscode.SymbolKind.Variable;
                 break;
             default:
-                throw new Error('Invalid Argument');
+                throw new Error(`Invalid argument ${s.kind}`);
 
         }
 
