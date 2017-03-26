@@ -128,23 +128,23 @@ export namespace Intelephense {
                 break;
             case SymbolKind.Method:
                 if (s.name === '__construct') {
-                    s.kind = vscode.SymbolKind.Constructor;
+                    si.kind = vscode.SymbolKind.Constructor;
                 } else {
-                    s.kind = vscode.SymbolKind.Method;
+                    si.kind = vscode.SymbolKind.Method;
                 }
                 break;
             case SymbolKind.Namespace:
-                s.kind = vscode.SymbolKind.Namespace;
+                si.kind = vscode.SymbolKind.Namespace;
                 break;
             case SymbolKind.Property:
-                s.kind = vscode.SymbolKind.Property;
+                si.kind = vscode.SymbolKind.Property;
                 break;
             case SymbolKind.Trait:
-                s.kind = vscode.SymbolKind.Module;
+                si.kind = vscode.SymbolKind.Module;
                 break;
             case SymbolKind.Variable:
             case SymbolKind.Parameter:
-                s.kind = vscode.SymbolKind.Variable;
+                si.kind = vscode.SymbolKind.Variable;
                 break;
             default:
                 throw new Error(`Invalid argument ${s.kind}`);
