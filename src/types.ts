@@ -140,7 +140,7 @@ export class TreeTraverser<T extends TreeLike> {
 
         let descend = true;
 
-        if (visitor.hasOwnProperty('preOrder')) {
+        if (visitor.preOrder) {
             descend = visitor.preOrder(treeNode, spine);
             if (visitor.haltTraverse) {
                 return;
@@ -160,7 +160,7 @@ export class TreeTraverser<T extends TreeLike> {
 
         }
 
-        if (visitor.hasOwnProperty('postOrder')) {
+        if (visitor.postOrder) {
             visitor.postOrder(treeNode, spine);
         }
 

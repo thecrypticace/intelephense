@@ -55,7 +55,7 @@ export class TextDocument {
 
         let search = new BinarySearch<number>(this._lineOffsets);
         let compareFn = (x) => {
-            return offset - x;
+            return x - offset;
         };
         let rank = search.rank(compareFn);
         let index = Math.max(rank - 1, 0);

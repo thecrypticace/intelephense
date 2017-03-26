@@ -710,7 +710,8 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
         public nameResolver: NameResolver,
         public spine: PhpSymbol[]
     ) {
-
+        SymbolReader.textDocument = textDocument;
+        SymbolReader.nameResolver = nameResolver;
     }
 
     preOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
@@ -942,6 +943,16 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 if ((<NamespaceDefinition>node).statementList) {
                     this.nameResolver.namespaceName = '';
                 }
+                break;
+            case PhraseType.FunctionDeclaration:
+            case PhraseType.ParameterDeclaration:
+            case PhraseType.ClassDeclaration:
+            case PhraseType.InterfaceDeclaration:
+            case PhraseType.TraitDeclaration:
+            case PhraseType.MethodDeclaration:
+            case PhraseType.AnonymousClassDeclaration:
+            case PhraseType.AnonymousFunctionCreationExpression:
+                this.spine.pop();
                 break;
             default:
                 break;
