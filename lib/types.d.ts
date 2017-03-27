@@ -38,6 +38,7 @@ export declare class Debounce<T> {
     private _lastEvent;
     private _timer;
     private _wait;
+    private _clear;
     constructor(handler: (e: T) => void, wait: number);
     handle(event: T): void;
     interupt(): void;

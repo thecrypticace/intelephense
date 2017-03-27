@@ -235,6 +235,10 @@ export class Debounce<T> {
     private _lastEvent: T;
     private _timer: number;
     private _wait: number;
+    private _clear = () => {
+        this._timer = null;
+        this._lastEvent = null;
+    }
 
     constructor(handler: (e: T) => void, wait: number) {
         this._handler = handler;
@@ -244,22 +248,30 @@ export class Debounce<T> {
     handle(event: T) {
         this._lastEvent = event;
         this.interupt();
+        let that = this;
+        let handler = this._handler;
         let later = () => {
-            this._handler.apply(this, this._lastEvent);
+            handler.apply(that, event);
         };
         this._timer = setTimeout(later, this._wait);
     }
 
     interupt() {
         clearTimeout(this._timer);
-        this._timer = 0;
+        this._clear();
     }
 
     flush() {
-        if (this._timer) {
-            this.interupt();
-            this._handler.apply(this, this._lastEvent);
+        if (!this._timer) {
+            return;
         }
+
+        let event = this._lastEvent;
+        this.interupt();
+        if (event) {
+            this._handler.apply(this, event);
+        }
+
     }
 
 }
@@ -277,7 +289,7 @@ export class ToArrayVisitor<T> implements TreeVisitor<T>{
         return this._array;
     }
 
-    preOrder(t:T, spine:T[]) {
+    preOrder(t: T, spine: T[]) {
         this._array.push(t);
         return true;
     }
