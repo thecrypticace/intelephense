@@ -5,7 +5,7 @@ export declare class TextDocument {
     private _lineOffsets;
     constructor(uri: string, text: string);
     readonly uri: string;
-    fullText: string;
+    text: string;
     readonly lineOffsets: number[];
     offsetAtLine(line: number): number;
     textAtOffset(offset: number, length: number): string;
