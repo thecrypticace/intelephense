@@ -7,23 +7,32 @@
 import { TextDocument, DocumentStore } from './document';
 import { Parser } from 'php7parser';
 import { ParseTree, ParseTreeStore } from './parse';
-import { SymbolStore, SymbolTable, SymbolKind, PhpSymbol } from './symbol';
-import * as vscode from 'vscode-languageserver-types';
+import { SymbolStore, SymbolTable } from './symbol';
+import { DocumentSymbolsProvider } from './documentSymbols';
+import { Debounce } from './types';
+import * as lsp from 'vscode-languageserver-types';
 
 export namespace Intelephense {
+
+    const phpLanguageId = 'php';
+    const documentChangeDebounceWait = 200;
 
     var documentStore = new DocumentStore();
     var parseTreeStore = new ParseTreeStore();
     var symbolStore = new SymbolStore();
-    const namespacedSymbolMask =
-        SymbolKind.Interface |
-        SymbolKind.Class |
-        SymbolKind.Trait |
-        SymbolKind.Constant |
-        SymbolKind.Function;
+    var documentChangeDebounceMap: { [uri: string]: Debounce<DocumentChangedEventArgs> } = {};
 
-    export function openDocument(uri: string, text: string) {
+    var documentSymbolsProvider = new DocumentSymbolsProvider(symbolStore);
 
+
+    export function openDocument(textDocument: lsp.TextDocumentItem) {
+
+        if (textDocument.languageId !== phpLanguageId || documentStore.find(textDocument.uri)) {
+            return;
+        }
+
+        let uri = textDocument.uri;
+        let text = textDocument.text;
         let doc = new TextDocument(uri, text);
         documentStore.add(doc);
         let parseTree = new ParseTree(uri, Parser.parse(text));
@@ -31,39 +40,34 @@ export namespace Intelephense {
         let symbolTable = SymbolTable.create(parseTree, doc);
         symbolStore.add(symbolTable);
 
+        documentChangeDebounceMap[textDocument.uri] = new Debounce<DocumentChangedEventArgs>(
+            documentChangedEventHandler,
+            documentChangeDebounceWait
+        );
+
     }
 
-    export function hasDocumentOpen(uri:string){
-        return documentStore.find(uri) !== null;
-    }
-
-    export function getDocument(uri:string){
-        let doc = documentStore.find(uri);
-        if(!doc){
-            return null;
+    export function closeDocument(textDocument: lsp.TextDocumentIdentifier) {
+        let debounce = documentChangeDebounceMap[textDocument.uri];
+        if (debounce) {
+            debounce.interupt();
+            delete documentChangeDebounceMap[textDocument.uri];
         }
-        return <vscode.TextDocumentItem>{
-            uri:doc.uri,
-            text:doc.fullText
-        };
-    }
-
-    export function closeDocument(uri: string) {
-        documentStore.remove(uri);
-        parseTreeStore.remove(uri);
+        documentStore.remove(textDocument.uri);
+        parseTreeStore.remove(textDocument.uri);
     }
 
     export function editDocument(
-        uri: string,
-        changes: vscode.TextDocumentContentChangeEvent[]) {
+        textDocument: lsp.VersionedTextDocumentIdentifier,
+        contentChanges: lsp.TextDocumentContentChangeEvent[]) {
 
-        let doc = documentStore.find(uri);
+        let doc = documentStore.find(textDocument.uri);
 
         if (!doc) {
             return;
         }
 
-        let compareFn = (a: vscode.TextDocumentContentChangeEvent, b: vscode.TextDocumentContentChangeEvent) => {
+        let compareFn = (a: lsp.TextDocumentContentChangeEvent, b: lsp.TextDocumentContentChangeEvent) => {
             if (a.range.end.line > b.range.end.line) {
                 return -1;
             } else if (a.range.end.line < b.range.end.line) {
@@ -73,84 +77,43 @@ export namespace Intelephense {
             }
         }
 
-        changes.sort(compareFn);
-        let change:vscode.TextDocumentContentChangeEvent;
-        
-        for (let n = 0, l = changes.length; n < l; ++n) {
-            change = changes[n];
+        contentChanges.sort(compareFn);
+        let change: lsp.TextDocumentContentChangeEvent;
+
+        for (let n = 0, l = contentChanges.length; n < l; ++n) {
+            change = contentChanges[n];
             doc.applyEdit(change.range.start, change.range.end, change.text);
         }
 
-    }
-
-    export function documentSymbols(uri: string) {
-
-        let symbolTable = symbolStore.getSymbolTable(uri);
-
-        if (!symbolTable) {
-            return [];
+        let debounce = documentChangeDebounceMap[textDocument.uri];
+        if (debounce) {
+            debounce.handle({ textDocument: doc });
         }
 
-        let symbols = symbolTable.symbols.map<vscode.SymbolInformation>(toDocumentSymbolInformation);
-        return symbols;
     }
 
-    function toDocumentSymbolInformation(s: PhpSymbol) {
-
-        let si: vscode.SymbolInformation = {
-            kind: null,
-            name: s.name,
-            location: s.location,
-            containerName: s.scope
-        };
-
-        //check for symbol scope to exclude class constants
-        if ((s.kind & namespacedSymbolMask) && !s.scope) {
-            let nsSeparatorPos = s.name.lastIndexOf('\\');
-            if (nsSeparatorPos >= 0) {
-                si.name = s.name.slice(nsSeparatorPos + 1);
-                si.containerName = s.name.slice(0, nsSeparatorPos);
-            }
+    export function documentSymbols(textDocument: lsp.TextDocumentIdentifier) {
+        let debounce = documentChangeDebounceMap[textDocument.uri];
+        if (debounce) {
+            debounce.flush();
         }
-
-        switch (s.kind) {
-            case SymbolKind.Class:
-                si.kind = vscode.SymbolKind.Class;
-                break;
-            case SymbolKind.Constant:
-                si.kind = vscode.SymbolKind.Constant;
-                break;
-            case SymbolKind.Function:
-                si.kind = vscode.SymbolKind.Function;
-                break;
-            case SymbolKind.Interface:
-                si.kind = vscode.SymbolKind.Interface;
-                break;
-            case SymbolKind.Method:
-                if (s.name === '__construct') {
-                    si.kind = vscode.SymbolKind.Constructor;
-                } else {
-                    si.kind = vscode.SymbolKind.Method;
-                }
-                break;
-            case SymbolKind.Namespace:
-                si.kind = vscode.SymbolKind.Namespace;
-                break;
-            case SymbolKind.Property:
-                si.kind = vscode.SymbolKind.Property;
-                break;
-            case SymbolKind.Trait:
-                si.kind = vscode.SymbolKind.Module;
-                break;
-            case SymbolKind.Variable:
-            case SymbolKind.Parameter:
-                si.kind = vscode.SymbolKind.Variable;
-                break;
-            default:
-                throw new Error(`Invalid argument ${s.kind}`);
-
-        }
-
-        return si;
+        return documentSymbolsProvider.provideDocumentSymbols(textDocument.uri);
     }
+
+    interface DocumentChangedEventArgs {
+        textDocument: TextDocument;
+    }
+
+    function documentChangedEventHandler(eventArgs: DocumentChangedEventArgs) {
+
+        let doc = eventArgs.textDocument
+        let parseTree = new ParseTree(doc.uri, Parser.parse(doc.text));
+        parseTreeStore.remove(doc.uri);
+        parseTreeStore.add(parseTree);
+        let symbolTable = SymbolTable.create(parseTree, doc);
+        symbolStore.remove(doc.uri);
+        symbolStore.add(symbolTable);
+
+    }
+
 }

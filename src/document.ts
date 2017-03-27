@@ -16,18 +16,18 @@ export class TextDocument {
 
     constructor(uri: string, text: string) {
         this._uri = uri;
-        this.fullText = text;
+        this.text = text;
     }
 
     get uri() {
         return this._uri;
     }
 
-    get fullText() {
+    get text() {
         return this._text;
     }
 
-    set fullText(text: string) {
+    set text(text: string) {
         this._text = text;
         this._lineOffsets = this._textLineOffsets(text, 0);
     }
