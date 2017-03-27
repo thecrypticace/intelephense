@@ -252,7 +252,7 @@ export class Debounce<T> {
         let handler = this._handler;
         let clear = this._clear;
         let later = () => {
-            handler.apply(that, event);
+            handler.apply(that, [event]);
             clear();
         };
         this._timer = setTimeout(later, this._wait);
@@ -271,7 +271,7 @@ export class Debounce<T> {
         let event = this._lastEvent;
         this.interupt();
         if (event) {
-            this._handler.apply(this, event);
+            this._handler.apply(this, [event]);
         }
 
     }
