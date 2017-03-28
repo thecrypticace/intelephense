@@ -38,6 +38,8 @@ export namespace Intelephense {
         let parseTree = new ParseTree(uri, Parser.parse(text));
         parseTreeStore.add(parseTree);
         let symbolTable = SymbolTable.create(parseTree, doc);
+        //must remove before adding as entry may exist already from workspace discovery
+        symbolStore.remove(symbolTable.uri); 
         symbolStore.add(symbolTable);
 
         documentChangeDebounceMap[textDocument.uri] = new Debounce<DocumentChangedEventArgs>(
