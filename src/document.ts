@@ -148,4 +148,8 @@ export class DocumentStore {
         return this._documents[uri] ? this._documents[uri] : null;
     }
 
+    hasDocument(uri:string){
+        return this._documents[uri] !== undefined;
+    }
+
 }

@@ -100,8 +100,23 @@ export namespace Intelephense {
         return documentSymbolsProvider.provideDocumentSymbols(textDocument.uri);
     }
 
-    export function discover(textDocument: lsp.TextDocumentIdentifier){
-        return 0;
+    export function discover(textDocument: lsp.TextDocumentItem) {
+
+        let uri = textDocument.uri;
+        if (documentStore.hasDocument(uri)) {
+            //if document is in doc store/opened then dont rediscover.
+            let symbolTable = symbolStore.getSymbolTable(uri);
+            return symbolTable ? symbolTable.count : 0;
+        }
+
+        let text = textDocument.text;
+        let doc = new TextDocument(uri, text);
+        let parseTree = new ParseTree(uri, Parser.parse(text));
+        let symbolTable = SymbolTable.create(parseTree, doc);
+        symbolStore.remove(uri);
+        symbolStore.add(symbolTable);
+        return symbolTable.count;
+
     }
 
     interface DocumentChangedEventArgs {

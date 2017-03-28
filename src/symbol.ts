@@ -5,7 +5,10 @@
 'use strict';
 
 import { Position, Range, Location } from 'vscode-languageserver-types';
-import { Predicate, TreeTraverser, TreeVisitor, BinarySearch, ToArrayVisitor } from './types';
+import {
+    Predicate, TreeTraverser, TreeVisitor, BinarySearch, ToArrayVisitor,
+    CountVisitor
+} from './types';
 import {
     Phrase, PhraseType, Token, TokenType, NamespaceName, FunctionDeclarationHeader,
     ReturnType, TypeDeclaration, QualifiedName, ParameterDeclarationList,
@@ -407,12 +410,22 @@ export class SymbolTable {
         return array;
     }
 
+    get count() {
+
+        let traverser = new TreeTraverser([this.root]);
+        let countVisitor = new CountVisitor<PhpSymbol>();
+        traverser.traverse(countVisitor);
+        //remove 1 for root
+        return countVisitor.count - 1;    
+
+    }
+
     static create(parseTree: ParseTree, textDocument: TextDocument) {
 
         let symbolReader = new SymbolReader(
             textDocument,
             new NameResolver(null, null, []),
-            [{ kind: SymbolKind.None, name:'', children: [] }]
+            [{ kind: SymbolKind.None, name: '', children: [] }]
         );
 
         let traverser = new TreeTraverser<Phrase | Token>([parseTree.root]);
@@ -1071,7 +1084,7 @@ export namespace SymbolReader {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Function,
-            name:'',
+            name: '',
             location: phraseLocation(node),
             children: []
         }
@@ -1188,7 +1201,7 @@ export namespace SymbolReader {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Method,
-            name:'',
+            name: '',
             location: phraseLocation(node),
             children: []
         }
@@ -1248,7 +1261,7 @@ export namespace SymbolReader {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Interface,
-            name:'',
+            name: '',
             location: phraseLocation(node),
             children: []
         }
@@ -1349,7 +1362,7 @@ export namespace SymbolReader {
     export function traitDeclaration(node: TraitDeclaration, phpDoc: PhpDoc) {
         let s: PhpSymbol = {
             kind: SymbolKind.Trait,
-            name:'',
+            name: '',
             location: phraseLocation(node),
             children: []
         }
@@ -1370,7 +1383,7 @@ export namespace SymbolReader {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Class,
-            name:'',
+            name: '',
             location: phraseLocation(node),
             children: []
         };
