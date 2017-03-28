@@ -100,6 +100,10 @@ export namespace Intelephense {
         return documentSymbolsProvider.provideDocumentSymbols(textDocument.uri);
     }
 
+    export function discover(textDocument: lsp.TextDocumentIdentifier){
+        return 0;
+    }
+
     interface DocumentChangedEventArgs {
         textDocument: TextDocument;
     }
