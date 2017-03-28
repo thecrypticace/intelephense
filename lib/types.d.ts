@@ -38,10 +38,9 @@ export declare class Debounce<T> {
     private _lastEvent;
     private _timer;
     private _wait;
-    private _clear;
     constructor(handler: (e: T) => void, wait: number);
+    clear: () => void;
     handle(event: T): void;
-    interupt(): void;
     flush(): void;
 }
 export declare class ToArrayVisitor<T> implements TreeVisitor<T> {
