@@ -408,7 +408,7 @@ export class BinarySearch<T> {
 
     range(compareLower: (n: T) => number, compareUpper: (T) => number) {
         let rankLower = this.rank(compareLower);
-        return this._sortedArray.slice(rankLower, this._search(compareUpper, rankLower + 1).rank);
+        return this._sortedArray.slice(rankLower, this._search(compareUpper, rankLower).rank);
     }
 
     private _search(compare: (n: T) => number, left = 0): BinarySearchResult {
