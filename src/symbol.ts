@@ -444,14 +444,28 @@ export class SymbolStore {
 
     private _map: { [index: string]: SymbolTable };
     private _index: SymbolIndex;
+    private _symbolCount:number;
 
     constructor() {
         this._map = {};
         this._index = new SymbolIndex();
+        this._symbolCount = 0;
     }
 
     getSymbolTable(uri: string) {
         return this._map[uri];
+    }
+
+    getSymbolTableUriArray(){
+        return Object.keys(this._map);
+    }
+
+    get tableCount(){
+        return Object.keys(this._map).length;
+    }
+
+    get symbolCount(){
+        return this._symbolCount;
     }
 
     add(symbolTable: SymbolTable) {
@@ -460,6 +474,7 @@ export class SymbolStore {
         }
         this._map[symbolTable.uri] = symbolTable;
         this._index.addMany(this._indexSymbols(symbolTable.root));
+        this._symbolCount += symbolTable.count;
     }
 
     remove(uri: string) {
@@ -468,6 +483,7 @@ export class SymbolStore {
             return;
         }
         this._index.removeMany(this._indexSymbols(symbolTable.root));
+        this._symbolCount -= symbolTable.count;
         delete this._map[uri];
     }
 

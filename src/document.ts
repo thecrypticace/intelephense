@@ -136,6 +136,10 @@ export class DocumentStore {
         this._documents = {};
     }
 
+    get count(){
+        return Object.keys(this._documents).length;
+    }
+
     add(doc: TextDocument) {
         this._documents[doc.uri] = doc;
     }
