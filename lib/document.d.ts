@@ -17,7 +17,9 @@ export declare class TextDocument {
 export declare class DocumentStore {
     private _documents;
     constructor();
+    readonly count: number;
     add(doc: TextDocument): void;
     remove(uri: string): void;
     find(uri: string): TextDocument;
+    hasDocument(uri: string): boolean;
 }

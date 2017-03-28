@@ -8,7 +8,7 @@ import { TextDocument, DocumentStore } from './document';
 import { Parser } from 'php7parser';
 import { ParseTree, ParseTreeStore } from './parse';
 import { SymbolStore, SymbolTable } from './symbol';
-import { DocumentSymbolsProvider } from './documentSymbols';
+import { SymbolProvider } from './symbolProvider';
 import { Debounce } from './types';
 import * as lsp from 'vscode-languageserver-types';
 
@@ -22,7 +22,7 @@ export namespace Intelephense {
     var symbolStore = new SymbolStore();
     var documentChangeDebounceMap: { [uri: string]: Debounce<DocumentChangedEventArgs> } = {};
 
-    var documentSymbolsProvider = new DocumentSymbolsProvider(symbolStore);
+    var symbolProvider = new SymbolProvider(symbolStore);
 
 
     export function openDocument(textDocument: lsp.TextDocumentItem) {
@@ -93,11 +93,12 @@ export namespace Intelephense {
     }
 
     export function documentSymbols(textDocument: lsp.TextDocumentIdentifier) {
-        let debounce = documentChangeDebounceMap[textDocument.uri];
-        if (debounce) {
-            debounce.flush();
-        }
-        return documentSymbolsProvider.provideDocumentSymbols(textDocument.uri);
+        documentChangeDebounceFlush(textDocument.uri);
+        return symbolProvider.provideDocumentSymbols(textDocument.uri);
+    }
+
+    export function workspaceSymbols(query:string){
+        return symbolProvider.provideWorkspaceSymbols(query);
     }
 
     export function discover(textDocument: lsp.TextDocumentItem) {
@@ -153,6 +154,13 @@ export namespace Intelephense {
 
     interface DocumentChangedEventArgs {
         textDocument: TextDocument;
+    }
+
+    function documentChangeDebounceFlush(uri:string){
+        let debounce = documentChangeDebounceMap[uri];
+        if (debounce) {
+            debounce.flush();
+        }
     }
 
     function documentChangedEventHandler(eventArgs: DocumentChangedEventArgs) {

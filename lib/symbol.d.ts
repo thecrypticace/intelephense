@@ -78,13 +78,18 @@ export declare class SymbolTable {
     root: PhpSymbol;
     constructor(uri: string, root: PhpSymbol);
     readonly symbols: PhpSymbol[];
+    readonly count: number;
     static create(parseTree: ParseTree, textDocument: TextDocument): SymbolTable;
 }
 export declare class SymbolStore {
     private _map;
     private _index;
+    private _symbolCount;
     constructor();
     getSymbolTable(uri: string): SymbolTable;
+    getSymbolTableUriArray(): string[];
+    readonly tableCount: number;
+    readonly symbolCount: number;
     add(symbolTable: SymbolTable): void;
     remove(uri: string): void;
     /**
