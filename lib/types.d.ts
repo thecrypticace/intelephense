@@ -50,6 +50,12 @@ export declare class ToArrayVisitor<T> implements TreeVisitor<T> {
     readonly array: T[];
     preOrder(t: T, spine: T[]): boolean;
 }
+export declare class CountVisitor<T> implements TreeVisitor<T> {
+    private _count;
+    constructor();
+    readonly count: number;
+    preOrder(t: T, spine: T[]): boolean;
+}
 export declare class BinarySearch<T> {
     private _sortedArray;
     constructor(sortedArray: T[]);

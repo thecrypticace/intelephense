@@ -14,6 +14,23 @@ const namespacedSymbolMask =
     SymbolKind.Constant |
     SymbolKind.Function;
 
+export class SymbolProvider {
+
+    constructor(public symbolStore: SymbolStore) { }
+
+    provideDocumentSymbols(uri: string) {
+        let symbolTable = this.symbolStore.getSymbolTable(uri);
+        return symbolTable ?
+            symbolTable.symbols.map<lsp.SymbolInformation>(toDocumentSymbolInformation) :
+            [];
+    }
+
+    provideWorkspaceSymbols(query:string){
+        return this.symbolStore.match(query).map<lsp.SymbolInformation>(toDocumentSymbolInformation);
+    }
+
+}
+
 function toDocumentSymbolInformation(s: PhpSymbol) {
 
     let si: lsp.SymbolInformation = {
@@ -73,15 +90,3 @@ function toDocumentSymbolInformation(s: PhpSymbol) {
     return si;
 }
 
-export class DocumentSymbolsProvider {
-
-    constructor(public symbolStore: SymbolStore) { }
-
-    provideDocumentSymbols(uri: string) {
-        let symbolTable = this.symbolStore.getSymbolTable(uri);
-        return symbolTable ?
-            symbolTable.symbols.map<lsp.SymbolInformation>(toDocumentSymbolInformation) :
-            [];
-    }
-
-}
