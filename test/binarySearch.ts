@@ -25,7 +25,7 @@ describe('BinarySearch', () => {
             assert.equal(search.rank((n) => { return n - 14; }), 8);
         });
 
-        it('Should rank value in correctorder when not exists', function () {
+        it('Should rank value in correct order when not exists', function () {
             assert.equal(search.rank((n) => { return n - 6; }), 4);
         });
 
@@ -35,5 +35,20 @@ describe('BinarySearch', () => {
 
     });
 
-    
+    describe('#range()', function () {
+
+        it('Should get correct array of items if range exists', function () {
+            let range = search.range((n) => { return n - 5; }, (n) => { return n - 10; });
+            assert.deepEqual(range, [7, 9]);
+        });
+
+        it('Should get empty array of items if range does not exist', function () {
+            let range = search.range((n) => { return n - 50; }, (n) => { return n - 60; });
+            assert.isArray(range);
+            assert.lengthOf(range, 0);
+        });
+
+    });
+
+
 });

@@ -77,7 +77,7 @@ export namespace PhpSymbol {
         let text = s.name.slice(s.name.lastIndexOf('\\') + 1);
 
         if (!text) {
-            return null;
+            return '';
         }
 
         let lcText = text.toLowerCase();
@@ -103,6 +103,40 @@ export namespace PhpSymbol {
         }
 
         return acronym;
+    }
+
+    /**
+     * Get suffixes after $, namespace separator, underscore and on lowercase uppercase boundary
+     */
+    export function suffixArray(s: PhpSymbol) {
+        if (!s.name) {
+            return [];
+        }
+
+        let text = s.name;
+        let lcText = text.toLowerCase();
+        let suffixes = [lcText];
+        let n = 0;
+        let c: string;
+        let l = text.length;
+
+        while (n < l) {
+
+            c = text[n];
+
+            if ((c === '$' || c === '\\' || c === '_') && n + 1 < l && text[n + 1] !== '_') {
+                ++n;
+                suffixes.push(lcText.slice(n));
+            } else if (n > 0 && c !== lcText[n] && text[n - 1] === lcText[n - 1]) {
+                //uppercase
+                suffixes.push(lcText.slice(n));
+            }
+
+            ++n;
+
+        }
+
+        return suffixes;
     }
 
 }
@@ -416,7 +450,7 @@ export class SymbolTable {
         let countVisitor = new CountVisitor<PhpSymbol>();
         traverser.traverse(countVisitor);
         //remove 1 for root
-        return countVisitor.count - 1;    
+        return countVisitor.count - 1;
 
     }
 
@@ -444,7 +478,7 @@ export class SymbolStore {
 
     private _map: { [index: string]: SymbolTable };
     private _index: SymbolIndex;
-    private _symbolCount:number;
+    private _symbolCount: number;
 
     constructor() {
         this._map = {};
@@ -456,15 +490,15 @@ export class SymbolStore {
         return this._map[uri];
     }
 
-    getSymbolTableUriArray(){
+    getSymbolTableUriArray() {
         return Object.keys(this._map);
     }
 
-    get tableCount(){
+    get tableCount() {
         return Object.keys(this._map).length;
     }
 
-    get symbolCount(){
+    get symbolCount() {
         return this._symbolCount;
     }
 
@@ -1627,11 +1661,7 @@ export namespace SymbolReader {
 
 }
 
-interface SuffixDelegate<T> {
-    (t: T): string[];
-}
-
-class SymbolIndex {
+export class SymbolIndex {
 
     private _nodeArray: SymbolIndexNode[];
     private _binarySearch: BinarySearch<SymbolIndexNode>;
@@ -1717,10 +1747,10 @@ class SymbolIndex {
         let collator = this._collator;
         let lcText = text.toLowerCase();
         let compareLowerFn = (n: SymbolIndexNode) => {
-            return collator.compare(lcText, n.key);
+            return collator.compare(n.key, lcText);
         };
         let compareUpperFn = (n: SymbolIndexNode) => {
-            return n.key.slice(0, lcText.length) === lcText ? 1 : -1;
+            return n.key.slice(0, lcText.length) === lcText ? -1 : 1;
         }
 
         return this._binarySearch.range(compareLowerFn, compareUpperFn);
@@ -1732,7 +1762,7 @@ class SymbolIndex {
         let lcText = text.toLowerCase();
         let collator = this._collator;
         let compareFn = (n: SymbolIndexNode) => {
-            return collator.compare(lcText, n.key);
+            return collator.compare(n.key, lcText);
         }
 
         return this._binarySearch.find(compareFn);
@@ -1743,7 +1773,7 @@ class SymbolIndex {
 
         let collator = this._collator;
         let rank = this._binarySearch.rank((n) => {
-            return collator.compare(node.key, n.key);
+            return collator.compare(n.key, node.key);
         });
 
         this._nodeArray.splice(rank, 0, node);
@@ -1754,7 +1784,7 @@ class SymbolIndex {
 
         let collator = this._collator;
         let rank = this._binarySearch.rank((n) => {
-            return collator.compare(node.key, n.key);
+            return collator.compare(n.key, node.key);
         });
 
         if (this._nodeArray[rank] === node) {
@@ -1763,39 +1793,12 @@ class SymbolIndex {
 
     }
 
-    /**
-     * Get suffixes after $, namespace separator, underscore and on lowercase uppercase boundary
-     */
-    private _symbolSuffixes(symbol: PhpSymbol) {
-
-        let text = symbol.toString();
-        let lcText = text.toLowerCase();
-        let suffixes = [lcText];
-        let n = 0;
-        let c: string;
-        let l = text.length;
-
-        while (n < l) {
-
-            c = text[n];
-
-            if ((c === '$' || c === '\\' || c === '_') && n + 1 < l && text[n + 1] !== '_') {
-                ++n;
-                suffixes.push(lcText.slice(n));
-            } else if (n > 0 && c !== lcText[n] && text[n - 1] === lcText[n - 1]) {
-                //uppercase
-                suffixes.push(lcText.slice(n));
-            }
-
-            ++n;
-
-        }
-
-        let acronym = PhpSymbol.acronym(symbol);
-        if (acronym) {
+    private _symbolSuffixes(s: PhpSymbol) {
+        let suffixes = PhpSymbol.suffixArray(s);
+        let acronym = PhpSymbol.acronym(s);
+        if(acronym.length > 1){
             suffixes.push(acronym);
         }
-
         return suffixes;
     }
 
