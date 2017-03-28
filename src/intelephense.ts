@@ -122,23 +122,15 @@ export namespace Intelephense {
 
     }
 
-    export function forget(uri: string): [number, number] {
-        let uriArray = symbolStore.getSymbolTableUriArray();
-        let fullUri: string;
-        let forgotten: [number, number] = [0, 0];
-        let table: SymbolTable;
-
-        for (let n = 0, l = uriArray.length; n < l; ++n) {
-            fullUri = uriArray[n];
-            if (fullUri.indexOf(uri) === 0 && !documentStore.hasDocument(fullUri)) {
-                table = symbolStore.getSymbolTable(fullUri);
-                symbolStore.remove(fullUri);
-                if (table) {
-                    forgotten[0]++;
-                    forgotten[1] += table.count;
-                }
-            }
+    export function forget(uri: string): number {
+        let forgotten = 0;
+        let table = symbolStore.getSymbolTable(uri);
+        if(!table || documentStore.hasDocument(uri)){
+            return forgotten;
         }
+
+        forgotten = table.count;
+        symbolStore.remove(table.uri);
         return forgotten;
     }
 

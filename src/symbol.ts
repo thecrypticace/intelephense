@@ -490,10 +490,6 @@ export class SymbolStore {
         return this._map[uri];
     }
 
-    getSymbolTableUriArray() {
-        return Object.keys(this._map);
-    }
-
     get tableCount() {
         return Object.keys(this._map).length;
     }
