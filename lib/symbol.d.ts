@@ -91,7 +91,6 @@ export declare class SymbolStore {
     private _symbolCount;
     constructor();
     getSymbolTable(uri: string): SymbolTable;
-    getSymbolTableUriArray(): string[];
     readonly tableCount: number;
     readonly symbolCount: number;
     add(symbolTable: SymbolTable): void;
