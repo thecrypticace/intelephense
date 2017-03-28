@@ -6,7 +6,7 @@ export declare namespace Intelephense {
     function documentSymbols(textDocument: lsp.TextDocumentIdentifier): lsp.SymbolInformation[];
     function workspaceSymbols(query: string): lsp.SymbolInformation[];
     function discover(textDocument: lsp.TextDocumentItem): number;
-    function forget(uri: string): [number, number];
+    function forget(uri: string): number;
     function numberDocumentsOpen(): number;
     function numberDocumentsKnown(): number;
     function numberSymbolsKnown(): number;
