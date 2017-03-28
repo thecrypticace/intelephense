@@ -1670,7 +1670,7 @@ export class SymbolIndex {
     constructor() {
         this._nodeArray = [];
         this._binarySearch = new BinarySearch<SymbolIndexNode>(this._nodeArray);
-        this._collator = new Intl.Collator();
+        this._collator = new Intl.Collator('en');
     }
 
     add(item: PhpSymbol) {
