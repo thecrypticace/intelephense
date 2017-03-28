@@ -279,7 +279,7 @@ export class Debounce<T> {
 }
 
 
-export class ToArrayVisitor<T> implements TreeVisitor<T>{
+export class ToArrayVisitor<T> implements TreeVisitor<T> {
 
     private _array: T[];
 
@@ -296,6 +296,24 @@ export class ToArrayVisitor<T> implements TreeVisitor<T>{
         return true;
     }
 
+}
+
+export class CountVisitor<T> implements TreeVisitor<T> {
+
+    private _count: number
+
+    constructor() {
+        this._count = 0;
+    }
+
+    get count(){
+        return this._count;
+    }
+
+    preOrder(t: T, spine: T[]) {
+        ++this._count;
+        return true;
+    }
 }
 
 /*
