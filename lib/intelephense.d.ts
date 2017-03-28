@@ -4,4 +4,5 @@ export declare namespace Intelephense {
     function closeDocument(textDocument: lsp.TextDocumentIdentifier): void;
     function editDocument(textDocument: lsp.VersionedTextDocumentIdentifier, contentChanges: lsp.TextDocumentContentChangeEvent[]): void;
     function documentSymbols(textDocument: lsp.TextDocumentIdentifier): lsp.SymbolInformation[];
+    function discover(textDocument: lsp.TextDocumentIdentifier): number;
 }
