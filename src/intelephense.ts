@@ -52,7 +52,7 @@ export namespace Intelephense {
     export function closeDocument(textDocument: lsp.TextDocumentIdentifier) {
         let debounce = documentChangeDebounceMap[textDocument.uri];
         if (debounce) {
-            debounce.interupt();
+            debounce.clear();
             delete documentChangeDebounceMap[textDocument.uri];
         }
         documentStore.remove(textDocument.uri);

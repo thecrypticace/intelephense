@@ -235,32 +235,29 @@ export class Debounce<T> {
     private _lastEvent: T;
     private _timer: number;
     private _wait: number;
-    private _clear = () => {
-        this._timer = null;
-        this._lastEvent = null;
-    }
 
     constructor(handler: (e: T) => void, wait: number) {
         this._handler = handler;
         this._wait = wait;
     }
 
+    clear = () => {
+        clearTimeout(this._timer);
+        this._timer = null;
+        this._lastEvent = null;
+    }
+
     handle(event: T) {
-        this.interupt();
+        this.clear();
         this._lastEvent = event;
         let that = this;
         let handler = this._handler;
-        let clear = this._clear;
+        let clear = this.clear;
         let later = () => {
             handler.apply(that, [event]);
             clear();
         };
         this._timer = setTimeout(later, this._wait);
-    }
-
-    interupt() {
-        clearTimeout(this._timer);
-        this._clear();
     }
 
     flush() {
@@ -269,7 +266,7 @@ export class Debounce<T> {
         }
 
         let event = this._lastEvent;
-        this.interupt();
+        this.clear();
         if (event) {
             this._handler.apply(this, [event]);
         }
