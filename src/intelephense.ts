@@ -100,7 +100,7 @@ export namespace Intelephense {
     }
 
     export function workspaceSymbols(query:string){
-        return symbolProvider.provideWorkspaceSymbols(query);
+        return query ? symbolProvider.provideWorkspaceSymbols(query) : [];
     }
 
     export function discover(textDocument: lsp.TextDocumentItem) {
