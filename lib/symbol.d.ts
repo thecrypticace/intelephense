@@ -46,6 +46,10 @@ export interface PhpSymbol {
 }
 export declare namespace PhpSymbol {
     function acronym(s: PhpSymbol): string;
+    /**
+     * Get suffixes after $, namespace separator, underscore and on lowercase uppercase boundary
+     */
+    function suffixArray(s: PhpSymbol): string[];
 }
 export declare class NameResolver {
     namespaceName: string;
@@ -170,4 +174,20 @@ export declare namespace SymbolReader {
     function tokenToSymbolKind(t: Token): SymbolKind;
     function namespaceUseDeclaration(node: NamespaceUseDeclaration): [SymbolKind, string];
     function namespaceDefinition(node: NamespaceDefinition): PhpSymbol;
+}
+export declare class SymbolIndex {
+    private _nodeArray;
+    private _binarySearch;
+    private _collator;
+    constructor();
+    add(item: PhpSymbol): void;
+    addMany(items: PhpSymbol[]): void;
+    remove(item: PhpSymbol): void;
+    removeMany(items: PhpSymbol[]): void;
+    match(text: string): PhpSymbol[];
+    private _nodeMatch(text);
+    private _nodeFind(text);
+    private _insertNode(node);
+    private _deleteNode(node);
+    private _symbolSuffixes(s);
 }
