@@ -67,6 +67,18 @@ export class TreeTraverser<T extends TreeLike> {
 
     }
 
+    toArray(){
+        let visitor = new ToArrayVisitor<T>();
+        this.traverse(visitor);
+        return visitor.array;
+    }
+
+    count(){
+        let visitor = new CountVisitor<T>();
+        this.traverse(visitor);
+        return visitor.count;
+    }
+
     find(predicate: Predicate<T>) {
 
         let visitor = new FindVisitor<T>(predicate);

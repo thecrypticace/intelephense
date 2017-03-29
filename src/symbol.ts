@@ -436,22 +436,21 @@ export class SymbolTable {
 
     get symbols() {
         let traverser = new TreeTraverser([this.root]);
-        let toArrayVisitor = new ToArrayVisitor<PhpSymbol>();
-        traverser.traverse(toArrayVisitor);
-        let array = toArrayVisitor.array;
+        let symbols = traverser.toArray();
         //remove root
-        array.shift();
-        return array;
+        symbols.shift();
+        return symbols;
     }
 
     get count() {
-
         let traverser = new TreeTraverser([this.root]);
-        let countVisitor = new CountVisitor<PhpSymbol>();
-        traverser.traverse(countVisitor);
-        //remove 1 for root
-        return countVisitor.count - 1;
+        //subtract 1 for root
+        return traverser.count() - 1;
+    }
 
+    filter(predicate: Predicate<PhpSymbol>) {
+        let traverser = new TreeTraverser([this.root]);
+        return traverser.filter(predicate)
     }
 
     static create(parseTree: ParseTree, textDocument: TextDocument) {
@@ -762,6 +761,7 @@ class TypeConsolidator implements TreeVisitor<VariableSet> {
 export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     lastPhpDoc: PhpDoc;
+    lastPhpDocLocation: Location;
     namespaceUseDeclarationKind: SymbolKind;
     namespaceUseDeclarationPrefix: string;
     classConstDeclarationModifier: SymbolModifier;
@@ -835,7 +835,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.ClassDeclaration:
                 this._addSymbol(
-                    SymbolReader.classDeclaration(<ClassDeclaration>node, this.lastPhpDoc),
+                    SymbolReader.classDeclaration(<ClassDeclaration>node, this.lastPhpDoc, this.lastPhpDocLocation),
                     true
                 );
                 return true;
@@ -869,7 +869,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.InterfaceDeclaration:
                 this._addSymbol(
-                    SymbolReader.interfaceDeclaration(<InterfaceDeclaration>node, this.lastPhpDoc),
+                    SymbolReader.interfaceDeclaration(<InterfaceDeclaration>node, this.lastPhpDoc, this.lastPhpDocLocation),
                     true
                 );
                 return true;
@@ -891,7 +891,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.TraitDeclaration:
                 this._addSymbol(
-                    SymbolReader.traitDeclaration(<TraitDeclaration>node, this.lastPhpDoc),
+                    SymbolReader.traitDeclaration(<TraitDeclaration>node, this.lastPhpDoc, this.lastPhpDocLocation),
                     true
                 );
                 return true;
@@ -1044,10 +1044,19 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
         switch (t.tokenType) {
             case TokenType.DocumentComment:
-                this.lastPhpDoc = PhpDocParser.parse(SymbolReader.tokenText(t));
+                let phpDocTokenText = SymbolReader.tokenText(t);
+                this.lastPhpDoc = PhpDocParser.parse(phpDocTokenText);
+                this.lastPhpDocLocation = {
+                    uri: this.textDocument.uri,
+                    range: {
+                        start: this.textDocument.positionAtOffset(t.offset),
+                        end: this.textDocument.positionAtOffset(t.offset + phpDocTokenText.length)
+                    }
+                };
                 break;
             case TokenType.CloseBrace:
                 this.lastPhpDoc = null;
+                this.lastPhpDocLocation = null;
                 break;
             default:
                 break;
@@ -1303,7 +1312,7 @@ export namespace SymbolReader {
         return tokenText(node.name);
     }
 
-    export function interfaceDeclaration(node: InterfaceDeclaration, phpDoc: PhpDoc) {
+    export function interfaceDeclaration(node: InterfaceDeclaration, phpDoc: PhpDoc, phpDocLoc:Location) {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Interface,
@@ -1314,38 +1323,39 @@ export namespace SymbolReader {
 
         if (phpDoc) {
             s.description = phpDoc.text;
-            Array.prototype.push.apply(s.children, phpDocMembers(phpDoc));
+            Array.prototype.push.apply(s.children, phpDocMembers(phpDoc, phpDocLoc));
         }
 
         return s;
 
     }
 
-    export function phpDocMembers(phpDoc: PhpDoc) {
+    export function phpDocMembers(phpDoc: PhpDoc, phpDocLoc:Location) {
 
         let magic: Tag[] = phpDoc.propertyTags;
         let symbols: PhpSymbol[] = [];
 
         for (let n = 0, l = magic.length; n < l; ++n) {
-            symbols.push(propertyTagToSymbol(magic[n]));
+            symbols.push(propertyTagToSymbol(magic[n], phpDocLoc));
         }
 
         magic = phpDoc.methodTags;
         for (let n = 0, l = magic.length; n < l; ++n) {
-            symbols.push(methodTagToSymbol(magic[n]));
+            symbols.push(methodTagToSymbol(magic[n], phpDocLoc));
         }
 
         return symbols;
     }
 
-    export function methodTagToSymbol(tag: Tag) {
+    export function methodTagToSymbol(tag: Tag, phpDocLoc:Location) {
         let s: PhpSymbol = {
             kind: SymbolKind.Method,
             modifiers: SymbolModifier.Magic,
             name: tag.name,
             type: new TypeString(tag.typeString).nameResolve(nameResolver),
             description: tag.description,
-            children: []
+            children: [],
+            location:phpDocLoc
         };
 
         if (!tag.parameters) {
@@ -1353,30 +1363,32 @@ export namespace SymbolReader {
         }
 
         for (let n = 0, l = tag.parameters.length; n < l; ++n) {
-            s.children.push(magicMethodParameterToSymbol(tag.parameters[n]));
+            s.children.push(magicMethodParameterToSymbol(tag.parameters[n], phpDocLoc));
         }
 
         return s;
     }
 
-    export function magicMethodParameterToSymbol(p: MethodTagParam) {
+    export function magicMethodParameterToSymbol(p: MethodTagParam, phpDocLoc:Location) {
 
         return <PhpSymbol>{
             kind: SymbolKind.Parameter,
             name: p.name,
             modifiers: SymbolModifier.Magic,
-            type: new TypeString(p.typeString).nameResolve(nameResolver)
+            type: new TypeString(p.typeString).nameResolve(nameResolver),
+            location:phpDocLoc
         }
 
     }
 
-    export function propertyTagToSymbol(t: Tag) {
+    export function propertyTagToSymbol(t: Tag, phpDocLoc:Location) {
         return <PhpSymbol>{
             kind: SymbolKind.Property,
             name: t.name,
             modifiers: magicPropertyModifier(t) | SymbolModifier.Magic,
             type: new TypeString(t.typeString).nameResolve(nameResolver),
-            description: t.description
+            description: t.description,
+            location:phpDocLoc
         };
     }
 
@@ -1405,7 +1417,7 @@ export namespace SymbolReader {
         return qualifiedNameList(node.nameList).map<PhpSymbol>(mapFn);
     }
 
-    export function traitDeclaration(node: TraitDeclaration, phpDoc: PhpDoc) {
+    export function traitDeclaration(node: TraitDeclaration, phpDoc: PhpDoc, phpDocLoc:Location) {
         let s: PhpSymbol = {
             kind: SymbolKind.Trait,
             name: '',
@@ -1415,7 +1427,7 @@ export namespace SymbolReader {
 
         if (phpDoc) {
             s.description = phpDoc.text;
-            Array.prototype.push.apply(s.children, phpDocMembers(phpDoc));
+            Array.prototype.push.apply(s.children, phpDocMembers(phpDoc, phpDocLoc));
         }
 
         return s;
@@ -1425,7 +1437,7 @@ export namespace SymbolReader {
         return nameTokenToFqn(node.name);
     }
 
-    export function classDeclaration(node: ClassDeclaration, phpDoc: PhpDoc) {
+    export function classDeclaration(node: ClassDeclaration, phpDoc: PhpDoc, phpDocLoc:Location) {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Class,
@@ -1436,7 +1448,7 @@ export namespace SymbolReader {
 
         if (phpDoc) {
             s.description = phpDoc.text;
-            Array.prototype.push.apply(s.children, phpDocMembers(phpDoc));
+            Array.prototype.push.apply(s.children, phpDocMembers(phpDoc, phpDocLoc));
         }
 
         return s;
@@ -1509,7 +1521,8 @@ export namespace SymbolReader {
     export function anonymousFunctionUseVariable(node: AnonymousFunctionUseVariable) {
         return <PhpSymbol>{
             kind: SymbolKind.Variable,
-            name: tokenText(node.name)
+            name: tokenText(node.name),
+            location: phraseLocation(node)
         };
     }
 
@@ -1520,7 +1533,8 @@ export namespace SymbolReader {
 
         return <PhpSymbol>{
             kind: SymbolKind.Variable,
-            name: tokenText(<Token>node.name)
+            name: tokenText(<Token>node.name),
+            location: phraseLocation(node)
         };
     }
 
@@ -1792,7 +1806,7 @@ export class SymbolIndex {
     private _symbolSuffixes(s: PhpSymbol) {
         let suffixes = PhpSymbol.suffixArray(s);
         let acronym = PhpSymbol.acronym(s);
-        if(acronym.length > 1){
+        if (acronym.length > 1) {
             suffixes.push(acronym);
         }
         return suffixes;

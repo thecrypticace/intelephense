@@ -2,33 +2,30 @@ import { SymbolReader, NameResolver, PhpSymbol, SymbolKind, SymbolTable } from '
 import { TextDocument } from '../src/document';
 import { ParseTree } from '../src/parse';
 import { Parser } from 'php7parser';
-import {TreeTraverser} from '../src/types';
+import { TreeTraverser } from '../src/types';
 import { expect } from 'chai';
 import 'mocha';
 
-const src =
-    `<?php
-        namespace Test;
-        function testFunction($param1, $param2) {
+function symbolReaderOutput(src: string) {
 
-        }`;
+    let doc = new TextDocument('test', src);
+    let parseTree = Parser.parse(src);
+    let symbolTree: PhpSymbol = { kind: SymbolKind.None, name: '' };
+    let sr = new SymbolReader(doc, new NameResolver('', '', []), [symbolTree]);
+    let traverser = new TreeTraverser([parseTree]);
+    traverser.traverse(sr);
+    return symbolTree;
 
-let doc = new TextDocument('test', src);
-let tree = new ParseTree('test', Parser.parse(src));
-let symbolRoot: PhpSymbol = { kind: SymbolKind.None, name: '' };
-let sr = new SymbolReader(doc, new NameResolver('', '', []), [symbolRoot]);
-let traverser = new TreeTraverser([tree.root]);
-traverser.traverse(sr);
-let table = new SymbolTable('test', symbolRoot);
+}
 
-//console.log(JSON.stringify(symbolRoot, null, 4));
+describe('SymbolReader', () => {
 
-console.log(JSON.stringify(table.symbols, null, 4));
-
-describe('Symbol Reader', () => {
-
-    it('symbols', () => {
-
-        
+    it('Should read simple variables', () => {
+        let src = `<?php 
+                        $myVar = 1;
+                        
+                        function myFunction($myParam){}`;
+        let output = symbolReaderOutput(src);
+        console.log(JSON.stringify(output, null, 4));
     });
 });
