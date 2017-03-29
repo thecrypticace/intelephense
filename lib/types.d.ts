@@ -22,6 +22,8 @@ export declare class TreeTraverser<T extends TreeLike> {
     readonly node: T;
     traverse(visitor: TreeVisitor<T>): void;
     filter(predicate: Predicate<T>): T[];
+    toArray(): T[];
+    count(): number;
     find(predicate: Predicate<T>): T;
     prevSibling(): T;
     nextSibling(): T;

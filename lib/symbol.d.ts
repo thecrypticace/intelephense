@@ -83,6 +83,7 @@ export declare class SymbolTable {
     constructor(uri: string, root: PhpSymbol);
     readonly symbols: PhpSymbol[];
     readonly count: number;
+    filter(predicate: Predicate<PhpSymbol>): PhpSymbol[];
     static create(parseTree: ParseTree, textDocument: TextDocument): SymbolTable;
 }
 export declare class SymbolStore {
@@ -109,6 +110,7 @@ export declare class SymbolReader implements TreeVisitor<Phrase | Token> {
     nameResolver: NameResolver;
     spine: PhpSymbol[];
     lastPhpDoc: PhpDoc;
+    lastPhpDocLocation: Location;
     namespaceUseDeclarationKind: SymbolKind;
     namespaceUseDeclarationPrefix: string;
     classConstDeclarationModifier: SymbolModifier;
@@ -145,17 +147,17 @@ export declare namespace SymbolReader {
     function propertyDeclaration(node: PropertyDeclaration): SymbolModifier;
     function propertyElement(modifiers: SymbolModifier, node: PropertyElement, phpDoc: PhpDoc): PhpSymbol;
     function identifier(node: Identifier): string;
-    function interfaceDeclaration(node: InterfaceDeclaration, phpDoc: PhpDoc): PhpSymbol;
-    function phpDocMembers(phpDoc: PhpDoc): PhpSymbol[];
-    function methodTagToSymbol(tag: Tag): PhpSymbol;
-    function magicMethodParameterToSymbol(p: MethodTagParam): PhpSymbol;
-    function propertyTagToSymbol(t: Tag): PhpSymbol;
+    function interfaceDeclaration(node: InterfaceDeclaration, phpDoc: PhpDoc, phpDocLoc: Location): PhpSymbol;
+    function phpDocMembers(phpDoc: PhpDoc, phpDocLoc: Location): PhpSymbol[];
+    function methodTagToSymbol(tag: Tag, phpDocLoc: Location): PhpSymbol;
+    function magicMethodParameterToSymbol(p: MethodTagParam, phpDocLoc: Location): PhpSymbol;
+    function propertyTagToSymbol(t: Tag, phpDocLoc: Location): PhpSymbol;
     function magicPropertyModifier(t: Tag): SymbolModifier;
     function interfaceDeclarationHeader(node: InterfaceDeclarationHeader): string;
     function interfaceBaseClause(node: InterfaceBaseClause): PhpSymbol[];
-    function traitDeclaration(node: TraitDeclaration, phpDoc: PhpDoc): PhpSymbol;
+    function traitDeclaration(node: TraitDeclaration, phpDoc: PhpDoc, phpDocLoc: Location): PhpSymbol;
     function traitDeclarationHeader(node: TraitDeclarationHeader): string;
-    function classDeclaration(node: ClassDeclaration, phpDoc: PhpDoc): PhpSymbol;
+    function classDeclaration(node: ClassDeclaration, phpDoc: PhpDoc, phpDocLoc: Location): PhpSymbol;
     function classDeclarationHeader(s: PhpSymbol, node: ClassDeclarationHeader): PhpSymbol;
     function classBaseClause(node: ClassBaseClause): PhpSymbol;
     function classInterfaceClause(node: ClassInterfaceClause): PhpSymbol[];
