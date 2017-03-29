@@ -6,14 +6,14 @@
 
 export namespace PhpDocParser {
 
-    const stripPattern: RegExp = /^\/\*\*\s*|\s*\*\/$|^[ \t]*\*[ \t]*/mg;
+    const stripPattern: RegExp = /^\/\*\*[ \t]*|\s*\*\/$|^[ \t]*\*[ \t]*/mg;
     const tagBoundaryPattern: RegExp = /(?:\r\n|\r|\n)(?=@)/;
     const summaryBoundaryPattern: RegExp = /\.(?:\r\n|\r|\n)|(?:\r\n|\r|\n){2}/;
     const methodParamPartBoundaryPattern: RegExp = /\s*,\s*|\s+/;
-    const tagPattern: RegExp = new RegExp([
-        /^(@param|@var|@property|@property-read|@property-write|@return|@throws)\s+(\S+)\s+(\$\S+)?\s*([^]*)$/.source,
-        /^(@method)\s+(\S+\s+)?(\S+)\(\s*([^]*)\s*\)(?!\[)\s*([^]*)$/.source
-    ].join('|'));
+    const paramOrPropertyPattern = /^(@param|@property|@property-read|@property-write)\s+(\S+)\s+(\$\S+)\s*([^]*)$/;
+    const varPattern = /^(@var)\s+(\S+)\s+(\$\S+)?\s*([^]*)$/;
+    const returnPattern = /^(@return)\s+(\S+)\s*([^]*)$/;
+    const methodPattern = /^(@method)\s+(\S+\s+)?(\S+)\(\s*([^]*)\s*\)(?!\[)\s*([^]*)$/;
 
     export function parse(input: string) {
 
@@ -23,31 +23,25 @@ export namespace PhpDocParser {
 
         let stripped = input.replace(stripPattern, '');
         let split = stripped.split(tagBoundaryPattern);
-        let text: string = null;
+        let text: string = '';
 
         if (split[0] && split[0][0] !== '@') {
-            text = split.shift();
+            text = split.shift().trim();
         }
 
         let match: RegExpMatchArray;
         let tagString: string;
         let tags: Tag[] = [];
-        let tag: Tag;
+        let tag:Tag;
 
         while (tagString = split.shift()) {
-            //parse @param, @var, @property*, @return, @throws, @method tags
-            if (!(match = tagString.match(tagPattern))) {
-                continue;
+
+            //parse @param, @var, @property*, @return, @method tags
+            tag = parseTag(tagString);
+            if(tag){
+                tags.push(tag);
             }
 
-            if (match[1]) {
-                tags.push(typeTag(match[1], match[2], match[3], match[4]));
-            } else {
-                tags.push(methodTag(match[5], match[6], match[7],
-                    methodParameters(match[8]), match[9]));
-            }
-
-            tags.push(tag);
         }
 
         //must have at least text or a tag
@@ -56,6 +50,40 @@ export namespace PhpDocParser {
         }
 
         return new PhpDoc(text, tags);
+
+    }
+
+    function parseTag(text:string){
+
+        let substring = text.slice(0, 4);
+        let match: RegExpMatchArray;      
+
+        switch(substring){
+            case '@par':
+            case '@pro':
+                if((match = text.match(paramOrPropertyPattern))){
+                    return typeTag(match[1], match[2], match[3], match[4]);
+                }
+                return null;
+            case '@var':
+                if((match = text.match(varPattern))){
+                    return typeTag(match[1], match[2], match[3], match[4]);
+                }
+                return null;
+            case '@ret':
+                if((match = text.match(returnPattern))){
+                    return typeTag(match[1], match[2], '', match[3]);
+                }
+                return null;
+            case '@met':
+                if((match = text.match(methodPattern))){
+                    return methodTag(match[5], match[6], match[7], methodParameters(match[8]), match[9]);
+                }
+                return null;
+            default:
+                return null;
+        }
+
 
     }
 
