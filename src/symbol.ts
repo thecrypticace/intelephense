@@ -1023,16 +1023,18 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     }
 
     private _variableExists(name: string) {
-        let s = this.spine[this.spine.length - 1];
+        let parent = this.spine[this.spine.length - 1];
 
-        if (!s.children) {
+        if (!parent.children) {
             return false;
         }
 
         let mask = SymbolKind.Parameter | SymbolKind.Variable;
+        let s:PhpSymbol;
 
-        for (let n = 0, l = s.children.length; n < l; ++n) {
-            if ((s.children[n].kind & mask) > 0 && s.name === name) {
+        for (let n = 0, l = parent.children.length; n < l; ++n) {
+            s = parent.children[n];
+            if ((s.kind & mask) > 0 && s.name === name) {
                 return true;
             }
         }
