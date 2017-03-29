@@ -5,7 +5,7 @@
 'use strict';
 
 import * as lsp from 'vscode-languageserver-types';
-import { PhpSymbol, SymbolKind, SymbolStore } from './symbol';
+import { PhpSymbol, SymbolKind, SymbolStore, SymbolModifier } from './symbol';
 
 const namespacedSymbolMask =
     SymbolKind.Interface |
@@ -18,15 +18,45 @@ export class SymbolProvider {
 
     constructor(public symbolStore: SymbolStore) { }
 
+    /**
+     * Excludes magic symbols
+     * @param uri 
+     */
     provideDocumentSymbols(uri: string) {
         let symbolTable = this.symbolStore.getSymbolTable(uri);
-        return symbolTable ?
-            symbolTable.symbols.map<lsp.SymbolInformation>(toDocumentSymbolInformation) :
-            [];
+        let symbols = symbolTable ? symbolTable.symbols : [];
+        let symbolInformationList: lsp.SymbolInformation[] = [];
+        let s: PhpSymbol;
+
+        for (let n = 0, l = symbols.length; n < l; ++n) {
+            s = symbols[n];
+            if (!(s.modifiers & SymbolModifier.Magic)) {
+                symbolInformationList.push(toDocumentSymbolInformation(s));
+            }
+        }
+
+        return symbolInformationList;
     }
 
-    provideWorkspaceSymbols(query:string){
-        return this.symbolStore.match(query).map<lsp.SymbolInformation>(toDocumentSymbolInformation);
+    /**
+     * Excludes internal symbols
+     * @param query 
+     */
+    provideWorkspaceSymbols(query: string) {
+        let matches = this.symbolStore.match(query);
+        let symbolInformationList: lsp.SymbolInformation[] = [];
+        const modifierMask = SymbolModifier.Anonymous |
+            SymbolModifier.Use |
+            SymbolModifier.Private;
+        let s: PhpSymbol;
+
+        for (let n = 0, l = matches.length; n < l; ++n) {
+            s = matches[n];
+            if (!(s.modifiers & modifierMask)) {
+                symbolInformationList.push(toDocumentSymbolInformation(s));
+            }
+        }
+        return symbolInformationList;
     }
 
 }
