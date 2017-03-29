@@ -1133,8 +1133,8 @@ export namespace SymbolReader {
      */
     export function anonymousName(node: Phrase) {
         let range = phraseLocation(node).range;
-        let suffix = [range.start.line, range.end.line, range.end.line, range.end.character].join('.');
-        return '.anonymous.' + suffix;
+        let suffix = [range.start.line, range.start.character, range.end.line, range.end.character].join('#');
+        return '#anonymous#' + suffix;
     }
 
     export function functionDeclaration(node: FunctionDeclaration, phpDoc: PhpDoc) {
