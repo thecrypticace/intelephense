@@ -407,21 +407,22 @@ export class BinarySearch<T> {
     }
 
     find(compare: (n: T) => number) {
-        let result = this._search(compare);
+        let result = this.search(compare);
         return result.isExactMatch ? this._sortedArray[result.rank] : null;
     }
 
     rank(compare: (n: T) => number) {
-        return this._search(compare).rank;
+        return this.search(compare).rank;
     }
 
     range(compareLower: (n: T) => number, compareUpper: (T) => number) {
         let rankLower = this.rank(compareLower);
-        return this._sortedArray.slice(rankLower, this._search(compareUpper, rankLower).rank);
+        return this._sortedArray.slice(rankLower, this.search(compareUpper, rankLower).rank);
     }
 
-    private _search(compare: (n: T) => number, left = 0): BinarySearchResult {
+    search(compare: (n: T) => number, offset?:number): BinarySearchResult {
 
+        let left = offset ? offset : 0;
         let right = this._sortedArray.length - 1;
         let mid = 0;
         let compareResult = 0;
@@ -454,7 +455,7 @@ export class BinarySearch<T> {
 
 }
 
-interface BinarySearchResult {
+export interface BinarySearchResult {
     rank: number;
     isExactMatch: boolean
 }
