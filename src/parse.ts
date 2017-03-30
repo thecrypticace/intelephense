@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Phrase, Token } from 'php7parser';
+import { Phrase, Token, NamespaceName, MemberName, TokenType } from 'php7parser';
 import { TextDocument } from './document';
 
 export class ParseTree {
@@ -55,9 +55,29 @@ export namespace ParseTree {
         return null;
     }
 
-    export function tokenText(t: Token, textDocument:TextDocument){
-        return t ? textDocument.textAtOffset(t.offset, t.length) : '';
+    export function tokenToString(t: Token, textDocument:TextDocument){
+        return isToken(t) ? textDocument.textAtOffset(t.offset, t.length) : '';
     }
+
+    export function namespaceNameToString(node: NamespaceName, textDocument:TextDocument) {
+
+        if (!node || !node.parts || node.parts.length < 1) {
+            return '';
+        }
+
+        let parts: string[] = [];
+        for (let n = 0, l = node.parts.length; n < l; ++n) {
+            parts.push(ParseTree.tokenToString(node.parts[n], textDocument));
+        }
+
+        return parts.join('\\');
+
+    }
+
+    export function isToken(node:Phrase | Token, type?:TokenType){
+        return node && (<Token>node).tokenType !== undefined && (!type || type === (<Token>node).tokenType);
+    }
+
 
 }
 
