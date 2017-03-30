@@ -7,6 +7,7 @@ import { DocumentContext } from './visitors';
 import { PhpSymbol, SymbolStore, SymbolTable, SymbolTree, SymbolKind, SymbolModifier, TypeString } from './symbol';
 import { ParsedDocument, AstStore, Ast } from './parse';
 import { Tree, Predicate } from './types';
+import * as lsp from 'vscode-languageserver-types';
 
 'use strict';
 

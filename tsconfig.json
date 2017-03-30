@@ -13,6 +13,6 @@
 		"lib",
 		".vscode",
 		"src/visitors.ts",
-		"src/completion.ts"
+		"src/completionProvider.ts"
 	]
 }

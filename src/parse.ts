@@ -5,6 +5,7 @@
 'use strict';
 
 import { Phrase, Token } from 'php7parser';
+import { TextDocument } from './document';
 
 export class ParseTree {
 
@@ -52,6 +53,10 @@ export namespace ParseTree {
         }
 
         return null;
+    }
+
+    export function tokenText(t: Token, textDocument:TextDocument){
+        return t ? textDocument.textAtOffset(t.offset, t.length) : '';
     }
 
 }
