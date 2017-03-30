@@ -22,7 +22,7 @@ import {
     AnonymousClassDeclarationHeader, AnonymousFunctionCreationExpression, AnonymousFunctionUseVariable,
     TraitUseClause, SimpleVariable, ObjectCreationExpression, TypeDesignator, SubscriptExpression,
     FunctionCallExpression, FullyQualifiedName, RelativeQualifiedName, MethodCallExpression,
-    MemberName, PropertyAccessExpression
+    MemberName, PropertyAccessExpression, ClassTypeDesignator
 } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam } from './phpDoc';
 import { ParseTree } from './parse';
@@ -1127,30 +1127,16 @@ export namespace SymbolReader {
             return null;
         }
 
-        let startToken: Token, endToken: Token;
-        [startToken, endToken] = ParseTree.tokenRange(p);
+        let range = ParseTree.phraseRange(p, textDocument);
 
-        if (!startToken || !endToken) {
+        if (!range) {
             return null;
         }
 
         return <Location>{
             uri: textDocument.uri,
-            range: {
-                start: textDocument.positionAtOffset(startToken.offset),
-                end: textDocument.positionAtOffset(endToken.offset + endToken.length)
-            }
+            range: range
         }
-    }
-
-    /**
-     * 
-     * Uses phrase range to provide "unique" name
-     */
-    export function anonymousName(node: Phrase) {
-        let range = phraseLocation(node).range;
-        let suffix = [range.start.line, range.start.character, range.end.line, range.end.character].join('#');
-        return '#anonymous#' + suffix;
     }
 
     export function functionDeclaration(node: FunctionDeclaration, phpDoc: PhpDoc) {
@@ -1519,7 +1505,7 @@ export namespace SymbolReader {
 
         return <PhpSymbol>{
             kind: SymbolKind.Class,
-            name: anonymousName(node),
+            name: ParseTree.anonymousName(node, textDocument),
             modifiers: SymbolModifier.Anonymous,
             location: phraseLocation(node)
         };
@@ -1529,7 +1515,7 @@ export namespace SymbolReader {
 
         return <PhpSymbol>{
             kind: SymbolKind.Function,
-            name: anonymousName(node),
+            name: ParseTree.anonymousName(node, textDocument),
             modifiers: SymbolModifier.Anonymous,
             location: phraseLocation(node)
         };
@@ -1828,6 +1814,21 @@ export interface LookupVariableTypeDelegate {
     (name: string): TypeString;
 }
 
+function resolveNamePhraseName(p: Phrase, nameResolver: NameResolver, textDocument: TextDocument, symbolKind: SymbolKind) {
+    switch (p.phraseType) {
+        case PhraseType.RelativeQualifiedName:
+            return nameResolver.resolveRelative(
+                ParseTree.namespaceNameToString((<FullyQualifiedName>p).name, textDocument));
+        case PhraseType.QualifiedName:
+            return nameResolver.resolveNotFullyQualified(
+                ParseTree.namespaceNameToString((<FullyQualifiedName>p).name, textDocument), symbolKind);
+        case PhraseType.FullyQualifiedName:
+            return ParseTree.namespaceNameToString((<FullyQualifiedName>p).name, textDocument);
+        default:
+            return '';
+    }
+}
+
 export class ExpressionResolver {
 
     constructor(
@@ -1864,9 +1865,43 @@ export class ExpressionResolver {
             case PhraseType.SimpleAssignmentExpression:
             case PhraseType.ByRefAssignmentExpression:
 
+            case PhraseType.ObjectCreationExpression:
+
+            case PhraseType.ClassTypeDesignator:
+            case PhraseType.InstanceofTypeDesignator:
+
             default:
                 return null;
         }
+
+    }
+
+    classTypeDesignator(node: ClassTypeDesignator) {
+
+        if (!node.type) {
+            return null;
+        }
+
+
+    }
+
+    objectCreationExpression(node: ObjectCreationExpression) {
+
+        if (!node.type) {
+            return null;
+        }
+
+        if (node.type.phraseType === PhraseType.AnonymousClassDeclaration) {
+            return ParseTree.anonymousName(node, this.textDocument);
+        } else if (node.type.phraseType === PhraseType.ClassTypeDesignator) {
+            return this.
+        } else {
+            return null;
+        }
+
+    }
+
+    anonymousClassDeclaration(node: AnonymousClassDeclaration) {
 
     }
 
