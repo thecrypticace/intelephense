@@ -4,8 +4,9 @@
 
 'use strict';
 
-import { Phrase, Token, NamespaceName, MemberName, TokenType } from 'php7parser';
+import { Phrase, Token, NamespaceName, MemberName, TokenType, PhraseType } from 'php7parser';
 import { TextDocument } from './document';
+import { Range } from 'vscode-languageserver-types';
 
 export class ParseTree {
 
@@ -17,10 +18,6 @@ export class ParseTree {
 }
 
 export namespace ParseTree {
-
-    export function tokenRange(node: Phrase | Token): [Token, Token] {
-        return [firstToken(node), lastToken(node)];
-    }
 
     export function firstToken(node: Phrase | Token) {
 
@@ -55,11 +52,11 @@ export namespace ParseTree {
         return null;
     }
 
-    export function tokenToString(t: Token, textDocument:TextDocument){
+    export function tokenToString(t: Token, textDocument: TextDocument) {
         return isToken(t) ? textDocument.textAtOffset(t.offset, t.length) : '';
     }
 
-    export function namespaceNameToString(node: NamespaceName, textDocument:TextDocument) {
+    export function namespaceNameToString(node: NamespaceName, textDocument: TextDocument) {
 
         if (!node || !node.parts || node.parts.length < 1) {
             return '';
@@ -74,8 +71,40 @@ export namespace ParseTree {
 
     }
 
-    export function isToken(node:Phrase | Token, type?:TokenType){
+    export function isToken(node: Phrase | Token, type?: TokenType) {
         return node && (<Token>node).tokenType !== undefined && (!type || type === (<Token>node).tokenType);
+    }
+
+    export function anonymousName(node: Phrase, textDocument: TextDocument) {
+        let range = phraseRange(node, textDocument);
+        let suffix = [range.start.line, range.start.character, range.end.line, range.end.character].join('#');
+        return '#anonymous#' + suffix;
+    }
+
+    export function phraseRange(p: Phrase, textDocument: TextDocument) {
+        let tFirst = firstToken(p);
+        let tLast = lastToken(p);
+
+        if (!tFirst || !tLast) {
+            return null;
+        }
+
+        return <Range>{
+            start: textDocument.positionAtOffset(tFirst.offset),
+            end: textDocument.positionAtOffset(tLast.offset + tLast.length)
+        }
+
+    }
+
+    export function isNamePhrase(p: Phrase) {
+        switch (p.phraseType) {
+            case PhraseType.RelativeQualifiedName:
+            case PhraseType.QualifiedName:
+            case PhraseType.FullyQualifiedName:
+                return true;
+            default:
+                return false;
+        }
     }
 
 
