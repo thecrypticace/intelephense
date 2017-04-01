@@ -7,10 +7,13 @@ export interface DebugLogger {
 export interface EventHandler<T> {
     (t: T): void;
 }
+export interface Unsubscribe {
+    (): void;
+}
 export declare class Event<T> {
     private _subscribed;
     constructor();
-    subscribe(handler: EventHandler<T>): () => void;
+    subscribe(handler: EventHandler<T>): Unsubscribe;
     trigger(args: T): void;
 }
 export interface TreeLike {
@@ -63,5 +66,9 @@ export declare class BinarySearch<T> {
     find(compare: (n: T) => number): T;
     rank(compare: (n: T) => number): number;
     range(compareLower: (n: T) => number, compareUpper: (T) => number): T[];
-    private _search(compare, left?);
+    search(compare: (n: T) => number, offset?: number): BinarySearchResult;
+}
+export interface BinarySearchResult {
+    rank: number;
+    isExactMatch: boolean;
 }

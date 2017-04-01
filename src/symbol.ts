@@ -25,8 +25,7 @@ import {
     MemberName, PropertyAccessExpression, ClassTypeDesignator
 } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam } from './phpDoc';
-import { ParseTree } from './parse';
-import { TextDocument } from './document';
+import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
 import * as util from './util';
 
 export const enum SymbolKind {
@@ -459,18 +458,17 @@ export class SymbolTable {
         return traverser.filter(predicate)
     }
 
-    static create(parseTree: ParseTree, textDocument: TextDocument) {
+    static create(parsedDocument: ParsedDocument) {
 
         let symbolReader = new SymbolReader(
-            textDocument,
+            parsedDocument,
             new NameResolver(null, null, []),
             [{ kind: SymbolKind.None, name: '', children: [] }]
         );
 
-        let traverser = new TreeTraverser<Phrase | Token>([parseTree.root]);
-        traverser.traverse(symbolReader);
+        parsedDocument.traverse(symbolReader);
         return new SymbolTable(
-            textDocument.uri,
+            parsedDocument.uri,
             symbolReader.spine[0]
         );
 
@@ -490,6 +488,11 @@ export class SymbolStore {
         this._index = new SymbolIndex();
         this._symbolCount = 0;
     }
+
+    onParsedDocumentChange = (args:ParsedDocumentChangeEventArgs) => {
+        this.remove(args.parsedDocument.uri);
+        this.add(SymbolTable.create(args.parsedDocument));
+    };
 
     getSymbolTable(uri: string) {
         return this._map[uri];
@@ -788,13 +791,10 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     propertyDeclarationModifier: SymbolModifier;
 
     constructor(
-        public textDocument: TextDocument,
+        public parsedDocument: ParsedDocument,
         public nameResolver: NameResolver,
         public spine: PhpSymbol[]
-    ) {
-        SymbolReader.textDocument = textDocument;
-        SymbolReader.nameResolver = nameResolver;
-    }
+    ) { }
 
     preOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
@@ -803,18 +803,18 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
         switch ((<Phrase>node).phraseType) {
 
             case PhraseType.NamespaceDefinition:
-                s = SymbolReader.namespaceDefinition(<NamespaceDefinition>node);
+                s = this.namespaceDefinition(<NamespaceDefinition>node);
                 this.nameResolver.namespaceName = s.name;
                 this._addSymbol(s, false);
                 return true;
 
             case PhraseType.NamespaceUseDeclaration:
                 [this.namespaceUseDeclarationKind, this.namespaceUseDeclarationPrefix] =
-                    SymbolReader.namespaceUseDeclaration(<NamespaceUseDeclaration>node);
+                    this.namespaceUseDeclaration(<NamespaceUseDeclaration>node);
                 return true;
 
             case PhraseType.NamespaceUseClause:
-                s = SymbolReader.namespaceUseClause(<NamespaceUseClause>node,
+                s = this.namespaceUseClause(<NamespaceUseClause>node,
                     this.namespaceUseDeclarationKind,
                     this.namespaceUseDeclarationPrefix
                 );
@@ -825,43 +825,43 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 return false;
 
             case PhraseType.ConstElement:
-                this._addSymbol(SymbolReader.constElement(<ConstElement>node, this.lastPhpDoc), false);
+                this._addSymbol(this.constElement(<ConstElement>node, this.lastPhpDoc), false);
                 return false;
 
             case PhraseType.FunctionDeclaration:
                 this._addSymbol(
-                    SymbolReader.functionDeclaration(<FunctionDeclaration>node, this.lastPhpDoc),
+                    this.functionDeclaration(<FunctionDeclaration>node, this.lastPhpDoc),
                     true
                 );
                 return true;
 
             case PhraseType.FunctionDeclarationHeader:
                 this.spine[this.spine.length - 1].name =
-                    SymbolReader.functionDeclarationHeader(<FunctionDeclarationHeader>node);
+                    this.functionDeclarationHeader(<FunctionDeclarationHeader>node);
                 return true;
 
             case PhraseType.ParameterDeclaration:
                 this._addSymbol(
-                    SymbolReader.parameterDeclaration(<ParameterDeclaration>node, this.lastPhpDoc),
+                    this.parameterDeclaration(<ParameterDeclaration>node, this.lastPhpDoc),
                     true
                 );
                 return true;
 
             case PhraseType.TypeDeclaration:
                 s = this.spine[this.spine.length - 1];
-                let typeDeclarationValue = SymbolReader.typeDeclaration(<TypeDeclaration>node);
+                let typeDeclarationValue = this.typeDeclaration(<TypeDeclaration>node);
                 s.type = s.type ? s.type.merge(typeDeclarationValue) : new TypeString(typeDeclarationValue);
                 return false;
 
             case PhraseType.ClassDeclaration:
                 this._addSymbol(
-                    SymbolReader.classDeclaration(<ClassDeclaration>node, this.lastPhpDoc, this.lastPhpDocLocation),
+                    this.classDeclaration(<ClassDeclaration>node, this.lastPhpDoc, this.lastPhpDocLocation),
                     true
                 );
                 return true;
 
             case PhraseType.ClassDeclarationHeader:
-                SymbolReader.classDeclarationHeader(
+                this.classDeclarationHeader(
                     this.spine[this.spine.length - 1],
                     <ClassDeclarationHeader>node
                 );
@@ -869,7 +869,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.ClassBaseClause:
                 s = this.spine[this.spine.length - 1];
-                let classBaseClause = SymbolReader.classBaseClause(<ClassBaseClause>node);
+                let classBaseClause = this.classBaseClause(<ClassBaseClause>node);
                 if (s.associated) {
                     s.associated.push(classBaseClause);
                 } else {
@@ -879,7 +879,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.ClassInterfaceClause:
                 s = this.spine[this.spine.length - 1];
-                let classInterfaceClause = SymbolReader.classInterfaceClause(<ClassInterfaceClause>node);
+                let classInterfaceClause = this.classInterfaceClause(<ClassInterfaceClause>node);
                 if (s.associated) {
                     Array.prototype.push.apply(s.associated, classInterfaceClause);
                 } else {
@@ -889,19 +889,19 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.InterfaceDeclaration:
                 this._addSymbol(
-                    SymbolReader.interfaceDeclaration(<InterfaceDeclaration>node, this.lastPhpDoc, this.lastPhpDocLocation),
+                    this.interfaceDeclaration(<InterfaceDeclaration>node, this.lastPhpDoc, this.lastPhpDocLocation),
                     true
                 );
                 return true;
 
             case PhraseType.InterfaceDeclarationHeader:
                 this.spine[this.spine.length - 1].name =
-                    SymbolReader.interfaceDeclarationHeader(<InterfaceDeclarationHeader>node);
+                    this.interfaceDeclarationHeader(<InterfaceDeclarationHeader>node);
                 return false;
 
             case PhraseType.InterfaceBaseClause:
                 s = this.spine[this.spine.length - 1];
-                let interfaceBaseClause = SymbolReader.interfaceBaseClause(<InterfaceBaseClause>node);
+                let interfaceBaseClause = this.interfaceBaseClause(<InterfaceBaseClause>node);
                 if (s.associated) {
                     Array.prototype.push.apply(s.associated, interfaceBaseClause);
                 } else {
@@ -911,24 +911,24 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.TraitDeclaration:
                 this._addSymbol(
-                    SymbolReader.traitDeclaration(<TraitDeclaration>node, this.lastPhpDoc, this.lastPhpDocLocation),
+                    this.traitDeclaration(<TraitDeclaration>node, this.lastPhpDoc, this.lastPhpDocLocation),
                     true
                 );
                 return true;
 
             case PhraseType.TraitDeclarationHeader:
                 this.spine[this.spine.length - 1].name =
-                    SymbolReader.traitDeclarationHeader(<TraitDeclarationHeader>node);
+                    this.traitDeclarationHeader(<TraitDeclarationHeader>node);
                 return false;
 
             case PhraseType.ClassConstDeclaration:
                 this.classConstDeclarationModifier =
-                    SymbolReader.classConstantDeclaration(<ClassConstDeclaration>node);
+                    this.classConstantDeclaration(<ClassConstDeclaration>node);
                 return true;
 
             case PhraseType.ClassConstElement:
                 this._addSymbol(
-                    SymbolReader.classConstElement(
+                    this.classConstElement(
                         this.classConstDeclarationModifier,
                         <ClassConstElement>node,
                         this.lastPhpDoc
@@ -939,12 +939,12 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.PropertyDeclaration:
                 this.propertyDeclarationModifier =
-                    SymbolReader.propertyDeclaration(<PropertyDeclaration>node);
+                    this.propertyDeclaration(<PropertyDeclaration>node);
                 return true;
 
             case PhraseType.PropertyElement:
                 this._addSymbol(
-                    SymbolReader.propertyElement(
+                    this.propertyElement(
                         this.propertyDeclarationModifier,
                         <PropertyElement>node,
                         this.lastPhpDoc
@@ -955,7 +955,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.TraitUseClause:
                 s = this.spine[this.spine.length - 1];
-                let traitUseClause = SymbolReader.traitUseClause(<TraitUseClause>node);
+                let traitUseClause = this.traitUseClause(<TraitUseClause>node);
                 if (s.associated) {
                     Array.prototype.push.apply(s.associated, traitUseClause);
                 } else {
@@ -965,44 +965,44 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.MethodDeclaration:
                 this._addSymbol(
-                    SymbolReader.methodDeclaration(<MethodDeclaration>node, this.lastPhpDoc),
+                    this.methodDeclaration(<MethodDeclaration>node, this.lastPhpDoc),
                     true
                 );
                 return true;
 
             case PhraseType.MethodDeclarationHeader:
                 this.spine[this.spine.length - 1].name =
-                    SymbolReader.methodDeclarationHeader(<MethodDeclarationHeader>node);
+                    this.methodDeclarationHeader(<MethodDeclarationHeader>node);
                 return true;
 
             case PhraseType.MemberModifierList:
                 this.spine[this.spine.length - 1].modifiers =
-                    SymbolReader.memberModifierList(<MemberModifierList>node);
+                    this.memberModifierList(<MemberModifierList>node);
                 return false;
 
             case PhraseType.AnonymousClassDeclaration:
                 this._addSymbol(
-                    SymbolReader.anonymousClassDeclaration(<AnonymousClassDeclaration>node),
+                    this.anonymousClassDeclaration(<AnonymousClassDeclaration>node),
                     true
                 );
                 return true;
 
             case PhraseType.AnonymousFunctionCreationExpression:
                 this._addSymbol(
-                    SymbolReader.anonymousFunctionCreationExpression(<AnonymousFunctionCreationExpression>node),
+                    this.anonymousFunctionCreationExpression(<AnonymousFunctionCreationExpression>node),
                     true
                 );
                 return true;
 
             case PhraseType.AnonymousFunctionUseVariable:
                 this._addSymbol(
-                    SymbolReader.anonymousFunctionUseVariable(<AnonymousFunctionUseVariable>node),
+                    this.anonymousFunctionUseVariable(<AnonymousFunctionUseVariable>node),
                     false
                 );
                 return false;
 
             case PhraseType.SimpleVariable:
-                s = SymbolReader.simpleVariable(<SimpleVariable>node);
+                s = this.simpleVariable(<SimpleVariable>node);
                 if (s && !this._variableExists(s.name)) {
                     this._addSymbol(s, false);
                 }
@@ -1066,13 +1066,13 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
         switch (t.tokenType) {
             case TokenType.DocumentComment:
-                let phpDocTokenText = ParseTree.tokenToString(t, this.textDocument);
+                let phpDocTokenText = this.parsedDocument.tokenToString(t);
                 this.lastPhpDoc = PhpDocParser.parse(phpDocTokenText);
                 this.lastPhpDocLocation = {
-                    uri: this.textDocument.uri,
+                    uri: this.parsedDocument.uri,
                     range: {
-                        start: this.textDocument.positionAtOffset(t.offset),
-                        end: this.textDocument.positionAtOffset(t.offset + phpDocTokenText.length)
+                        start: this.parsedDocument.positionAtOffset(t.offset),
+                        end: this.parsedDocument.positionAtOffset(t.offset + phpDocTokenText.length)
                     }
                 };
                 break;
@@ -1109,42 +1109,34 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     }
 
-}
-
-
-export namespace SymbolReader {
-
-    export var nameResolver: NameResolver;
-    export var textDocument: TextDocument;
-
-    export function nameTokenToFqn(t: Token) {
-        let name = ParseTree.tokenToString(t, textDocument);
-        return name ? nameResolver.resolveRelative(name) : '';
+    nameTokenToFqn(t: Token) {
+        let name = this.parsedDocument.tokenToString(t);
+        return name ? this.nameResolver.resolveRelative(name) : '';
     }
 
-    export function phraseLocation(p: Phrase) {
+    phraseLocation(p: Phrase) {
         if (!p) {
             return null;
         }
 
-        let range = ParseTree.phraseRange(p, textDocument);
+        let range = this.parsedDocument.phraseRange(p);
 
         if (!range) {
             return null;
         }
 
         return <Location>{
-            uri: textDocument.uri,
+            uri: this.parsedDocument.uri,
             range: range
         }
     }
 
-    export function functionDeclaration(node: FunctionDeclaration, phpDoc: PhpDoc) {
+    functionDeclaration(node: FunctionDeclaration, phpDoc: PhpDoc) {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Function,
             name: '',
-            location: phraseLocation(node),
+            location: this.phraseLocation(node),
             children: []
         }
 
@@ -1152,7 +1144,7 @@ export namespace SymbolReader {
             s.description = phpDoc.text;
             let returnTag = phpDoc.returnTag;
             if (returnTag) {
-                s.type = new TypeString(returnTag.typeString).nameResolve(nameResolver);
+                s.type = new TypeString(returnTag.typeString).nameResolve(this.nameResolver);
             }
         }
 
@@ -1160,23 +1152,23 @@ export namespace SymbolReader {
 
     }
 
-    export function functionDeclarationHeader(node: FunctionDeclarationHeader) {
-        return nameTokenToFqn(node.name);
+    functionDeclarationHeader(node: FunctionDeclarationHeader) {
+        return this.nameTokenToFqn(node.name);
     }
 
-    export function parameterDeclaration(node: ParameterDeclaration, phpDoc: PhpDoc) {
+    parameterDeclaration(node: ParameterDeclaration, phpDoc: PhpDoc) {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Parameter,
-            name: ParseTree.tokenToString(node.name, textDocument),
-            location: phraseLocation(node)
+            name: this.parsedDocument.tokenToString(node.name),
+            location: this.phraseLocation(node)
         };
 
         if (phpDoc) {
             let tag = phpDoc.findParamTag(s.name);
             if (tag) {
                 s.description = tag.description;
-                let type = new TypeString(tag.typeString).nameResolve(nameResolver);
+                let type = new TypeString(tag.typeString).nameResolve(this.nameResolver);
                 s.type = s.type ? s.type.merge(type) : type;
             }
         }
@@ -1184,44 +1176,44 @@ export namespace SymbolReader {
         return s;
     }
 
-    export function typeDeclaration(node: TypeDeclaration) {
+    typeDeclaration(node: TypeDeclaration) {
 
         return (<Phrase>node.name).phraseType ?
-            qualifiedName(<QualifiedName>node.name, SymbolKind.Class) :
-            ParseTree.tokenToString(<Token>node.name, textDocument);
+            this.qualifiedName(<QualifiedName>node.name, SymbolKind.Class) :
+            this.parsedDocument.tokenToString(<Token>node.name);
 
     }
 
-    export function qualifiedName(node: QualifiedName, kind: SymbolKind) {
+    qualifiedName(node: QualifiedName, kind: SymbolKind) {
         if (!node || !node.name) {
             return '';
         }
 
-        let name = ParseTree.namespaceNameToString(node.name, textDocument);
+        let name = this.parsedDocument.namespaceNameToString(node.name);
         switch (node.phraseType) {
             case PhraseType.QualifiedName:
-                return nameResolver.resolveNotFullyQualified(name, kind);
+                return this.nameResolver.resolveNotFullyQualified(name, kind);
             case PhraseType.RelativeQualifiedName:
-                return nameResolver.resolveRelative(name);
+                return this.nameResolver.resolveRelative(name);
             case PhraseType.FullyQualifiedName:
             default:
                 return name;
         }
     }
 
-    export function constElement(node: ConstElement, phpDoc: PhpDoc) {
+    constElement(node: ConstElement, phpDoc: PhpDoc) {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Constant,
-            name: nameTokenToFqn(node.name),
-            location: phraseLocation(node)
+            name: this.nameTokenToFqn(node.name),
+            location: this.phraseLocation(node)
         };
 
         if (phpDoc) {
             let tag = phpDoc.findVarTag(s.name);
             if (tag) {
                 s.description = tag.description;
-                s.type = new TypeString(tag.typeString).nameResolve(nameResolver);
+                s.type = new TypeString(tag.typeString).nameResolve(this.nameResolver);
             }
         }
 
@@ -1229,26 +1221,26 @@ export namespace SymbolReader {
 
     }
 
-    export function classConstantDeclaration(node: ClassConstDeclaration) {
+    classConstantDeclaration(node: ClassConstDeclaration) {
         return node.modifierList ?
-            modifierListElementsToSymbolModifier(node.modifierList.elements) :
+            this.modifierListElementsToSymbolModifier(node.modifierList.elements) :
             SymbolModifier.None;
     }
 
-    export function classConstElement(modifiers: SymbolModifier, node: ClassConstElement, phpDoc: PhpDoc) {
+    classConstElement(modifiers: SymbolModifier, node: ClassConstElement, phpDoc: PhpDoc) {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Constant,
             modifiers: modifiers,
-            name: identifier(node.name),
-            location: phraseLocation(node)
+            name: this.identifier(node.name),
+            location: this.phraseLocation(node)
         }
 
         if (phpDoc) {
             let tag = phpDoc.findVarTag(s.name);
             if (tag) {
                 s.description = tag.description;
-                s.type = new TypeString(tag.typeString).nameResolve(nameResolver);
+                s.type = new TypeString(tag.typeString).nameResolve(this.nameResolver);
             }
         }
 
@@ -1256,12 +1248,12 @@ export namespace SymbolReader {
 
     }
 
-    export function methodDeclaration(node: MethodDeclaration, phpDoc: PhpDoc) {
+    methodDeclaration(node: MethodDeclaration, phpDoc: PhpDoc) {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Method,
             name: '',
-            location: phraseLocation(node),
+            location: this.phraseLocation(node),
             children: []
         }
 
@@ -1269,7 +1261,7 @@ export namespace SymbolReader {
             s.description = phpDoc.text;
             let returnTag = phpDoc.returnTag;
             if (returnTag) {
-                s.type = new TypeString(returnTag.typeString).nameResolve(nameResolver);
+                s.type = new TypeString(returnTag.typeString).nameResolve(this.nameResolver);
             }
         }
 
@@ -1277,34 +1269,34 @@ export namespace SymbolReader {
 
     }
 
-    export function memberModifierList(node: MemberModifierList) {
-        return modifierListElementsToSymbolModifier(node.elements);
+    memberModifierList(node: MemberModifierList) {
+        return this.modifierListElementsToSymbolModifier(node.elements);
     }
 
-    export function methodDeclarationHeader(node: MethodDeclarationHeader) {
-        return identifier(node.name);
+    methodDeclarationHeader(node: MethodDeclarationHeader) {
+        return this.identifier(node.name);
     }
 
-    export function propertyDeclaration(node: PropertyDeclaration) {
+    propertyDeclaration(node: PropertyDeclaration) {
         return node.modifierList ?
-            modifierListElementsToSymbolModifier(node.modifierList.elements) :
+            this.modifierListElementsToSymbolModifier(node.modifierList.elements) :
             SymbolModifier.None;
     }
 
-    export function propertyElement(modifiers: SymbolModifier, node: PropertyElement, phpDoc: PhpDoc) {
+    propertyElement(modifiers: SymbolModifier, node: PropertyElement, phpDoc: PhpDoc) {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Property,
-            name: ParseTree.tokenToString(node.name, textDocument),
+            name: this.parsedDocument.tokenToString(node.name),
             modifiers: modifiers,
-            location: phraseLocation(node)
+            location: this.phraseLocation(node)
         }
 
         if (phpDoc) {
             let tag = phpDoc.findVarTag(s.name);
             if (tag) {
                 s.description = tag.description;
-                s.type = new TypeString(tag.typeString).nameResolve(nameResolver);
+                s.type = new TypeString(tag.typeString).nameResolve(this.nameResolver);
             }
         }
 
@@ -1312,51 +1304,51 @@ export namespace SymbolReader {
 
     }
 
-    export function identifier(node: Identifier) {
-        return ParseTree.tokenToString(node.name, textDocument);
+    identifier(node: Identifier) {
+        return this.parsedDocument.tokenToString(node.name);
     }
 
-    export function interfaceDeclaration(node: InterfaceDeclaration, phpDoc: PhpDoc, phpDocLoc: Location) {
+    interfaceDeclaration(node: InterfaceDeclaration, phpDoc: PhpDoc, phpDocLoc: Location) {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Interface,
             name: '',
-            location: phraseLocation(node),
+            location: this.phraseLocation(node),
             children: []
         }
 
         if (phpDoc) {
             s.description = phpDoc.text;
-            Array.prototype.push.apply(s.children, phpDocMembers(phpDoc, phpDocLoc));
+            Array.prototype.push.apply(s.children, this.phpDocMembers(phpDoc, phpDocLoc));
         }
 
         return s;
 
     }
 
-    export function phpDocMembers(phpDoc: PhpDoc, phpDocLoc: Location) {
+    phpDocMembers(phpDoc: PhpDoc, phpDocLoc: Location) {
 
         let magic: Tag[] = phpDoc.propertyTags;
         let symbols: PhpSymbol[] = [];
 
         for (let n = 0, l = magic.length; n < l; ++n) {
-            symbols.push(propertyTagToSymbol(magic[n], phpDocLoc));
+            symbols.push(this.propertyTagToSymbol(magic[n], phpDocLoc));
         }
 
         magic = phpDoc.methodTags;
         for (let n = 0, l = magic.length; n < l; ++n) {
-            symbols.push(methodTagToSymbol(magic[n], phpDocLoc));
+            symbols.push(this.methodTagToSymbol(magic[n], phpDocLoc));
         }
 
         return symbols;
     }
 
-    export function methodTagToSymbol(tag: Tag, phpDocLoc: Location) {
+    methodTagToSymbol(tag: Tag, phpDocLoc: Location) {
         let s: PhpSymbol = {
             kind: SymbolKind.Method,
             modifiers: SymbolModifier.Magic,
             name: tag.name,
-            type: new TypeString(tag.typeString).nameResolve(nameResolver),
+            type: new TypeString(tag.typeString).nameResolve(this.nameResolver),
             description: tag.description,
             children: [],
             location: phpDocLoc
@@ -1367,36 +1359,36 @@ export namespace SymbolReader {
         }
 
         for (let n = 0, l = tag.parameters.length; n < l; ++n) {
-            s.children.push(magicMethodParameterToSymbol(tag.parameters[n], phpDocLoc));
+            s.children.push(this.magicMethodParameterToSymbol(tag.parameters[n], phpDocLoc));
         }
 
         return s;
     }
 
-    export function magicMethodParameterToSymbol(p: MethodTagParam, phpDocLoc: Location) {
+    magicMethodParameterToSymbol(p: MethodTagParam, phpDocLoc: Location) {
 
         return <PhpSymbol>{
             kind: SymbolKind.Parameter,
             name: p.name,
             modifiers: SymbolModifier.Magic,
-            type: new TypeString(p.typeString).nameResolve(nameResolver),
+            type: new TypeString(p.typeString).nameResolve(this.nameResolver),
             location: phpDocLoc
         }
 
     }
 
-    export function propertyTagToSymbol(t: Tag, phpDocLoc: Location) {
+    propertyTagToSymbol(t: Tag, phpDocLoc: Location) {
         return <PhpSymbol>{
             kind: SymbolKind.Property,
             name: t.name,
-            modifiers: magicPropertyModifier(t) | SymbolModifier.Magic,
-            type: new TypeString(t.typeString).nameResolve(nameResolver),
+            modifiers: this.magicPropertyModifier(t) | SymbolModifier.Magic,
+            type: new TypeString(t.typeString).nameResolve(this.nameResolver),
             description: t.description,
             location: phpDocLoc
         };
     }
 
-    export function magicPropertyModifier(t: Tag) {
+    magicPropertyModifier(t: Tag) {
         switch (t.tagName) {
             case '@property-read':
                 return SymbolModifier.ReadOnly;
@@ -1407,77 +1399,77 @@ export namespace SymbolReader {
         }
     }
 
-    export function interfaceDeclarationHeader(node: InterfaceDeclarationHeader) {
-        return nameTokenToFqn(node.name);
+    interfaceDeclarationHeader(node: InterfaceDeclarationHeader) {
+        return this.nameTokenToFqn(node.name);
     }
 
-    export function interfaceBaseClause(node: InterfaceBaseClause) {
+    interfaceBaseClause(node: InterfaceBaseClause) {
         let mapFn = (name: string) => {
             return <PhpSymbol>{
                 kind: SymbolKind.Interface,
                 name: name
             };
         }
-        return qualifiedNameList(node.nameList).map<PhpSymbol>(mapFn);
+        return this.qualifiedNameList(node.nameList).map<PhpSymbol>(mapFn);
     }
 
-    export function traitDeclaration(node: TraitDeclaration, phpDoc: PhpDoc, phpDocLoc: Location) {
+    traitDeclaration(node: TraitDeclaration, phpDoc: PhpDoc, phpDocLoc: Location) {
         let s: PhpSymbol = {
             kind: SymbolKind.Trait,
             name: '',
-            location: phraseLocation(node),
+            location: this.phraseLocation(node),
             children: []
         }
 
         if (phpDoc) {
             s.description = phpDoc.text;
-            Array.prototype.push.apply(s.children, phpDocMembers(phpDoc, phpDocLoc));
+            Array.prototype.push.apply(s.children, this.phpDocMembers(phpDoc, phpDocLoc));
         }
 
         return s;
     }
 
-    export function traitDeclarationHeader(node: TraitDeclarationHeader) {
-        return nameTokenToFqn(node.name);
+    traitDeclarationHeader(node: TraitDeclarationHeader) {
+        return this.nameTokenToFqn(node.name);
     }
 
-    export function classDeclaration(node: ClassDeclaration, phpDoc: PhpDoc, phpDocLoc: Location) {
+    classDeclaration(node: ClassDeclaration, phpDoc: PhpDoc, phpDocLoc: Location) {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Class,
             name: '',
-            location: phraseLocation(node),
+            location: this.phraseLocation(node),
             children: []
         };
 
         if (phpDoc) {
             s.description = phpDoc.text;
-            Array.prototype.push.apply(s.children, phpDocMembers(phpDoc, phpDocLoc));
+            Array.prototype.push.apply(s.children, this.phpDocMembers(phpDoc, phpDocLoc));
         }
 
         return s;
 
     }
 
-    export function classDeclarationHeader(s: PhpSymbol, node: ClassDeclarationHeader) {
+    classDeclarationHeader(s: PhpSymbol, node: ClassDeclarationHeader) {
 
         if (node.modifier) {
-            s.modifiers = modifierTokenToSymbolModifier(node.modifier);
+            s.modifiers =this.modifierTokenToSymbolModifier(node.modifier);
         }
 
-        s.name = nameTokenToFqn(node.name);
+        s.name = this.nameTokenToFqn(node.name);
         return s;
 
     }
 
-    export function classBaseClause(node: ClassBaseClause) {
+    classBaseClause(node: ClassBaseClause) {
         return <PhpSymbol>{
             kind: SymbolKind.Class,
-            name: qualifiedName(node.name, SymbolKind.Class)
+            name: this.qualifiedName(node.name, SymbolKind.Class)
         };
     }
 
-    export function classInterfaceClause(node: ClassInterfaceClause) {
+    classInterfaceClause(node: ClassInterfaceClause) {
 
         let mapFn = (name: string) => {
             return <PhpSymbol>{
@@ -1486,11 +1478,11 @@ export namespace SymbolReader {
             }
         }
 
-        return qualifiedNameList(node.nameList).map<PhpSymbol>(mapFn);
+        return this.qualifiedNameList(node.nameList).map<PhpSymbol>(mapFn);
 
     }
 
-    export function traitUseClause(node: TraitUseClause) {
+    traitUseClause(node: TraitUseClause) {
         let mapFn = (name: string) => {
             return <PhpSymbol>{
                 kind: SymbolKind.Trait,
@@ -1498,51 +1490,51 @@ export namespace SymbolReader {
             };
         };
 
-        return qualifiedNameList(node.nameList).map<PhpSymbol>(mapFn);
+        return this.qualifiedNameList(node.nameList).map<PhpSymbol>(mapFn);
     }
 
-    export function anonymousClassDeclaration(node: AnonymousClassDeclaration) {
+    anonymousClassDeclaration(node: AnonymousClassDeclaration) {
 
         return <PhpSymbol>{
             kind: SymbolKind.Class,
-            name: ParseTree.anonymousName(node, textDocument),
+            name: this.parsedDocument.createAnonymousName(node),
             modifiers: SymbolModifier.Anonymous,
-            location: phraseLocation(node)
+            location: this.phraseLocation(node)
         };
     }
 
-    export function anonymousFunctionCreationExpression(node: AnonymousFunctionCreationExpression) {
+    anonymousFunctionCreationExpression(node: AnonymousFunctionCreationExpression) {
 
         return <PhpSymbol>{
             kind: SymbolKind.Function,
-            name: ParseTree.anonymousName(node, textDocument),
+            name: this.parsedDocument.createAnonymousName(node),
             modifiers: SymbolModifier.Anonymous,
-            location: phraseLocation(node)
+            location: this.phraseLocation(node)
         };
 
     }
 
-    export function anonymousFunctionUseVariable(node: AnonymousFunctionUseVariable) {
+    anonymousFunctionUseVariable(node: AnonymousFunctionUseVariable) {
         return <PhpSymbol>{
             kind: SymbolKind.Variable,
-            name: ParseTree.tokenToString(node.name, textDocument),
-            location: phraseLocation(node)
+            name: this.parsedDocument.tokenToString(node.name),
+            location: this.phraseLocation(node)
         };
     }
 
-    export function simpleVariable(node: SimpleVariable) {
-        if (!node.name || (<Token>node.name).tokenType !== TokenType.VariableName) {
+    simpleVariable(node: SimpleVariable) {
+        if (!ParsedDocument.isToken(node, [TokenType.VariableName])) {
             return null;
         }
 
         return <PhpSymbol>{
             kind: SymbolKind.Variable,
-            name: ParseTree.tokenToString(<Token>node.name, textDocument),
-            location: phraseLocation(node)
+            name: this.parsedDocument.tokenToString(<Token>node.name),
+            location: this.phraseLocation(node)
         };
     }
 
-    export function qualifiedNameList(node: QualifiedNameList) {
+    qualifiedNameList(node: QualifiedNameList) {
 
         let names: string[] = [];
         let name: string;
@@ -1550,7 +1542,7 @@ export namespace SymbolReader {
             return names;
         }
         for (let n = 0, l = node.elements.length; n < l; ++n) {
-            name = qualifiedName(node.elements[n], SymbolKind.Class);
+            name = this.qualifiedName(node.elements[n], SymbolKind.Class);
             if (name) {
                 names.push(name);
             }
@@ -1559,7 +1551,7 @@ export namespace SymbolReader {
 
     }
 
-    export function modifierListElementsToSymbolModifier(tokens: Token[]) {
+    modifierListElementsToSymbolModifier(tokens: Token[]) {
 
         let flag = SymbolModifier.None;
         if (!tokens || tokens.length < 1) {
@@ -1567,13 +1559,13 @@ export namespace SymbolReader {
         }
 
         for (let n = 0, l = tokens.length; n < l; ++n) {
-            flag |= modifierTokenToSymbolModifier(tokens[n]);
+            flag |= this.modifierTokenToSymbolModifier(tokens[n]);
         }
 
         return flag;
     }
 
-    export function modifierTokenToSymbolModifier(t: Token) {
+    modifierTokenToSymbolModifier(t: Token) {
 
         switch (t.tokenType) {
             case TokenType.Public:
@@ -1594,9 +1586,7 @@ export namespace SymbolReader {
 
     }
 
-
-
-    export function concatNamespaceName(prefix: string, name: string) {
+    concatNamespaceName(prefix: string, name: string) {
         if (!name) {
             return null;
         } else if (!prefix) {
@@ -1606,16 +1596,16 @@ export namespace SymbolReader {
         }
     }
 
-    export function namespaceUseClause(node: NamespaceUseClause, kind: SymbolKind, prefix: string) {
+    namespaceUseClause(node: NamespaceUseClause, kind: SymbolKind, prefix: string) {
 
         let s: PhpSymbol = {
             kind: kind ? kind : SymbolKind.Class,
-            name: node.aliasingClause ? ParseTree.tokenToString(node.aliasingClause.alias, textDocument) : null,
+            name: node.aliasingClause ? this.parsedDocument.tokenToString(node.aliasingClause.alias) : null,
             associated: [],
-            location: phraseLocation(node)
+            location: this.phraseLocation(node)
         };
 
-        let fqn = concatNamespaceName(prefix, ParseTree.namespaceNameToString(node.name, textDocument));
+        let fqn = this.concatNamespaceName(prefix, this.parsedDocument.namespaceNameToString(node.name));
         if (!fqn) {
             return s;
         }
@@ -1629,7 +1619,7 @@ export namespace SymbolReader {
 
     }
 
-    export function tokenToSymbolKind(t: Token) {
+    tokenToSymbolKind(t: Token) {
         switch (t.tokenType) {
             case TokenType.Function:
                 return SymbolKind.Function;
@@ -1640,21 +1630,21 @@ export namespace SymbolReader {
         }
     }
 
-    export function namespaceUseDeclaration(node: NamespaceUseDeclaration): [SymbolKind, string] {
+    namespaceUseDeclaration(node: NamespaceUseDeclaration): [SymbolKind, string] {
 
         return [
-            node.kind ? tokenToSymbolKind(node.kind) : SymbolKind.None,
-            node.prefix ? ParseTree.namespaceNameToString(node.prefix, textDocument) : null
+            node.kind ? this.tokenToSymbolKind(node.kind) : SymbolKind.None,
+            node.prefix ? this.parsedDocument.namespaceNameToString(node.prefix) : null
         ];
 
     }
 
-    export function namespaceDefinition(node: NamespaceDefinition) {
+    namespaceDefinition(node: NamespaceDefinition) {
 
         return <PhpSymbol>{
             kind: SymbolKind.Namespace,
-            name: ParseTree.namespaceNameToString(node.name, textDocument),
-            location: phraseLocation(node),
+            name: this.parsedDocument.namespaceNameToString(node.name),
+            location: this.phraseLocation(node),
             children: []
         };
 
@@ -1814,16 +1804,16 @@ export interface LookupVariableTypeDelegate {
     (name: string): TypeString;
 }
 
-function resolveNamePhraseName(p: Phrase, nameResolver: NameResolver, textDocument: TextDocument, symbolKind: SymbolKind) {
+function resolveNamePhraseFqn(p: Phrase, nameResolver: NameResolver, parsedDocument:ParsedDocument, symbolKind: SymbolKind) {
     switch (p.phraseType) {
         case PhraseType.RelativeQualifiedName:
             return nameResolver.resolveRelative(
-                ParseTree.namespaceNameToString((<FullyQualifiedName>p).name, textDocument));
+                parsedDocument.namespaceNameToString((<FullyQualifiedName>p).name));
         case PhraseType.QualifiedName:
             return nameResolver.resolveNotFullyQualified(
-                ParseTree.namespaceNameToString((<FullyQualifiedName>p).name, textDocument), symbolKind);
+                parsedDocument.namespaceNameToString((<FullyQualifiedName>p).name), symbolKind);
         case PhraseType.FullyQualifiedName:
-            return ParseTree.namespaceNameToString((<FullyQualifiedName>p).name, textDocument);
+            return parsedDocument.namespaceNameToString((<FullyQualifiedName>p).name);
         default:
             return '';
     }
@@ -1834,7 +1824,7 @@ export class ExpressionResolver {
     constructor(
         public nameResolver: NameResolver,
         public symbolStore: SymbolStore,
-        public textDocument: TextDocument,
+        public parsedDocument: ParsedDocument,
         public lookupVariableTypeDelegate: LookupVariableTypeDelegate) {
 
     }
@@ -1892,9 +1882,9 @@ export class ExpressionResolver {
         }
 
         if (node.type.phraseType === PhraseType.AnonymousClassDeclaration) {
-            return ParseTree.anonymousName(node, this.textDocument);
+            return this.parsedDocument.createAnonymousName(node);
         } else if (node.type.phraseType === PhraseType.ClassTypeDesignator) {
-            return this.
+            return this.classTypeDesignator(<ClassTypeDesignator>node.type);
         } else {
             return null;
         }
@@ -1910,7 +1900,7 @@ export class ExpressionResolver {
             return null;
         }
 
-        return this.lookupVariableTypeDelegate(ParseTree.tokenToString((<Token>node.name), this.textDocument));
+        return this.lookupVariableTypeDelegate(this.parsedDocument.tokenToString((<Token>node.name)));
     }
 
     subscriptExpression(node: SubscriptExpression) {
@@ -1921,28 +1911,12 @@ export class ExpressionResolver {
     functionCallExpression(node: FunctionCallExpression) {
 
         let qName = <Phrase>node.callableExpr;
-        if (!qName) {
+        if (ParsedDocument.isPhrase(qName, 
+            [PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName])) {
             return null;
         }
 
-        let functionName: string;
-
-        switch (qName.phraseType) {
-            case PhraseType.RelativeQualifiedName:
-                functionName = this.nameResolver.resolveRelative(
-                    ParseTree.namespaceNameToString((<FullyQualifiedName>qName).name, this.textDocument));
-                break;
-            case PhraseType.QualifiedName:
-                functionName = this.nameResolver.resolveNotFullyQualified(
-                    ParseTree.namespaceNameToString((<FullyQualifiedName>qName).name, this.textDocument), SymbolKind.Function);
-                break;
-            case PhraseType.FullyQualifiedName:
-                functionName = ParseTree.namespaceNameToString((<FullyQualifiedName>qName).name, this.textDocument);
-                break;
-            default:
-                return null;
-        }
-
+        let functionName = resolveNamePhraseFqn(qName, this.nameResolver, this.parsedDocument, SymbolKind.Function);
         let symbol = this.symbolStore.find(functionName, SymbolKind.Function);
         return symbol && symbol.type ? symbol.type : null;
 
@@ -1954,8 +1928,8 @@ export class ExpressionResolver {
             return null;
         }
 
-        let methodName = ParseTree.isToken(node.memberName) ?
-            ParseTree.tokenToString(<Token>node.memberName, this.textDocument) :
+        let methodName = ParsedDocument.isToken(node.memberName) ?
+            this.parsedDocument.tokenToString(<Token>node.memberName) :
             this.memberName(<MemberName>node.memberName);
 
         let type = this.resolveExpression(node.variable);
@@ -1969,7 +1943,7 @@ export class ExpressionResolver {
     }
 
     memberName(node: MemberName) {
-        return ParseTree.tokenToString((<Token>node.name), this.textDocument);
+        return this.parsedDocument.tokenToString((<Token>node.name));
     }
 
     propertyAccessExpression(node: PropertyAccessExpression) {
@@ -1978,8 +1952,8 @@ export class ExpressionResolver {
             return null;
         }
 
-        let propName = ParseTree.isToken(node.memberName) ?
-            ParseTree.tokenToString(<Token>node.memberName, this.textDocument) :
+        let propName = ParsedDocument.isToken(node.memberName) ?
+            this.parsedDocument.tokenToString(<Token>node.memberName) :
             this.memberName(<MemberName>node.memberName);
 
         let type = this.resolveExpression(node.variable);
@@ -1992,7 +1966,6 @@ export class ExpressionResolver {
         return this.mergeTypes(propSymbols);
 
     }
-
 
     lookupMemberSymbols(typeNames: string[], memberName: string, kind: SymbolKind) {
 

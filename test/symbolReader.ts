@@ -1,19 +1,14 @@
 import { SymbolReader, NameResolver, PhpSymbol, SymbolKind, SymbolTable } from '../src/symbol';
-import { TextDocument } from '../src/document';
-import { ParseTree } from '../src/parse';
-import { Parser } from 'php7parser';
-import { TreeTraverser } from '../src/types';
+import { ParsedDocument } from '../src/parsedDocument';
 import { expect } from 'chai';
 import 'mocha';
 
 function symbolReaderOutput(src: string) {
 
-    let doc = new TextDocument('test', src);
-    let parseTree = Parser.parse(src);
+    let parsedDoc = new ParsedDocument('test', src);
     let symbolTree: PhpSymbol = { kind: SymbolKind.None, name: '' };
-    let sr = new SymbolReader(doc, new NameResolver('', '', []), [symbolTree]);
-    let traverser = new TreeTraverser([parseTree]);
-    traverser.traverse(sr);
+    let sr = new SymbolReader(parsedDoc, new NameResolver('', '', []), [symbolTree]);
+    parsedDoc.traverse(sr);
     return symbolTree;
 
 }

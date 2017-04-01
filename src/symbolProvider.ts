@@ -30,7 +30,7 @@ export class SymbolProvider {
 
         for (let n = 0, l = symbols.length; n < l; ++n) {
             s = symbols[n];
-            if (!(s.modifiers & SymbolModifier.Magic)) {
+            if (!(s.modifiers & SymbolModifier.Magic) && s.location) {
                 symbolInformationList.push(toDocumentSymbolInformation(s));
             }
         }
@@ -52,7 +52,7 @@ export class SymbolProvider {
 
         for (let n = 0, l = matches.length; n < l; ++n) {
             s = matches[n];
-            if (!(s.modifiers & modifierMask)) {
+            if (!(s.modifiers & modifierMask) && s.location) {
                 symbolInformationList.push(toDocumentSymbolInformation(s));
             }
         }
