@@ -16,6 +16,10 @@ export interface EventHandler<T> {
     (t: T): void;
 }
 
+export interface Unsubscribe {
+    (): void;
+}
+
 export class Event<T> {
 
     private _subscribed: EventHandler<T>[];
@@ -24,7 +28,7 @@ export class Event<T> {
         this._subscribed = [];
     }
 
-    subscribe(handler: EventHandler<T>) {
+    subscribe(handler: EventHandler<T>): Unsubscribe {
         this._subscribed.push(handler);
         let index = this._subscribed.length - 1;
         let subscribed = this._subscribed;
@@ -67,13 +71,13 @@ export class TreeTraverser<T extends TreeLike> {
 
     }
 
-    toArray(){
+    toArray() {
         let visitor = new ToArrayVisitor<T>();
         this.traverse(visitor);
         return visitor.array;
     }
 
-    count(){
+    count() {
         let visitor = new CountVisitor<T>();
         this.traverse(visitor);
         return visitor.count;
@@ -279,9 +283,7 @@ export class Debounce<T> {
 
         let event = this._lastEvent;
         this.clear();
-        if (event) {
-            this._handler.apply(this, [event]);
-        }
+        this._handler.apply(this, [event]);
 
     }
 
@@ -315,7 +317,7 @@ export class CountVisitor<T> implements TreeVisitor<T> {
         this._count = 0;
     }
 
-    get count(){
+    get count() {
         return this._count;
     }
 
@@ -420,7 +422,7 @@ export class BinarySearch<T> {
         return this._sortedArray.slice(rankLower, this.search(compareUpper, rankLower).rank);
     }
 
-    search(compare: (n: T) => number, offset?:number): BinarySearchResult {
+    search(compare: (n: T) => number, offset?: number): BinarySearchResult {
 
         let left = offset ? offset : 0;
         let right = this._sortedArray.length - 1;
