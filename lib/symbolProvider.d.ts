@@ -1,5 +1,5 @@
 import * as lsp from 'vscode-languageserver-types';
-import { SymbolStore } from './symbol';
+import { PhpSymbol, SymbolStore } from './symbol';
 export declare class SymbolProvider {
     symbolStore: SymbolStore;
     constructor(symbolStore: SymbolStore);
@@ -13,4 +13,6 @@ export declare class SymbolProvider {
      * @param query
      */
     provideWorkspaceSymbols(query: string): lsp.SymbolInformation[];
+    workspaceSymbolFilter(s: PhpSymbol): boolean;
+    toDocumentSymbolInformation(s: PhpSymbol): lsp.SymbolInformation;
 }

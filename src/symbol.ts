@@ -39,7 +39,8 @@ export const enum SymbolKind {
     Function = 1 << 6,
     Parameter = 1 << 7,
     Variable = 1 << 8,
-    Namespace = 1 << 9
+    Namespace = 1 << 9,
+    ClassConstant = 1 << 10
 }
 
 export const enum SymbolModifier {
@@ -145,9 +146,11 @@ export namespace PhpSymbol {
 export class NameResolver {
 
     constructor(
+        public document: ParsedDocument,
+        public importedSymbols: PhpSymbol[],
         public namespaceName: string,
         public thisName: string,
-        public importedSymbols: PhpSymbol[]
+        public thisBaseName: string
     ) { }
 
     resolveRelative(relativeName: string) {
@@ -171,6 +174,47 @@ export class NameResolver {
         return pos < 0 ?
             this._resolveUnqualified(notFqName, kind) :
             this._resolveQualified(name, pos);
+    }
+
+    namespaceNameText(node: NamespaceName, endOffset?: number) {
+
+        if (!node || !node.parts || node.parts.length < 1) {
+            return '';
+        }
+
+        let parts: string[] = [];
+        let t: Token;
+        for (let n = 0, l = node.parts.length; n < l; ++n) {
+            t = node.parts[n];
+            if (endOffset && ParsedDocument.isOffsetInToken(endOffset, t)) {
+                parts.push(this.document.tokenText(t).substr(0, endOffset + 1 - t.offset));
+                break;
+            }
+            parts.push(this.document.tokenText(node.parts[n]));
+        }
+
+        return parts.join('\\');
+
+    }
+
+    qualifiedNameText(node: FullyQualifiedName | QualifiedName | RelativeQualifiedName,
+        kind: SymbolKind, endOffset?: number) {
+
+        if (!node || !node.name) {
+            return '';
+        }
+
+        let name = this.namespaceNameText(node.name);
+        switch (node.phraseType) {
+            case PhraseType.QualifiedName:
+                return this.resolveNotFullyQualified(name, kind);
+            case PhraseType.RelativeQualifiedName:
+                return this.resolveRelative(name);
+            case PhraseType.FullyQualifiedName:
+            default:
+                return name;
+        }
+
     }
 
     private _matchImportedSymbol(text: string, kind: SymbolKind) {
@@ -462,7 +506,7 @@ export class SymbolTable {
 
         let symbolReader = new SymbolReader(
             parsedDocument,
-            new NameResolver(null, null, []),
+            new NameResolver(parsedDocument, [], '', '', ''),
             [{ kind: SymbolKind.None, name: '', children: [] }]
         );
 
@@ -489,7 +533,7 @@ export class SymbolStore {
         this._symbolCount = 0;
     }
 
-    onParsedDocumentChange = (args:ParsedDocumentChangeEventArgs) => {
+    onParsedDocumentChange = (args: ParsedDocumentChangeEventArgs) => {
         this.remove(args.parsedDocument.uri);
         this.add(SymbolTable.create(args.parsedDocument));
     };
@@ -530,14 +574,15 @@ export class SymbolStore {
      * @param text 
      * @param kindMask 
      */
-    find(text: string, kindMask?: SymbolKind) {
-        return this.match(text, kindMask).shift();
+    find(text: string, filter?: Predicate<PhpSymbol>) {
+        return this.match(text, filter).shift();
     }
 
     /**
-     * Matches any symbol by name or partial name (excluding parameters and variables) 
+     * Matches any indexed symbol by name or partial name with optional additional filter
+     * Parameters and variables that are not file scoped are not indexed.
      */
-    match(text: string, kindMask?: SymbolKind) {
+    match(text: string, filter?: Predicate<PhpSymbol>) {
 
         if (!text) {
             return [];
@@ -545,7 +590,7 @@ export class SymbolStore {
 
         let matched = this._index.match(text);
 
-        if (!kindMask) {
+        if (!filter) {
             return matched;
         }
 
@@ -554,7 +599,7 @@ export class SymbolStore {
 
         for (let n = 0, l = matched.length; n < l; ++n) {
             s = matched[n];
-            if ((s.kind & kindMask) > 0) {
+            if (filter(s)) {
                 filtered.push(s);
             }
         }
@@ -562,8 +607,12 @@ export class SymbolStore {
         return filtered;
     }
 
+    private _classOrInterfaceFilter(s: PhpSymbol) {
+        return (s.kind & (SymbolKind.Class | SymbolKind.Interface)) > 0;
+    }
+
     lookupTypeMembers(typeName: string, memberPredicate: Predicate<PhpSymbol>) {
-        let type = this.match(typeName, SymbolKind.Class | SymbolKind.Interface).shift();
+        let type = this.match(typeName, this._classOrInterfaceFilter).shift();
         return this._lookupTypeMembers(type, memberPredicate);
     }
 
@@ -598,7 +647,9 @@ export class SymbolStore {
 
         for (let n = 0, l = associated.length; n < l; ++n) {
             baseSymbol = associated[n];
-            baseSymbol = this.match(baseSymbol.name, baseSymbol.kind).shift();
+            baseSymbol = this.match(baseSymbol.name, (x) => {
+                return x.kind === baseSymbol.kind;
+            }).shift();
             if (baseSymbol) {
                 Array.prototype.push.apply(members, this._lookupTypeMembers(baseSymbol, basePredicate));
             }
@@ -610,15 +661,15 @@ export class SymbolStore {
 
     private _indexSymbols(root: PhpSymbol) {
 
-        let notKindMask = SymbolKind.Parameter | SymbolKind.Variable;
-
-        let predicate: Predicate<PhpSymbol> = (x) => {
-            return !(x.kind & notKindMask) && !!x.name;
-        };
-
         let traverser = new TreeTraverser([root]);
-        return traverser.filter(predicate);
+        return traverser.filter(this._indexFilter);
 
+    }
+
+    private _indexFilter(s: PhpSymbol) {
+        return s.kind !== SymbolKind.Parameter &&
+            (s.kind !== SymbolKind.Variable || !s.scope) &&
+            s.name.length > 0;
     }
 
 
@@ -1066,7 +1117,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
         switch (t.tokenType) {
             case TokenType.DocumentComment:
-                let phpDocTokenText = this.parsedDocument.tokenToString(t);
+                let phpDocTokenText = this.parsedDocument.tokenText(t);
                 this.lastPhpDoc = PhpDocParser.parse(phpDocTokenText);
                 this.lastPhpDocLocation = {
                     uri: this.parsedDocument.uri,
@@ -1110,7 +1161,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     }
 
     nameTokenToFqn(t: Token) {
-        let name = this.parsedDocument.tokenToString(t);
+        let name = this.parsedDocument.tokenText(t);
         return name ? this.nameResolver.resolveRelative(name) : '';
     }
 
@@ -1160,7 +1211,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Parameter,
-            name: this.parsedDocument.tokenToString(node.name),
+            name: this.parsedDocument.tokenText(node.name),
             location: this.phraseLocation(node)
         };
 
@@ -1180,7 +1231,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
         return (<Phrase>node.name).phraseType ?
             this.qualifiedName(<QualifiedName>node.name, SymbolKind.Class) :
-            this.parsedDocument.tokenToString(<Token>node.name);
+            this.parsedDocument.tokenText(<Token>node.name);
 
     }
 
@@ -1230,7 +1281,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     classConstElement(modifiers: SymbolModifier, node: ClassConstElement, phpDoc: PhpDoc) {
 
         let s: PhpSymbol = {
-            kind: SymbolKind.Constant,
+            kind: SymbolKind.ClassConstant,
             modifiers: modifiers,
             name: this.identifier(node.name),
             location: this.phraseLocation(node)
@@ -1287,7 +1338,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Property,
-            name: this.parsedDocument.tokenToString(node.name),
+            name: this.parsedDocument.tokenText(node.name),
             modifiers: modifiers,
             location: this.phraseLocation(node)
         }
@@ -1305,7 +1356,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     }
 
     identifier(node: Identifier) {
-        return this.parsedDocument.tokenToString(node.name);
+        return this.parsedDocument.tokenText(node.name);
     }
 
     interfaceDeclaration(node: InterfaceDeclaration, phpDoc: PhpDoc, phpDocLoc: Location) {
@@ -1454,7 +1505,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     classDeclarationHeader(s: PhpSymbol, node: ClassDeclarationHeader) {
 
         if (node.modifier) {
-            s.modifiers =this.modifierTokenToSymbolModifier(node.modifier);
+            s.modifiers = this.modifierTokenToSymbolModifier(node.modifier);
         }
 
         s.name = this.nameTokenToFqn(node.name);
@@ -1517,7 +1568,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     anonymousFunctionUseVariable(node: AnonymousFunctionUseVariable) {
         return <PhpSymbol>{
             kind: SymbolKind.Variable,
-            name: this.parsedDocument.tokenToString(node.name),
+            name: this.parsedDocument.tokenText(node.name),
             location: this.phraseLocation(node)
         };
     }
@@ -1529,7 +1580,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
         return <PhpSymbol>{
             kind: SymbolKind.Variable,
-            name: this.parsedDocument.tokenToString(<Token>node.name),
+            name: this.parsedDocument.tokenText(<Token>node.name),
             location: this.phraseLocation(node)
         };
     }
@@ -1600,7 +1651,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
         let s: PhpSymbol = {
             kind: kind ? kind : SymbolKind.Class,
-            name: node.aliasingClause ? this.parsedDocument.tokenToString(node.aliasingClause.alias) : null,
+            name: node.aliasingClause ? this.parsedDocument.tokenText(node.aliasingClause.alias) : null,
             associated: [],
             location: this.phraseLocation(node)
         };
@@ -1804,7 +1855,7 @@ export interface LookupVariableTypeDelegate {
     (name: string): TypeString;
 }
 
-function resolveNamePhraseFqn(p: Phrase, nameResolver: NameResolver, parsedDocument:ParsedDocument, symbolKind: SymbolKind) {
+function resolveNamePhraseFqn(p: Phrase, nameResolver: NameResolver, parsedDocument: ParsedDocument, symbolKind: SymbolKind) {
     switch (p.phraseType) {
         case PhraseType.RelativeQualifiedName:
             return nameResolver.resolveRelative(
@@ -1900,7 +1951,7 @@ export class ExpressionResolver {
             return null;
         }
 
-        return this.lookupVariableTypeDelegate(this.parsedDocument.tokenToString((<Token>node.name)));
+        return this.lookupVariableTypeDelegate(this.parsedDocument.tokenText((<Token>node.name)));
     }
 
     subscriptExpression(node: SubscriptExpression) {
@@ -1911,13 +1962,13 @@ export class ExpressionResolver {
     functionCallExpression(node: FunctionCallExpression) {
 
         let qName = <Phrase>node.callableExpr;
-        if (ParsedDocument.isPhrase(qName, 
+        if (ParsedDocument.isPhrase(qName,
             [PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName])) {
             return null;
         }
 
         let functionName = resolveNamePhraseFqn(qName, this.nameResolver, this.parsedDocument, SymbolKind.Function);
-        let symbol = this.symbolStore.find(functionName, SymbolKind.Function);
+        let symbol = this.symbolStore.find(functionName, (x) => { return x.kind === SymbolKind.Function });
         return symbol && symbol.type ? symbol.type : null;
 
     }
@@ -1929,7 +1980,7 @@ export class ExpressionResolver {
         }
 
         let methodName = ParsedDocument.isToken(node.memberName) ?
-            this.parsedDocument.tokenToString(<Token>node.memberName) :
+            this.parsedDocument.tokenText(<Token>node.memberName) :
             this.memberName(<MemberName>node.memberName);
 
         let type = this.resolveExpression(node.variable);
@@ -1943,7 +1994,7 @@ export class ExpressionResolver {
     }
 
     memberName(node: MemberName) {
-        return this.parsedDocument.tokenToString((<Token>node.name));
+        return this.parsedDocument.tokenText((<Token>node.name));
     }
 
     propertyAccessExpression(node: PropertyAccessExpression) {
@@ -1953,7 +2004,7 @@ export class ExpressionResolver {
         }
 
         let propName = ParsedDocument.isToken(node.memberName) ?
-            this.parsedDocument.tokenToString(<Token>node.memberName) :
+            this.parsedDocument.tokenText(<Token>node.memberName) :
             this.memberName(<MemberName>node.memberName);
 
         let type = this.resolveExpression(node.variable);
