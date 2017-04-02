@@ -107,7 +107,7 @@ export namespace Intelephense {
     }
 
     export function workspaceSymbols(query: string) {
-        return query.length > 1 ? symbolProvider.provideWorkspaceSymbols(query) : [];
+        return query.length > 0 ? symbolProvider.provideWorkspaceSymbols(query) : [];
     }
 
     export function completions(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position) {
