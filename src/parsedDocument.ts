@@ -36,6 +36,7 @@ export class ParsedDocument {
         this._parseTree = Parser.parse(text);
         this._textDocument = new TextDocument(uri, text);
         this._debounce = new Debounce<null>(this._reparse, textDocumentChangeDebounceWait);
+        this._changeEvent = new Event<ParsedDocumentChangeEventArgs>();
     }
 
     get uri() {
