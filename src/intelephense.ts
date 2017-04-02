@@ -65,7 +65,7 @@ export namespace Intelephense {
     }
 
     function onDiagnosticsRequest(args: DiagnosticsEventArgs) {
-       
+
         if (typeof onDiagnosticsStart === 'function') {
             onDiagnosticsStart(args.parsedDocument.uri);
         }
@@ -79,7 +79,7 @@ export namespace Intelephense {
         documentStore.remove(textDocument.uri);
         //diagnostics
         let dd = diagnosticsDebounceMap[textDocument.uri];
-        if(dd){
+        if (dd) {
             dd.clear();
             delete diagnosticsDebounceMap[textDocument.uri];
         }
@@ -111,7 +111,13 @@ export namespace Intelephense {
     }
 
     export function completions(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position) {
-        return completionProvider.provideCompletions(textDocument.uri, position);
+        let parsedDocument = documentStore.find(textDocument.uri);
+        if (parsedDocument) {
+            parsedDocument.flush();
+            return completionProvider.provideCompletions(textDocument.uri, position);
+        }
+        return <lsp.CompletionList>{ items: [] };
+
     }
 
     export function discover(textDocument: lsp.TextDocumentItem) {
