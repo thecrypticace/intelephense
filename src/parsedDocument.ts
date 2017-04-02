@@ -69,6 +69,17 @@ export class ParsedDocument {
 
     }
 
+    tokenRange(t:Token){
+        if(!t){
+            return null;
+        }
+
+        return <lsp.Range>{
+            start: this._textDocument.positionAtOffset(t.offset),
+            end: this._textDocument.positionAtOffset(t.offset + t.length)
+        }
+    }
+
     phraseRange(p: Phrase) {
         let tFirst = this.firstToken(p);
         let tLast = this.lastToken(p);

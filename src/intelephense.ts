@@ -4,24 +4,43 @@
 
 'use strict';
 
-import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
+import { ParsedDocument, ParsedDocumentStore, ParsedDocumentChangeEventArgs } from './parsedDocument';
 import { SymbolStore, SymbolTable } from './symbol';
 import { SymbolProvider } from './symbolProvider';
 import { CompletionProvider } from './completionProvider';
-import { Debounce } from './types';
+import { DiagnosticsProvider } from './diagnosticsProvider';
+import { Debounce, Unsubscribe } from './types';
 import * as lsp from 'vscode-languageserver-types';
 
 export namespace Intelephense {
 
     const phpLanguageId = 'php';
-    const maxCompletions = 100;
+    export var maxCompletions = 100;
+    export var diagnosticsDebounceWait = 1000;
 
     let documentStore = new ParsedDocumentStore();
     let symbolStore = new SymbolStore();
     let symbolProvider = new SymbolProvider(symbolStore);
     let completionProvider = new CompletionProvider(symbolStore, documentStore, maxCompletions);
-    let unsubscribeParsedDocumentChange = 
-        documentStore.parsedDocumentChangeEvent.subscribe(symbolStore.onParsedDocumentChange);
+    let diagnosticsProvider = new DiagnosticsProvider();
+
+    let unsubscribes: Unsubscribe[] = [];
+    unsubscribes.push(documentStore.parsedDocumentChangeEvent.subscribe(symbolStore.onParsedDocumentChange));
+
+    let diagnosticsDebounceMap: { [uri: string]: Debounce<DiagnosticsEventArgs> } = {};
+    unsubscribes.push(documentStore.parsedDocumentChangeEvent.subscribe((args) => {
+        let debounce = diagnosticsDebounceMap[args.parsedDocument.uri];
+        if (debounce) {
+            debounce.handle(args);
+        }
+    }));
+
+    interface DiagnosticsEventArgs {
+        parsedDocument: ParsedDocument;
+    }
+
+    export var onDiagnosticsStart: (uri: string) => void = null
+    export var onDiagnosticsEnd: (uri: string, diagnostics: lsp.Diagnostic[]) => void = null;
 
     export function openDocument(textDocument: lsp.TextDocumentItem) {
 
@@ -33,13 +52,37 @@ export namespace Intelephense {
         documentStore.add(parsedDocument);
         let symbolTable = SymbolTable.create(parsedDocument);
         //must remove before adding as entry may exist already from workspace discovery
-        symbolStore.remove(symbolTable.uri); 
+        symbolStore.remove(symbolTable.uri);
         symbolStore.add(symbolTable);
 
+        //diagnostics
+        let dd = diagnosticsDebounceMap[textDocument.uri] = new Debounce<DiagnosticsEventArgs>(
+            onDiagnosticsRequest,
+            diagnosticsDebounceWait
+        );
+        dd.handle({ parsedDocument: parsedDocument });
+
+    }
+
+    function onDiagnosticsRequest(args: DiagnosticsEventArgs) {
+       
+        if (typeof onDiagnosticsStart === 'function') {
+            onDiagnosticsStart(args.parsedDocument.uri);
+        }
+
+        if (typeof onDiagnosticsEnd === 'function') {
+            onDiagnosticsEnd(args.parsedDocument.uri, diagnosticsProvider.diagnose(args.parsedDocument));
+        }
     }
 
     export function closeDocument(textDocument: lsp.TextDocumentIdentifier) {
         documentStore.remove(textDocument.uri);
+        //diagnostics
+        let dd = diagnosticsDebounceMap[textDocument.uri];
+        if(dd){
+            dd.clear();
+            delete diagnosticsDebounceMap[textDocument.uri];
+        }
     }
 
     export function editDocument(
@@ -54,27 +97,27 @@ export namespace Intelephense {
     }
 
     export function documentSymbols(textDocument: lsp.TextDocumentIdentifier) {
-        
+
         let parsedDocument = documentStore.find(textDocument.uri);
-        if(parsedDocument){
+        if (parsedDocument) {
             parsedDocument.flush();
             return symbolProvider.provideDocumentSymbols(textDocument.uri);
         }
         return [];
     }
 
-    export function workspaceSymbols(query:string){
+    export function workspaceSymbols(query: string) {
         return query.length > 1 ? symbolProvider.provideWorkspaceSymbols(query) : [];
     }
 
-    export function completions(textDocument:lsp.TextDocumentIdentifier, position:lsp.Position){
+    export function completions(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position) {
         return completionProvider.provideCompletions(textDocument.uri, position);
     }
 
     export function discover(textDocument: lsp.TextDocumentItem) {
 
         let uri = textDocument.uri;
-    
+
         if (documentStore.has(uri)) {
             //if document is in doc store/opened then dont rediscover.
             let symbolTable = symbolStore.getSymbolTable(uri);
@@ -93,7 +136,7 @@ export namespace Intelephense {
     export function forget(uri: string): number {
         let forgotten = 0;
         let table = symbolStore.getSymbolTable(uri);
-        if(!table || documentStore.has(uri)){
+        if (!table || documentStore.has(uri)) {
             return forgotten;
         }
 
@@ -102,7 +145,7 @@ export namespace Intelephense {
         return forgotten;
     }
 
-    export function numberDocumentsOpen(){
+    export function numberDocumentsOpen() {
         return documentStore.count;
     }
 
