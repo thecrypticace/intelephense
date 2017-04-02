@@ -1574,7 +1574,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     }
 
     simpleVariable(node: SimpleVariable) {
-        if (!ParsedDocument.isToken(node, [TokenType.VariableName])) {
+        if (!ParsedDocument.isToken(node.name, [TokenType.VariableName])) {
             return null;
         }
 
