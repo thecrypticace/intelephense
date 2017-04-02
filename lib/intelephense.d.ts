@@ -1,5 +1,9 @@
 import * as lsp from 'vscode-languageserver-types';
 export declare namespace Intelephense {
+    var maxCompletions: number;
+    var diagnosticsDebounceWait: number;
+    var onDiagnosticsStart: (uri: string) => void;
+    var onDiagnosticsEnd: (uri: string, diagnostics: lsp.Diagnostic[]) => void;
     function openDocument(textDocument: lsp.TextDocumentItem): void;
     function closeDocument(textDocument: lsp.TextDocumentIdentifier): void;
     function editDocument(textDocument: lsp.VersionedTextDocumentIdentifier, contentChanges: lsp.TextDocumentContentChangeEvent[]): void;

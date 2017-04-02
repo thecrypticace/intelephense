@@ -16,6 +16,7 @@ export declare class ParsedDocument {
     flush(): void;
     traverse(visitor: TreeVisitor<Phrase | Token>): void;
     applyChanges(contentChanges: lsp.TextDocumentContentChangeEvent[]): void;
+    tokenRange(t: Token): lsp.Range;
     phraseRange(p: Phrase): lsp.Range;
     firstToken(node: Phrase | Token): Token;
     lastToken(node: Phrase | Token): Token;
