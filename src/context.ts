@@ -38,6 +38,7 @@ class ContextVisitor implements TreeVisitor<Phrase | Token>{
         if (ParsedDocument.isOffsetInToken(this.offset, <Token>node)) {
             this.haltTraverse = true;
             this._spine = spine.slice(0);
+            this._spine.push(node);
             return false;
         }
 
@@ -106,7 +107,8 @@ export class Context {
                 (s.kind & (SymbolKind.Class | SymbolKind.Constant | SymbolKind.Function)) > 0
         };
 
-        let imported = symbolStore.getSymbolTable(document.uri).filter(importFilter);
+        let symbolTable = symbolStore.getSymbolTable(document.uri);
+        let imported = symbolTable ? symbolTable.filter(importFilter) : [];
         let thisName = '';
         let baseName = '';
 
