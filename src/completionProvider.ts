@@ -88,8 +88,8 @@ export class CompletionProvider {
             return false;
         }
 
-        for (let n = pattern.length - 1; n >= 0; --n) {
-            if (pattern[n] !== spinePattern[n]) {
+        for (let n = pattern.length - 1, m = spinePattern.length - 1; n >= 0; --n, --m) {
+            if (pattern[n] !== spinePattern[m]) {
                 return false;
             }
         }
@@ -142,10 +142,10 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
         }
 
         let matches = this.symbolStore.match(text, this._symbolFilter);
-        let limit = Math.min(matches.length, this.maxSuggestions + 1);
+        let limit = Math.min(matches.length, this.maxSuggestions);
         let isIncomplete = matches.length > this.maxSuggestions;
 
-        for (let n = 0; n < limit - 1; ++n) {
+        for (let n = 0; n < limit; ++n) {
             items.push(this._toCompletionItem(matches[n], context.nameResolver.namespaceName, qNameNode.phraseType));
         }
 
@@ -173,8 +173,7 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
             label: label,
             kind: lsp.SymbolKind.Class,
             detail: s.name,
-            documentation: s.description,
-
+            documentation: s.description
         }
 
     }
