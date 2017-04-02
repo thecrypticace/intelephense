@@ -55,7 +55,7 @@ describe('CompletionProvider', () => {
             };
             var completions = completionProvider.provideCompletions('test', { line: 7, character: 18 });
             assert.deepEqual(completions, expected);
-
+            console.log(JSON.stringify(completions, null, 4));
         });
 
     });
