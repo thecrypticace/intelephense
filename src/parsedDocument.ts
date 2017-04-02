@@ -206,6 +206,7 @@ export class ParsedDocumentStore {
     constructor() {
         this._parsedDocumentmap = {};
         this._parsedDocumentChangeEvent = new Event<ParsedDocumentChangeEventArgs>();
+        this._unsubscribeMap = {};
     }
 
     get parsedDocumentChangeEvent() {
