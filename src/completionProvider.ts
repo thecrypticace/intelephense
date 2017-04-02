@@ -32,7 +32,8 @@ export class CompletionProvider {
         public maxSuggestions: number) {
 
         this._strategies = [
-            new ClassTypeDesignatorCompletion(symbolStore, maxSuggestions)
+            new ClassTypeDesignatorCompletion(symbolStore, maxSuggestions),
+            new SimpleVariableCompletion()
         ];
 
     }
@@ -108,7 +109,7 @@ interface CompletionStrategy {
 
 class ClassTypeDesignatorCompletion implements CompletionStrategy {
 
-    static patterns: (PhraseType)[][] = [
+    static patterns: PhraseType[][] = [
         [PhraseType.ClassTypeDesignator, PhraseType.FullyQualifiedName, PhraseType.NamespaceName],
         [PhraseType.ClassTypeDesignator, PhraseType.QualifiedName, PhraseType.NamespaceName],
         [PhraseType.ClassTypeDesignator, PhraseType.RelativeQualifiedName, PhraseType.NamespaceName]
@@ -176,6 +177,94 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
             documentation: s.description
         }
 
+    }
+
+}
+
+class SimpleVariableCompletion implements CompletionStrategy {
+
+    static patterns:PhraseType[][] = [
+        [PhraseType.SimpleVariable]
+    ];
+
+    getPatterns(){
+        return SimpleVariableCompletion.patterns;
+    }
+
+    completions(context:Context){
+
+        return noCompletionResponse;
+        
+    }
+
+}
+
+class NameCompletion implements CompletionStrategy {
+
+    static patterns:PhraseType[][] = [
+        [PhraseType.QualifiedName, PhraseType.NamespaceName],
+        [PhraseType.FullyQualifiedName, PhraseType.NamespaceName],
+        [PhraseType.RelativeQualifiedName, PhraseType.NamespaceName]
+    ];
+
+    getPatterns(){
+        return SimpleVariableCompletion.patterns;
+    }
+
+    completions(context:Context){
+
+        return noCompletionResponse;
+        
+    }
+
+}
+
+class ScopedAccessCompletion implements CompletionStrategy {
+
+    static patterns:PhraseType[][] = [
+        [PhraseType.ScopedCallExpression],
+        [PhraseType.ErrorScopedAccessExpression],
+        [PhraseType.ScopedMemberName],
+        [PhraseType.ScopedPropertyAccessExpression],
+        [PhraseType.ScopedCallExpression, PhraseType.ScopedMemberName],
+        [PhraseType.ErrorScopedAccessExpression, PhraseType.ScopedMemberName],
+        [PhraseType.ScopedMemberName, PhraseType.ScopedMemberName],
+        [PhraseType.ScopedPropertyAccessExpression, PhraseType.ScopedMemberName],
+        [PhraseType.ScopedCallExpression, PhraseType.ScopedMemberName, PhraseType.Identifier],
+        [PhraseType.ErrorScopedAccessExpression, PhraseType.ScopedMemberName, PhraseType.Identifier],
+        [PhraseType.ScopedMemberName, PhraseType.ScopedMemberName, PhraseType.Identifier],
+        [PhraseType.ScopedPropertyAccessExpression, PhraseType.ScopedMemberName, PhraseType.Identifier]
+    ];
+
+    getPatterns(){
+        return SimpleVariableCompletion.patterns;
+    }
+
+    completions(context:Context){
+
+        return noCompletionResponse;
+        
+    }
+
+}
+
+class MemberAccessCompletion implements CompletionStrategy {
+
+    static patterns:PhraseType[][] = [
+        [PhraseType.PropertyAccessExpression],
+        [PhraseType.MethodCallExpression],
+        [PhraseType.PropertyAccessExpression, PhraseType.MemberName],
+        [PhraseType.MethodCallExpression, PhraseType.MemberName]
+    ];
+
+    getPatterns(){
+        return SimpleVariableCompletion.patterns;
+    }
+
+    completions(context:Context){
+
+        return noCompletionResponse;
+        
     }
 
 }
