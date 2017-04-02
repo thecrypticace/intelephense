@@ -7,27 +7,30 @@
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { SymbolStore, SymbolTable } from './symbol';
 import { SymbolProvider } from './symbolProvider';
+import { CompletionProvider } from './completionProvider';
 import { Debounce } from './types';
 import * as lsp from 'vscode-languageserver-types';
 
 export namespace Intelephense {
 
     const phpLanguageId = 'php';
+    const maxCompletions = 100;
 
-    let parsedDocumentStore = new ParsedDocumentStore();
+    let documentStore = new ParsedDocumentStore();
     let symbolStore = new SymbolStore();
     let symbolProvider = new SymbolProvider(symbolStore);
+    let completionProvider = new CompletionProvider(symbolStore, documentStore, maxCompletions);
     let unsubscribeParsedDocumentChange = 
-        parsedDocumentStore.parsedDocumentChangeEvent.subscribe(symbolStore.onParsedDocumentChange);
+        documentStore.parsedDocumentChangeEvent.subscribe(symbolStore.onParsedDocumentChange);
 
     export function openDocument(textDocument: lsp.TextDocumentItem) {
 
-        if (textDocument.languageId !== phpLanguageId || parsedDocumentStore.has(textDocument.uri)) {
+        if (textDocument.languageId !== phpLanguageId || documentStore.has(textDocument.uri)) {
             return;
         }
 
         let parsedDocument = new ParsedDocument(textDocument.uri, textDocument.text);
-        parsedDocumentStore.add(parsedDocument);
+        documentStore.add(parsedDocument);
         let symbolTable = SymbolTable.create(parsedDocument);
         //must remove before adding as entry may exist already from workspace discovery
         symbolStore.remove(symbolTable.uri); 
@@ -36,14 +39,14 @@ export namespace Intelephense {
     }
 
     export function closeDocument(textDocument: lsp.TextDocumentIdentifier) {
-        parsedDocumentStore.remove(textDocument.uri);
+        documentStore.remove(textDocument.uri);
     }
 
     export function editDocument(
         textDocument: lsp.VersionedTextDocumentIdentifier,
         contentChanges: lsp.TextDocumentContentChangeEvent[]) {
 
-        let parsedDocument = parsedDocumentStore.find(textDocument.uri);
+        let parsedDocument = documentStore.find(textDocument.uri);
         if (parsedDocument) {
             parsedDocument.applyChanges(contentChanges);
         }
@@ -52,7 +55,7 @@ export namespace Intelephense {
 
     export function documentSymbols(textDocument: lsp.TextDocumentIdentifier) {
         
-        let parsedDocument = parsedDocumentStore.find(textDocument.uri);
+        let parsedDocument = documentStore.find(textDocument.uri);
         if(parsedDocument){
             parsedDocument.flush();
             return symbolProvider.provideDocumentSymbols(textDocument.uri);
@@ -61,14 +64,18 @@ export namespace Intelephense {
     }
 
     export function workspaceSymbols(query:string){
-        return query ? symbolProvider.provideWorkspaceSymbols(query) : [];
+        return query.length > 1 ? symbolProvider.provideWorkspaceSymbols(query) : [];
+    }
+
+    export function completions(textDocument:lsp.TextDocumentIdentifier, position:lsp.Position){
+        return completionProvider.provideCompletions(textDocument.uri, position);
     }
 
     export function discover(textDocument: lsp.TextDocumentItem) {
 
         let uri = textDocument.uri;
     
-        if (parsedDocumentStore.has(uri)) {
+        if (documentStore.has(uri)) {
             //if document is in doc store/opened then dont rediscover.
             let symbolTable = symbolStore.getSymbolTable(uri);
             return symbolTable ? symbolTable.count : 0;
@@ -86,7 +93,7 @@ export namespace Intelephense {
     export function forget(uri: string): number {
         let forgotten = 0;
         let table = symbolStore.getSymbolTable(uri);
-        if(!table || parsedDocumentStore.has(uri)){
+        if(!table || documentStore.has(uri)){
             return forgotten;
         }
 
@@ -96,7 +103,7 @@ export namespace Intelephense {
     }
 
     export function numberDocumentsOpen(){
-        return parsedDocumentStore.count;
+        return documentStore.count;
     }
 
     export function numberDocumentsKnown() {

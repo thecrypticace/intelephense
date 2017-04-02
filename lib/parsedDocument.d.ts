@@ -19,15 +19,17 @@ export declare class ParsedDocument {
     phraseRange(p: Phrase): lsp.Range;
     firstToken(node: Phrase | Token): Token;
     lastToken(node: Phrase | Token): Token;
-    tokenToString(t: Token): string;
+    tokenText(t: Token): string;
     namespaceNameToString(node: NamespaceName): string;
     createAnonymousName(node: Phrase): string;
     positionAtOffset(offset: number): lsp.Position;
+    offsetAtPosition(position: lsp.Position): number;
     private _textDocumentChangeCompareFn(a, b);
 }
 export declare namespace ParsedDocument {
     function isToken(node: Phrase | Token, types?: TokenType[]): boolean;
     function isPhrase(node: Phrase | Token, types?: PhraseType[]): boolean;
+    function isOffsetInToken(offset: number, t: Token): boolean;
 }
 export declare class ParsedDocumentStore {
     private _parsedDocumentChangeEvent;
@@ -45,9 +47,11 @@ export declare class ParsedDocumentStore {
 export declare class Context {
     private _namespaceDefinition;
     private _spine;
-    constructor(spine: (Phrase | Token)[], namespaceDefinition: NamespaceDefinition);
+    private _offset;
+    constructor(spine: (Phrase | Token)[], namespaceDefinition: NamespaceDefinition, offset: number);
+    readonly offset: number;
+    readonly spine: (Token | Phrase)[];
     readonly namespace: NamespaceDefinition;
     readonly token: Token | Phrase;
-    readonly phrase: Token | Phrase;
     readonly traverser: TreeTraverser<Token | Phrase>;
 }

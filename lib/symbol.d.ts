@@ -1,6 +1,6 @@
 import { Location } from 'vscode-languageserver-types';
 import { Predicate, TreeVisitor } from './types';
-import { Phrase, Token, FunctionDeclarationHeader, TypeDeclaration, QualifiedName, ParameterDeclaration, ConstElement, FunctionDeclaration, ClassDeclaration, ClassDeclarationHeader, ClassBaseClause, ClassInterfaceClause, QualifiedNameList, InterfaceDeclaration, InterfaceDeclarationHeader, InterfaceBaseClause, TraitDeclaration, TraitDeclarationHeader, ClassConstDeclaration, ClassConstElement, Identifier, MethodDeclaration, MethodDeclarationHeader, PropertyDeclaration, PropertyElement, MemberModifierList, NamespaceDefinition, NamespaceUseDeclaration, NamespaceUseClause, AnonymousClassDeclaration, AnonymousFunctionCreationExpression, AnonymousFunctionUseVariable, TraitUseClause, SimpleVariable, ObjectCreationExpression, SubscriptExpression, FunctionCallExpression, MethodCallExpression, MemberName, PropertyAccessExpression, ClassTypeDesignator } from 'php7parser';
+import { Phrase, Token, NamespaceName, FunctionDeclarationHeader, TypeDeclaration, QualifiedName, ParameterDeclaration, ConstElement, FunctionDeclaration, ClassDeclaration, ClassDeclarationHeader, ClassBaseClause, ClassInterfaceClause, QualifiedNameList, InterfaceDeclaration, InterfaceDeclarationHeader, InterfaceBaseClause, TraitDeclaration, TraitDeclarationHeader, ClassConstDeclaration, ClassConstElement, Identifier, MethodDeclaration, MethodDeclarationHeader, PropertyDeclaration, PropertyElement, MemberModifierList, NamespaceDefinition, NamespaceUseDeclaration, NamespaceUseClause, AnonymousClassDeclaration, AnonymousFunctionCreationExpression, AnonymousFunctionUseVariable, TraitUseClause, SimpleVariable, ObjectCreationExpression, SubscriptExpression, FunctionCallExpression, FullyQualifiedName, RelativeQualifiedName, MethodCallExpression, MemberName, PropertyAccessExpression, ClassTypeDesignator } from 'php7parser';
 import { PhpDoc, Tag, MethodTagParam } from './phpDoc';
 import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
 export declare const enum SymbolKind {
@@ -15,6 +15,7 @@ export declare const enum SymbolKind {
     Parameter = 128,
     Variable = 256,
     Namespace = 512,
+    ClassConstant = 1024,
 }
 export declare const enum SymbolModifier {
     None = 0,
@@ -51,12 +52,16 @@ export declare namespace PhpSymbol {
     function suffixArray(s: PhpSymbol): string[];
 }
 export declare class NameResolver {
+    document: ParsedDocument;
+    importedSymbols: PhpSymbol[];
     namespaceName: string;
     thisName: string;
-    importedSymbols: PhpSymbol[];
-    constructor(namespaceName: string, thisName: string, importedSymbols: PhpSymbol[]);
+    thisBaseName: string;
+    constructor(document: ParsedDocument, importedSymbols: PhpSymbol[], namespaceName: string, thisName: string, thisBaseName: string);
     resolveRelative(relativeName: string): string;
     resolveNotFullyQualified(notFqName: string, kind: SymbolKind): string;
+    namespaceNameText(node: NamespaceName, endOffset?: number): string;
+    qualifiedNameText(node: FullyQualifiedName | QualifiedName | RelativeQualifiedName, kind: SymbolKind, endOffset?: number): string;
     private _matchImportedSymbol(text, kind);
     private _resolveQualified(name, pos);
     private _resolveUnqualified(name, kind);
@@ -101,15 +106,18 @@ export declare class SymbolStore {
      * @param text
      * @param kindMask
      */
-    find(text: string, kindMask?: SymbolKind): PhpSymbol;
+    find(text: string, filter?: Predicate<PhpSymbol>): PhpSymbol;
     /**
-     * Matches any symbol by name or partial name (excluding parameters and variables)
+     * Matches any indexed symbol by name or partial name with optional additional filter
+     * Parameters and variables that are not file scoped are not indexed.
      */
-    match(text: string, kindMask?: SymbolKind): PhpSymbol[];
+    match(text: string, filter?: Predicate<PhpSymbol>): PhpSymbol[];
+    private _classOrInterfaceFilter(s);
     lookupTypeMembers(typeName: string, memberPredicate: Predicate<PhpSymbol>): PhpSymbol[];
     lookupTypeMember(typeName: string, memberPredicate: Predicate<PhpSymbol>): PhpSymbol;
     private _lookupTypeMembers(type, predicate);
     private _indexSymbols(root);
+    private _indexFilter(s);
 }
 export declare class SymbolReader implements TreeVisitor<Phrase | Token> {
     parsedDocument: ParsedDocument;

@@ -20,8 +20,9 @@ export interface TreeLike {
     children?: TreeLike[];
 }
 export declare class TreeTraverser<T extends TreeLike> {
-    spine: T[];
+    private _spine;
     constructor(spine: T[]);
+    readonly spine: T[];
     readonly node: T;
     traverse(visitor: TreeVisitor<T>): void;
     filter(predicate: Predicate<T>): T[];
@@ -31,6 +32,7 @@ export declare class TreeTraverser<T extends TreeLike> {
     prevSibling(): T;
     nextSibling(): T;
     ancestor(predicate: Predicate<T>): T;
+    parent(): T;
     private _traverse(treeNode, visitor, spine);
 }
 export interface TreeVisitor<T extends TreeLike> {

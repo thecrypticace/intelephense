@@ -4,12 +4,120 @@
 
 'use strict';
 
-import {Phrase, Token} from 'php7parser';
-import {SymbolStore} from './symbol';
-import {TreeVisitor} from './types';
-import {Position} from 'vscode-languageserver-types';
+import { SymbolStore, NameResolver, PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
+import { TreeVisitor, TreeTraverser } from './types';
+import { ParsedDocument } from './parsedDocument';
+import { Position } from 'vscode-languageserver-types';
+import { Phrase, Token, PhraseType, NamespaceDefinition } from 'php7parser';
 
-export class DocumentContext {
+class ContextVisitor implements TreeVisitor<Phrase | Token>{
+
+    haltTraverse: boolean;
+
+    private _spine: (Phrase | Token)[];
+    private _namespaceDefinition: NamespaceDefinition;
+
+    constructor(public offset) {
+        this.haltTraverse = false;
+    }
+
+    get spine() {
+        return this._spine;
+    }
+
+    get namespaceDefinition() {
+        return this._namespaceDefinition;
+    }
+
+    preOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+
+        if (this.haltTraverse) {
+            return false;
+        }
+
+        if (ParsedDocument.isOffsetInToken(this.offset, <Token>node)) {
+            this.haltTraverse = true;
+            this._spine = spine.slice(0);
+            return false;
+        }
+
+        if ((<Phrase>node).phraseType === PhraseType.NamespaceDefinition) {
+            this._namespaceDefinition = <NamespaceDefinition>node;
+        }
+
+        return true;
+
+    }
+
+    postOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+
+        if (this.haltTraverse) {
+            return;
+        }
+
+        if ((<Phrase>node).phraseType === PhraseType.NamespaceDefinition &&
+            (<NamespaceDefinition>node).statementList) {
+            this._namespaceDefinition = undefined;
+        }
+    }
+
+
+}
+
+export class Context {
+
+    private _nameResolver: NameResolver;
+    private _spine: (Phrase | Token)[];
+    private _offset: number;
+
+    constructor(spine: (Phrase | Token)[], nameResolver: NameResolver, offset: number) {
+        this._nameResolver = nameResolver;
+        this._spine = spine.slice(0);
+        this._offset = offset;
+    }
+
+    get offset() {
+        return this._offset;
+    }
+
+    get spine() {
+        return this._spine.slice(0);
+    }
+
+    get nameResolver() {
+        return this._nameResolver;
+    }
+
+    createTraverser() {
+        return new TreeTraverser(this._spine);
+    }
+
+    static create(symbolStore: SymbolStore, document: ParsedDocument, position: Position) {
+
+        let offset = document.offsetAtPosition(position);
+        let contextVisitor = new ContextVisitor(offset);
+        document.traverse(contextVisitor);
+        let namespaceDefinition = contextVisitor.namespaceDefinition;
+        let spine = contextVisitor.spine;
+        let namespaceName = namespaceDefinition ? document.namespaceNameToString(namespaceDefinition.name) : '';
+        
+        let importFilter = (s: PhpSymbol) => {
+            return (s.modifiers & SymbolModifier.Use) > 0 &&
+                (s.kind & (SymbolKind.Class | SymbolKind.Constant | SymbolKind.Function)) > 0
+        };
+
+        let imported = symbolStore.getSymbolTable(document.uri).filter(importFilter);
+        let thisName = '';
+        let baseName = '';
+
+        let nameResolver = new NameResolver(document, imported, namespaceName, thisName, baseName);
+        return new Context(spine, nameResolver, offset);
+
+    }
+
+}
+
+    /*
 
     private _tokenIndex: number;
     private _token: Token;
@@ -141,3 +249,4 @@ export class DocumentContext {
     }
 
 }
+*/

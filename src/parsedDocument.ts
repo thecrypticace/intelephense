@@ -10,7 +10,10 @@ import {
 } from 'php7parser';
 import { TextDocument } from './textDocument';
 import * as lsp from 'vscode-languageserver-types';
-import { TreeVisitor, TreeTraverser, Event, Debounce, Unsubscribe } from './types';
+import {
+    TreeVisitor, TreeTraverser, Event, Debounce, Unsubscribe,
+    Predicate
+} from './types';
 
 const textDocumentChangeDebounceWait = 250;
 
@@ -114,7 +117,7 @@ export class ParsedDocument {
         return null;
     }
 
-    tokenToString(t: Token) {
+    tokenText(t: Token) {
         return ParsedDocument.isToken(t) ? this._textDocument.textAtOffset(t.offset, t.length) : '';
     }
 
@@ -126,7 +129,7 @@ export class ParsedDocument {
 
         let parts: string[] = [];
         for (let n = 0, l = node.parts.length; n < l; ++n) {
-            parts.push(this.tokenToString(node.parts[n]));
+            parts.push(this.tokenText(node.parts[n]));
         }
 
         return parts.join('\\');
@@ -139,8 +142,12 @@ export class ParsedDocument {
         return '#anonymous#' + suffix;
     }
 
-    positionAtOffset(offset:number){
+    positionAtOffset(offset: number) {
         return this._textDocument.positionAtOffset(offset);
+    }
+
+    offsetAtPosition(position:lsp.Position){
+        return this._textDocument.offsetAtPosition(position);
     }
 
     private _textDocumentChangeCompareFn(a: lsp.TextDocumentContentChangeEvent, b: lsp.TextDocumentContentChangeEvent) {
@@ -167,6 +174,12 @@ export namespace ParsedDocument {
             (!types || types.indexOf((<Phrase>node).phraseType) > -1);
     }
 
+    export function isOffsetInToken(offset: number, t: Token) {
+        return ParsedDocument.isToken(t) &&
+            t.offset >= this.offset &&
+            t.offset <= this.offset;
+    }
+
 }
 
 export class ParsedDocumentStore {
@@ -187,7 +200,7 @@ export class ParsedDocumentStore {
         return this._parsedDocumentChangeEvent;
     }
 
-    get count(){
+    get count() {
         return Object.keys(this._parsedDocumentmap).length;
     }
 
@@ -234,7 +247,7 @@ class ContextVisitor implements TreeVisitor<Phrase | Token>{
     }
 
     get context() {
-        return new Context(this._spine, this._namespaceDefinition);
+        return new Context(this._spine, this._namespaceDefinition, this.offset);
     }
 
     preOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
@@ -243,9 +256,7 @@ class ContextVisitor implements TreeVisitor<Phrase | Token>{
             return false;
         }
 
-        if (ParsedDocument.isToken(node) &&
-            (<Token>node).offset >= this.offset &&
-            (<Token>node).offset <= this.offset) {
+        if (ParsedDocument.isOffsetInToken(this.offset, <Token>node)) {
             this.haltTraverse = true;
             this._spine = spine.slice(0);
             return false;
@@ -278,10 +289,19 @@ export class Context {
 
     private _namespaceDefinition: NamespaceDefinition;
     private _spine: (Phrase | Token)[];
+    private _offset:number;
 
-    constructor(spine: (Phrase | Token)[], namespaceDefinition: NamespaceDefinition) {
+    constructor(spine: (Phrase | Token)[], namespaceDefinition: NamespaceDefinition, offset:number) {
         this._namespaceDefinition = namespaceDefinition;
-        this._spine = spine;
+        this._spine = spine.slice(0);
+    }
+
+    get offset(){
+        return this._offset;
+    }
+
+    get spine() {
+        return this._spine.slice(0);
     }
 
     get namespace() {
@@ -290,11 +310,6 @@ export class Context {
 
     get token() {
         return this._spine.length ? this._spine[this._spine.length - 1] : null;
-    }
-
-    get phrase() {
-        let traverser = new TreeTraverser(this._spine);
-        return traverser.ancestor(ParsedDocument.isPhrase);
     }
 
     get traverser() {
