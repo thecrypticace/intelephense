@@ -6,7 +6,7 @@
 
 import { ParsedDocument } from './parsedDocument';
 import { TreeVisitor } from './types';
-import { Phrase, Token, ParseError } from 'php7parser';
+import { Phrase, Token, ParseError, tokenTypeToString } from 'php7parser';
 import * as lsp from 'vscode-languageserver-types';
 
 export class DiagnosticsProvider {
@@ -32,7 +32,7 @@ export class DiagnosticsProvider {
             range: doc.tokenRange(err.unexpected),
             severity: lsp.DiagnosticSeverity.Error,
             source: 'intelephense',
-            message: `Unexpected ${err.unexpected}`,
+            message: `Unexpected ${tokenTypeToString(err.unexpected.tokenType)}`,
         };
     }
 
