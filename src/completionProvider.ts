@@ -51,7 +51,7 @@ export class CompletionProvider {
         let strategy: CompletionStrategy = null;
 
         for (let n = 0, l = this._strategies.length; n < l; ++n) {
-            if (this._hasMatch(strategy[n].getPatterns(), spinePattern)) {
+            if (this._hasMatch(this._strategies[n].getPatterns(), spinePattern)) {
                 strategy = this._strategies[n];
                 break;
             }
