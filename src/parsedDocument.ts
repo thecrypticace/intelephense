@@ -188,8 +188,8 @@ export namespace ParsedDocument {
 
     export function isOffsetInToken(offset: number, t: Token) {
         return ParsedDocument.isToken(t) &&
-            t.offset >= this.offset &&
-            t.offset <= this.offset;
+            t.offset <= offset &&
+            t.offset + t.length >= offset;
     }
 
 }
