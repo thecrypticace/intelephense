@@ -632,162 +632,6 @@ export class SymbolStore {
 
 }
 
-/*
-
-interface ResolvedVariable {
-    name: string;
-    type: TypeString;
-}
-
-const enum VariableSetKind {
-    None, Scope, BranchGroup, Branch
-}
-
-interface VariableSet {
-    kind: VariableSetKind;
-    vars: { [index: string]: ResolvedVariable };
-}
-
-
-export class VariableTable {
-
-    private _node: Tree<VariableSet>;
-    private _thisTypeStack: TypeString[];
-
-    constructor() {
-        this._node = new Tree<VariableSet>({
-            kind: VariableSetKind.Scope,
-            vars: {}
-        });
-        this._thisTypeStack = [];
-    }
-
-    setType(varName: string, type: TypeString) {
-        this._node.value.vars[varName] = { name: varName, type: type };
-    }
-
-    pushThisType(thisType: TypeString) {
-        this._thisTypeStack.push(thisType);
-    }
-
-    popThisType() {
-        this._thisTypeStack.pop();
-    }
-
-    pushScope(carry: string[] = null) {
-
-        let resolvedVariables: ResolvedVariable[] = [];
-        if (carry) {
-            let type: TypeString;
-            for (let n = 0; n < carry.length; ++n) {
-                type = this.getType(carry[n]);
-                if (type) {
-                    resolvedVariables.push({ name: carry[n], type: type });
-                }
-            }
-        }
-
-        this._pushNode(VariableSetKind.Scope);
-        for (let n = 0; n < resolvedVariables.length; ++n) {
-            this.setType(resolvedVariables[n].name, resolvedVariables[n].type);
-        }
-    }
-
-    popScope() {
-        this._node = this._node.parent;
-    }
-
-    pushBranch() {
-        this._pushNode(VariableSetKind.Branch);
-    }
-
-    popBranch() {
-        this._node = this._node.parent;
-    }
-
-    pushBranchGroup() {
-        this._pushNode(VariableSetKind.BranchGroup);
-    }
-
-    popBranchGroup() {
-
-        //can consolidate variables and prune tree as at this point
-        //each variable may be any of types discovered in branches 
-        let b = this._node;
-        this._node = b.parent;
-        let consolidator = new TypeConsolidator(this._node.value.vars);
-        b.traverse(consolidator);
-        this._node.removeChild(b);
-
-    }
-
-    getType(varName: string) {
-
-        let type: TypeString;
-        let vars: { [index: string]: ResolvedVariable };
-        let node = this._node;
-
-        if (varName === '$this') {
-            return util.top<TypeString>(this._thisTypeStack);
-        }
-
-        while (node) {
-
-            if (node.value.vars.hasOwnProperty(varName)) {
-                return node.value.vars[varName].type;
-            } else if (node.value.kind !== VariableSetKind.Scope) {
-                node = node.parent;
-            } else {
-                break;
-            }
-
-        }
-
-        return null;
-
-    }
-
-    private _pushNode(kind: VariableSetKind) {
-        let node = new Tree<VariableSet>({
-            kind: kind,
-            vars: {}
-        });
-        this._node = this._node.addChild(node);
-    }
-
-}
-
-class TypeConsolidator implements TreeVisitor<VariableSet> {
-
-    constructor(public variables: { [index: string]: ResolvedVariable }) {
-
-    }
-
-    preOrder(node: Tree<VariableSet>) {
-
-        let keys = Object.keys(node.value.vars);
-        let v: ResolvedVariable;
-        let key: string;
-
-        for (let n = 0; n < keys.length; ++n) {
-            key = keys[n];
-            v = node.value.vars[key];
-
-            if (this.variables.hasOwnProperty(key)) {
-                this.variables[key].type = this.variables[key].type.merge(v.type);
-            } else {
-                this.variables[key] = v;
-            }
-        }
-
-        return true;
-
-    }
-
-}
-
-*/
-
 export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     lastPhpDoc: PhpDoc;
@@ -1808,7 +1652,7 @@ interface SymbolIndexNode {
 }
 
 export interface LookupVariableTypeDelegate {
-    (t:Token): TypeString;
+    (t: Token): TypeString;
 }
 
 export class ExpressionTypeResolver {
@@ -2287,6 +2131,159 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
             !typeString.isEmpty()) {
             this.variableTable.setType((<Token>node.children[0].value).text, typeString);
         }
+
+    }
+
+}
+
+interface TypedVariable {
+    name: string;
+    type: TypeString;
+}
+
+const enum TypedVariableSetKind {
+    None, Scope, BranchGroup, Branch
+}
+
+interface TypedVariableSet {
+    kind: TypedVariableSetKind;
+    variables: { [index: string]: TypedVariable };
+    children: TypedVariableSet[];
+}
+
+
+export class VariableTable {
+
+    private _typeVariableSetStack: TypedVariableSet[];
+
+    constructor() {
+
+        this._typeVariableSetStack = [{
+            kind: TypedVariableSetKind.Scope,
+            variables: {},
+            children: []
+        }];
+    }
+
+    setType(varName: string, type: TypeString) {
+        this._top().variables[varName] = { name: varName, type: type };
+    }
+
+    pushThisType(thisType: TypeString) {
+        this._typeVariableSetStack.push(thisType);
+    }
+
+    popThisType() {
+        this._typeVariableSetStack.pop();
+    }
+
+    pushScope(carry: string[]) {
+
+        let resolvedVariables: TypedVariable[] = [];
+        if (carry) {
+            let type: TypeString;
+            for (let n = 0; n < carry.length; ++n) {
+                type = this.getType(carry[n]);
+                if (type) {
+                    resolvedVariables.push({ name: carry[n], type: type });
+                }
+            }
+        }
+
+        this._pushNode(TypedVariableSetKind.Scope);
+        for (let n = 0; n < resolvedVariables.length; ++n) {
+            this.setType(resolvedVariables[n].name, resolvedVariables[n].type);
+        }
+    }
+
+    popScope() {
+        this._node = this._node.parent;
+    }
+
+    pushBranch() {
+        this._pushNode(TypedVariableSetKind.Branch);
+    }
+
+    pop() {
+        this._node = this._node.parent;
+    }
+
+    popBranchGroup() {
+
+        //can consolidate variables and prune tree as at this point
+        //each variable may be any of types discovered in branches 
+        let b = this._node;
+        this._node = b.parent;
+        let consolidator = new TypeConsolidator(this._node.value.vars);
+        b.traverse(consolidator);
+        this._node.removeChild(b);
+
+    }
+
+    getType(varName: string) {
+
+        let type: TypeString;
+        let vars: { [index: string]: TypedVariable };
+        let node = this._node;
+
+        if (varName === '$this') {
+            return util.top<TypeString>(this._typeVariableSetStack);
+        }
+
+        while (node) {
+
+            if (node.value.vars.hasOwnProperty(varName)) {
+                return node.value.vars[varName].type;
+            } else if (node.value.kind !== TypedVariableSetKind.Scope) {
+                node = node.parent;
+            } else {
+                break;
+            }
+
+        }
+
+        return null;
+
+    }
+
+    private _pushNode(kind: TypedVariableSetKind) {
+        let node = new Tree<TypedVariableSet>({
+            kind: kind,
+            vars: {}
+        });
+        this._node = this._node.addChild(node);
+    }
+
+    private _top(){
+        return this._typeVariableSetStack[this._typeVariableSetStack.length - 1];
+    }
+
+}
+
+class TypeConsolidator implements TreeVisitor<TypedVariableSet> {
+
+    constructor(public variables: { [index: string]: TypedVariable }) {
+
+    }
+
+    preOrder(node: Tree<TypedVariableSet>) {
+
+        let keys = Object.keys(node.value.vars);
+        let v: TypedVariable;
+        let key: string;
+
+        for (let n = 0; n < keys.length; ++n) {
+            key = keys[n];
+            v = node.value.vars[key];
+
+            if (this.variables.hasOwnProperty(key)) {
+                this.variables[key].type = this.variables[key].type.merge(v.type);
+            } else {
+                this.variables[key] = v;
+            }
+        }
+
+        return true;
 
     }
 
