@@ -200,8 +200,7 @@ class SimpleVariableCompletion implements CompletionStrategy {
 
         return <lsp.CompletionItem>{
             label: s.name,
-            kind: lsp.SymbolKind.Variable,
-            insertText: s.name.slice(1)
+            kind: lsp.SymbolKind.Variable
         }
 
     }
