@@ -22,6 +22,63 @@ const noCompletionResponse: lsp.CompletionList = {
     isIncomplete: false
 };
 
+function keywordCompletionItems(keywords: string[], text: string) {
+
+    let kw: string;
+    let items: lsp.CompletionItem[] = [];
+    for (let n = 0, l = keywords.length; n < l; ++n) {
+
+        kw = keywords[n];
+        if (kw.indexOf(text) === 0) {
+            items.push({
+                label: kw,
+                kind: lsp.CompletionItemKind.Keyword
+            });
+        }
+
+    }
+
+    return keywords;
+
+}
+
+function toNameCompletionItem(s: PhpSymbol, namespace: string, namePhraseType: PhraseType) {
+
+    let label = s.name;
+    let detail = s.name;
+    if (namespace && s.name.indexOf(namespace) === 0 && label.length > namespace.length + 1) {
+        label = label.slice(namespace.length + 1);
+    } else if (namespace && namePhraseType !== PhraseType.FullyQualifiedName && !(s.modifiers & SymbolModifier.Use)) {
+        label = '\\' + label;
+    } else if ((s.modifiers & SymbolModifier.Use) > 0 && s.associated && s.associated.length > 0) {
+        detail = s.associated[0].name;
+    }
+
+    let kind: lsp.CompletionItemKind;
+
+    switch (s.kind) {
+        case SymbolKind.Class:
+            kind = lsp.SymbolKind.Class;
+            break;
+        case SymbolKind.Function:
+            kind = lsp.SymbolKind.Function;
+            break;
+        case SymbolKind.Constant:
+            kind = lsp.SymbolKind.Constant;
+            break;
+        default:
+            break;
+    }
+
+    return <lsp.CompletionItem>{
+        label: label,
+        kind: kind,
+        detail: detail,
+        documentation: s.description
+    }
+
+}
+
 export class CompletionProvider {
 
     private _strategies: CompletionStrategy[];
@@ -81,6 +138,10 @@ interface CompletionStrategy {
 
 class ClassTypeDesignatorCompletion implements CompletionStrategy {
 
+    private static _keywords = [
+        'class', 'static'
+    ];
+
     constructor(public maxSuggestions: number) {
 
     }
@@ -109,17 +170,22 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
             return noCompletionResponse;
         }
 
+        if (qNameNode.phraseType === PhraseType.QualifiedName) {
+            Array.prototype.push.apply(items, keywordCompletionItems(ClassTypeDesignatorCompletion._keywords, text));
+
+        }
+
         if (qNameNode.phraseType === PhraseType.RelativeQualifiedName) {
             text = nameResolver.resolveRelative(text);
         }
 
         let matches = context.symbolStore.match(text, this._symbolFilter);
 
-        let limit = Math.min(matches.length, this.maxSuggestions);
-        let isIncomplete = matches.length > this.maxSuggestions;
+        let limit = Math.min(matches.length, this.maxSuggestions - items.length);
+        let isIncomplete = matches.length > this.maxSuggestions - items.length;
 
         for (let n = 0; n < limit; ++n) {
-            items.push(this._toCompletionItem(matches[n], nameResolver.namespaceName, qNameNode.phraseType));
+            items.push(toNameCompletionItem(matches[n], nameResolver.namespaceName, qNameNode.phraseType));
         }
 
         return <lsp.CompletionList>{
@@ -133,26 +199,7 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
             !(s.modifiers & (SymbolModifier.Anonymous | SymbolModifier.Abstract));
     }
 
-    private _toCompletionItem(s: PhpSymbol, namespace: string, namePhraseType: PhraseType) {
 
-        let label = s.name;
-        let detail = s.name;
-        if (namespace && s.name.indexOf(namespace) === 0 && label.length > namespace.length + 1) {
-            label = label.slice(namespace.length + 1);
-        } else if (namespace && namePhraseType !== PhraseType.FullyQualifiedName && !(s.modifiers & SymbolModifier.Use)) {
-            label = '\\' + label;
-        } else if ((s.modifiers & SymbolModifier.Use) > 0 && s.associated && s.associated.length > 0) {
-            detail = s.associated[0].name;
-        }
-
-        return <lsp.CompletionItem>{
-            label: label,
-            kind: lsp.SymbolKind.Class,
-            detail: detail,
-            documentation: s.description
-        }
-
-    }
 
 }
 
@@ -174,11 +221,17 @@ class SimpleVariableCompletion implements CompletionStrategy {
         let text = ParsedDocument.isToken(context.token, [TokenType.Dollar]) ?
             '$' : nameResolver.tokenText(context.token, context.offset);
 
+        if (!text) {
+            return noCompletionResponse;
+        }
+
         let scope = context.scopeSymbol;
         let symbolMask = SymbolKind.Variable | SymbolKind.Parameter;
         let varSymbols = scope.children.filter((x) => {
             return (x.kind & symbolMask) > 0 && x.name.indexOf(text) === 0;
         });
+        //also suggest built in globals vars
+        Array.prototype.push.apply(varSymbols, context.symbolStore.match(text, this._isBuiltInGlobalVar));
 
         let limit = Math.min(varSymbols.length, this.maxSuggestions);
         let isIncomplete = varSymbols.length > this.maxSuggestions;
@@ -196,11 +249,16 @@ class SimpleVariableCompletion implements CompletionStrategy {
 
     }
 
+    private _isBuiltInGlobalVar(s: PhpSymbol) {
+        return s.kind === SymbolKind.Variable && !s.location;
+    }
+
     private _toCompletionItem(s: PhpSymbol) {
 
         return <lsp.CompletionItem>{
             label: s.name,
-            kind: lsp.SymbolKind.Variable
+            kind: lsp.SymbolKind.Variable,
+            documentation: s.description
         }
 
     }
@@ -208,6 +266,71 @@ class SimpleVariableCompletion implements CompletionStrategy {
 }
 
 class NameCompletion implements CompletionStrategy {
+
+    private static _statementKeywords = [
+        '__halt_compiler',
+        'abstract',
+        'break',
+        'catch',
+        'class',
+        'const',
+        'continue',
+        'declare',
+        'die',
+        'do',
+        'echo',
+        'else',
+        'elseif',
+        'enddeclare',
+        'endfor',
+        'endforeach',
+        'endif',
+        'endswitch',
+        'endwhile',
+        'final',
+        'finally',
+        'for',
+        'foreach',
+        'function',
+        'global',
+        'goto',
+        'if',
+        'interface',
+        'list',
+        'namespace',
+        'return',
+        'static',
+        'switch',
+        'throw',
+        'trait',
+        'try',
+        'unset',
+        'use',
+        'while'
+    ];
+
+    private static _expressionKeywords = [
+        'array',
+        'clone',
+        'empty',
+        'eval',
+        'exit',
+        'function',
+        'include',
+        'include_once',
+        'isset',
+        'new',
+        'parent',
+        'print',
+        'require',
+        'require_once',
+        'static',
+        'yield'
+    ];
+
+    constructor(public maxSuggestions: number) {
+
+    }
 
     canSuggest(context: Context) {
         let traverser = context.createTraverser();
@@ -218,8 +341,47 @@ class NameCompletion implements CompletionStrategy {
 
     completions(context: Context) {
 
-        return noCompletionResponse;
+        let items: lsp.CompletionItem[] = [];
+        let traverser = context.createTraverser();
+        let nsNameNode = traverser.parent() as NamespaceName;
+        let qNameNode = traverser.parent() as Phrase;
+        let qNameParent = traverser.parent() as Phrase;
+        let nameResolver = context.createNameResolver();
+        let text = nameResolver.namespaceNameText(nsNameNode, context.offset);
 
+        if (!text) {
+            return noCompletionResponse;
+        }
+
+        if (qNameNode.phraseType === PhraseType.QualifiedName) {
+            Array.prototype.push.apply(items, keywordCompletionItems(NameCompletion._expressionKeywords, text));
+            if (qNameParent.phraseType === PhraseType.StatementList) {
+                Array.prototype.push.apply(items, keywordCompletionItems(NameCompletion._statementKeywords, text));
+            }
+        }
+
+        if (qNameNode.phraseType === PhraseType.RelativeQualifiedName) {
+            text = nameResolver.resolveRelative(text);
+        }
+
+        let matches = context.symbolStore.match(text, this._symbolFilter);
+        let limit = Math.min(matches.length, this.maxSuggestions - items.length);
+        let isIncomplete = matches.length > this.maxSuggestions - items.length;
+
+        for (let n = 0; n < limit; ++n) {
+            items.push(toNameCompletionItem(matches[n], nameResolver.namespaceName, qNameNode.phraseType));
+        }
+
+        return <lsp.CompletionList>{
+            items: items,
+            isIncomplete: isIncomplete
+        }
+
+    }
+
+    private _symbolFilter(s: PhpSymbol) {
+        return (s.kind & (SymbolKind.Class | SymbolKind.Function | SymbolKind.Constant)) > 0 &&
+            !(s.modifiers & SymbolModifier.Anonymous);
     }
 
 }
