@@ -68,53 +68,120 @@ class ContextVisitor implements TreeVisitor<Phrase | Token>{
 export class Context {
 
     private _nameResolver: NameResolver;
-    private _spine: (Phrase | Token)[];
+    private _parseTreeSpine: (Phrase | Token)[];
     private _offset: number;
+    private _namespaceDefinition: NamespaceDefinition;
+    private _scopePhrase:Phrase;
+    private _scopeSymbol:PhpSymbol;
 
-    constructor(spine: (Phrase | Token)[], nameResolver: NameResolver, offset: number) {
-        this._nameResolver = nameResolver;
-        this._spine = spine.slice(0);
-        this._offset = offset;
+    constructor(public symbolStore: SymbolStore, public document: ParsedDocument, public position: Position) {
+
+        this._offset = document.offsetAtPosition(position);
+        let contextVisitor = new ContextVisitor(this._offset);
+        document.traverse(contextVisitor);
+        this._namespaceDefinition = contextVisitor.namespaceDefinition;
+        this._parseTreeSpine = contextVisitor.spine;
+
+
+
+    }
+
+    get token() {
+        return this._parseTreeSpine.length ? <Token>this._parseTreeSpine[this._parseTreeSpine.length - 1] : null;
     }
 
     get offset() {
-        return this._offset;
+        return this.document.offsetAtPosition(this.position);
     }
 
     get spine() {
-        return this._spine.slice(0);
+        return this._parseTreeSpine.slice(0);
     }
 
-    get nameResolver() {
-        return this._nameResolver;
+    get scopePhrase() {
+        
+        if(!this._scopePhrase){
+            let t = this.createTraverser();
+            //need to get scope body first to exclude chance 
+            //that position is within a scope declaration
+            t.ancestor(this._isScopeBody);
+            this._scopePhrase = t.ancestor(this._isScopePhrase) as Phrase;
+            if(!this._scopePhrase){
+                this._scopePhrase = this._parseTreeSpine[0] as Phrase;
+            }
+        }
+        return this._scopePhrase;
+    }
+
+    get scopeSymbol(){
+
+        if(!this._scopeSymbol){
+
+            let phrase = this.scopePhrase;
+            let symbolTable = this.symbolStore.getSymbolTable(this.document.uri);
+            let phrasePos = this.document.phraseRange(phrase).start;
+            this._scopeSymbol = symbolTable.find((x)=>{
+                return x.location && 
+                    x.location.range.start.line === phrasePos.line &&
+                    x.location.range.start.character === phrasePos.character;
+            });
+
+            if(!this._scopeSymbol){
+                this._scopeSymbol = symbolTable.root;
+            }
+
+        }
+
+        return this._scopeSymbol;
+
+    }
+
+    createNameResolver() {
+        let symbolTable = this.symbolStore.getSymbolTable(this.document.uri);
+        let imported = symbolTable ? symbolTable.filter(this._importFilter) : [];
+        let namespaceName = this._namespaceDefinition ?
+            this.document.namespaceNameToString(this._namespaceDefinition.name) : '';
+        let thisName = '';
+        let baseName = '';
+        return new NameResolver(this.document, imported, namespaceName, thisName, baseName);
     }
 
     createTraverser() {
-        return new TreeTraverser(this._spine);
+        return new TreeTraverser(this._parseTreeSpine);
     }
 
-    static create(symbolStore: SymbolStore, document: ParsedDocument, position: Position) {
+    private _isScopePhrase(p: Phrase | Token) {
+        switch ((<Phrase>p).phraseType) {
+            case PhraseType.FunctionDeclaration:
+            case PhraseType.MethodDeclaration:
+            case PhraseType.AnonymousFunctionCreationExpression:
+            case PhraseType.ClassDeclaration:
+            case PhraseType.InterfaceDeclaration:
+            case PhraseType.TraitDeclaration:
+            case PhraseType.AnonymousClassDeclaration:
+                return true;
+            default:
+                return false;
+        }
+    }
 
-        let offset = document.offsetAtPosition(position);
-        let contextVisitor = new ContextVisitor(offset);
-        document.traverse(contextVisitor);
-        let namespaceDefinition = contextVisitor.namespaceDefinition;
-        let spine = contextVisitor.spine;
-        let namespaceName = namespaceDefinition ? document.namespaceNameToString(namespaceDefinition.name) : '';
-        
-        let importFilter = (s: PhpSymbol) => {
-            return (s.modifiers & SymbolModifier.Use) > 0 &&
-                (s.kind & (SymbolKind.Class | SymbolKind.Constant | SymbolKind.Function)) > 0
-        };
+    private _isScopeBody(p: Phrase | Token) {
 
-        let symbolTable = symbolStore.getSymbolTable(document.uri);
-        let imported = symbolTable ? symbolTable.filter(importFilter) : [];
-        let thisName = '';
-        let baseName = '';
+        switch ((<Phrase>p).phraseType) {
+            case PhraseType.CompoundStatement:
+            case PhraseType.ClassMemberDeclarationList:
+            case PhraseType.InterfaceMemberDeclarationList:
+            case PhraseType.TraitMemberDeclarationList:
+                return true;
+            default:
+                return false;
+        }
 
-        let nameResolver = new NameResolver(document, imported, namespaceName, thisName, baseName);
-        return new Context(spine, nameResolver, offset);
+    }
 
+    private _importFilter(s: PhpSymbol) {
+        return (s.modifiers & SymbolModifier.Use) > 0 &&
+            (s.kind & (SymbolKind.Class | SymbolKind.Constant | SymbolKind.Function)) > 0;
     }
 
 }

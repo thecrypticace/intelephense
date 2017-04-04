@@ -32,8 +32,8 @@ export class CompletionProvider {
         public maxSuggestions: number) {
 
         this._strategies = [
-            new ClassTypeDesignatorCompletion(symbolStore, maxSuggestions),
-            new SimpleVariableCompletion()
+            new ClassTypeDesignatorCompletion(maxSuggestions),
+            new SimpleVariableCompletion(maxSuggestions)
         ];
 
     }
@@ -47,12 +47,11 @@ export class CompletionProvider {
             return noCompletionResponse;
         }
 
-        let context = Context.create(this.symbolStore, doc, position);
-        let spinePattern = context.spine.slice(0, -1).map(this._phraseType);
+        let context = new Context(this.symbolStore, doc, position);
         let strategy: CompletionStrategy = null;
 
         for (let n = 0, l = this._strategies.length; n < l; ++n) {
-            if (this._hasMatch(this._strategies[n].getPatterns(), spinePattern)) {
+            if (this._strategies[n].canSuggest(context)) {
                 strategy = this._strategies[n];
                 break;
             }
@@ -71,59 +70,30 @@ export class CompletionProvider {
         return p.phraseType;
     }
 
-    private _hasMatch(patterns: PhraseType[][], spinePattern: PhraseType[]) {
-
-        for (let n = 0, l = patterns.length; n < l; ++n) {
-            if (this._isEqualPattern(patterns[n], spinePattern)) {
-                return true;
-            }
-        }
-
-        return false;
-
-    }
-
-    private _isEqualPattern(pattern: PhraseType[], spinePattern: PhraseType[]) {
-
-        if (spinePattern.length < pattern.length) {
-            return false;
-        }
-
-        for (let n = pattern.length - 1, m = spinePattern.length - 1; n >= 0; --n, --m) {
-            if (pattern[n] !== spinePattern[m]) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
 }
 
 interface CompletionStrategy {
 
-    getPatterns(): (PhraseType)[][];
+    canSuggest(context: Context): boolean;
     completions(context: Context): lsp.CompletionList;
 
 }
 
 class ClassTypeDesignatorCompletion implements CompletionStrategy {
 
-    static patterns: PhraseType[][] = [
-        [PhraseType.ClassTypeDesignator, PhraseType.FullyQualifiedName, PhraseType.NamespaceName],
-        [PhraseType.ClassTypeDesignator, PhraseType.QualifiedName, PhraseType.NamespaceName],
-        [PhraseType.ClassTypeDesignator, PhraseType.RelativeQualifiedName, PhraseType.NamespaceName]
-    ];
-
-    constructor(
-        public symbolStore: SymbolStore,
-        public maxSuggestions: number
-    ) {
+    constructor(public maxSuggestions: number) {
 
     }
 
-    getPatterns() {
-        return ClassTypeDesignatorCompletion.patterns;
+    canSuggest(context: Context) {
+
+        let traverser = context.createTraverser();
+        return ParsedDocument.isToken(traverser.node, [TokenType.Backslash, TokenType.Name]) &&
+            ParsedDocument.isPhrase(traverser.parent(), [PhraseType.NamespaceName]) &&
+            ParsedDocument.isPhrase(traverser.parent(),
+                [PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName]) &&
+            ParsedDocument.isPhrase(traverser.parent(), [PhraseType.ClassTypeDesignator]);
+
     }
 
     completions(context: Context) {
@@ -132,22 +102,23 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
         let traverser = context.createTraverser();
         let nsNameNode = traverser.parent() as NamespaceName;
         let qNameNode = traverser.parent() as Phrase;
-        let text = context.nameResolver.namespaceNameText(nsNameNode, context.offset);
+        let nameResolver = context.createNameResolver();
+        let text = nameResolver.namespaceNameText(nsNameNode, context.offset);
 
         if (!text) {
             return noCompletionResponse;
         }
 
         if (qNameNode.phraseType === PhraseType.RelativeQualifiedName) {
-            text = context.nameResolver.resolveRelative(text);
+            text = nameResolver.resolveRelative(text);
         }
 
-        let matches = this.symbolStore.match(text, this._symbolFilter);
+        let matches = context.symbolStore.match(text, this._symbolFilter);
         let limit = Math.min(matches.length, this.maxSuggestions);
         let isIncomplete = matches.length > this.maxSuggestions;
 
         for (let n = 0; n < limit; ++n) {
-            items.push(this._toCompletionItem(matches[n], context.nameResolver.namespaceName, qNameNode.phraseType));
+            items.push(this._toCompletionItem(matches[n], nameResolver.namespaceName, qNameNode.phraseType));
         }
 
         return <lsp.CompletionList>{
@@ -164,16 +135,19 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
     private _toCompletionItem(s: PhpSymbol, namespace: string, namePhraseType: PhraseType) {
 
         let label = s.name;
+        let detail = s.name;
         if (namespace && s.name.indexOf(namespace) === 0 && label.length > namespace.length + 1) {
             label = label.slice(namespace.length + 1);
-        } else if (namespace && namePhraseType !== PhraseType.FullyQualifiedName) {
+        } else if (namespace && namePhraseType !== PhraseType.FullyQualifiedName && !(s.modifiers & SymbolModifier.Use)) {
             label = '\\' + label;
+        } else if ((s.modifiers & SymbolModifier.Use) > 0 && s.associated && s.associated.length > 0) {
+            detail = s.associated[0].name;
         }
 
         return <lsp.CompletionItem>{
             label: label,
             kind: lsp.SymbolKind.Class,
-            detail: s.name,
+            detail: detail,
             documentation: s.description
         }
 
@@ -183,88 +157,124 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
 
 class SimpleVariableCompletion implements CompletionStrategy {
 
-    static patterns:PhraseType[][] = [
-        [PhraseType.SimpleVariable]
-    ];
+    constructor(public maxSuggestions) {
 
-    getPatterns(){
-        return SimpleVariableCompletion.patterns;
     }
 
-    completions(context:Context){
+    canSuggest(context: Context) {
+        let traverser = context.createTraverser();
+        return ParsedDocument.isToken(traverser.node, [TokenType.Dollar, TokenType.VariableName]) &&
+            ParsedDocument.isPhrase(traverser.parent(), [PhraseType.SimpleVariable]);
+    }
 
-        return noCompletionResponse;
-        
+    completions(context: Context) {
+
+        let nameResolver = context.createNameResolver();
+        let text = ParsedDocument.isToken(context.token, [TokenType.Dollar]) ?
+            '$' : nameResolver.tokenText(context.token, context.offset);
+
+        let scope = context.scopeSymbol;
+        let symbolMask = SymbolKind.Variable | SymbolKind.Parameter;
+        let varSymbols = scope.children.filter((x) => {
+            return (x.kind & symbolMask) > 0 && x.name.indexOf(text) === 0;
+        });
+
+        let limit = Math.min(varSymbols.length, this.maxSuggestions);
+        let isIncomplete = varSymbols.length > this.maxSuggestions;
+
+        let items: lsp.CompletionItem[] = [];
+
+        for (let n = 0; n < limit; ++n) {
+            items.push(this._toCompletionItem(varSymbols[n]));
+        }
+
+        return <lsp.CompletionList>{
+            items: items,
+            isIncomplete: isIncomplete
+        }
+
+    }
+
+    private _toCompletionItem(s: PhpSymbol) {
+
+        return <lsp.CompletionItem>{
+            label: s.name,
+            kind: lsp.SymbolKind.Variable,
+            insertText: s.name.slice(1)
+        }
+
     }
 
 }
 
 class NameCompletion implements CompletionStrategy {
 
-    static patterns:PhraseType[][] = [
-        [PhraseType.QualifiedName, PhraseType.NamespaceName],
-        [PhraseType.FullyQualifiedName, PhraseType.NamespaceName],
-        [PhraseType.RelativeQualifiedName, PhraseType.NamespaceName]
-    ];
-
-    getPatterns(){
-        return SimpleVariableCompletion.patterns;
+    canSuggest(context: Context) {
+        let traverser = context.createTraverser();
+        return ParsedDocument.isToken(traverser.node, [TokenType.Backslash, TokenType.Name]) &&
+            ParsedDocument.isPhrase(traverser.parent(),
+                [PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName]);
     }
 
-    completions(context:Context){
+    completions(context: Context) {
 
         return noCompletionResponse;
-        
+
     }
 
 }
 
 class ScopedAccessCompletion implements CompletionStrategy {
 
-    static patterns:PhraseType[][] = [
-        [PhraseType.ScopedCallExpression],
-        [PhraseType.ErrorScopedAccessExpression],
-        [PhraseType.ScopedMemberName],
-        [PhraseType.ScopedPropertyAccessExpression],
-        [PhraseType.ScopedCallExpression, PhraseType.ScopedMemberName],
-        [PhraseType.ErrorScopedAccessExpression, PhraseType.ScopedMemberName],
-        [PhraseType.ScopedMemberName, PhraseType.ScopedMemberName],
-        [PhraseType.ScopedPropertyAccessExpression, PhraseType.ScopedMemberName],
-        [PhraseType.ScopedCallExpression, PhraseType.ScopedMemberName, PhraseType.Identifier],
-        [PhraseType.ErrorScopedAccessExpression, PhraseType.ScopedMemberName, PhraseType.Identifier],
-        [PhraseType.ScopedMemberName, PhraseType.ScopedMemberName, PhraseType.Identifier],
-        [PhraseType.ScopedPropertyAccessExpression, PhraseType.ScopedMemberName, PhraseType.Identifier]
-    ];
+    canSuggest(context: Context) {
+        let traverser = context.createTraverser();
+        let scopedAccessPhrases = [
+            PhraseType.ScopedCallExpression,
+            PhraseType.ErrorScopedAccessExpression,
+            PhraseType.ScopedMemberName,
+            PhraseType.ScopedPropertyAccessExpression
+        ];
 
-    getPatterns(){
-        return SimpleVariableCompletion.patterns;
+        if (ParsedDocument.isToken(traverser.node, [TokenType.ColonColon])) {
+            return ParsedDocument.isPhrase(traverser.parent(), scopedAccessPhrases);
+        }
+
+        if (ParsedDocument.isToken(traverser.node, [TokenType.VariableName])) {
+            return ParsedDocument.isPhrase(traverser.parent(), [PhraseType.ScopedMemberName]);
+        }
+
+        return ParsedDocument.isPhrase(traverser.parent(), [PhraseType.Identifier]) &&
+            ParsedDocument.isPhrase(traverser.parent(), [PhraseType.ScopedMemberName]);
     }
 
-    completions(context:Context){
+    completions(context: Context) {
 
         return noCompletionResponse;
-        
+
     }
 
 }
 
 class MemberAccessCompletion implements CompletionStrategy {
 
-    static patterns:PhraseType[][] = [
-        [PhraseType.PropertyAccessExpression],
-        [PhraseType.MethodCallExpression],
-        [PhraseType.PropertyAccessExpression, PhraseType.MemberName],
-        [PhraseType.MethodCallExpression, PhraseType.MemberName]
-    ];
+    canSuggest(context: Context) {
+        let traverser = context.createTraverser();
 
-    getPatterns(){
-        return SimpleVariableCompletion.patterns;
+        if (ParsedDocument.isToken(traverser.node, [TokenType.Arrow])) {
+            return ParsedDocument.isPhrase(traverser.parent(),
+                [PhraseType.PropertyAccessExpression, PhraseType.MethodCallExpression]);
+        }
+
+        return ParsedDocument.isToken(traverser.node, [TokenType.Name]) &&
+            ParsedDocument.isPhrase(traverser.parent(),
+                [PhraseType.PropertyAccessExpression, PhraseType.MethodCallExpression]);
+
     }
 
-    completions(context:Context){
+    completions(context: Context) {
 
         return noCompletionResponse;
-        
+
     }
 
 }

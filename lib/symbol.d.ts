@@ -61,7 +61,8 @@ export declare class NameResolver {
     resolveRelative(relativeName: string): string;
     resolveNotFullyQualified(notFqName: string, kind: SymbolKind): string;
     namespaceNameText(node: NamespaceName, endOffset?: number): string;
-    qualifiedNameText(node: FullyQualifiedName | QualifiedName | RelativeQualifiedName, kind: SymbolKind, endOffset?: number): string;
+    qualifiedNameText(node: FullyQualifiedName | QualifiedName | RelativeQualifiedName, kind: SymbolKind): string;
+    tokenText(t: Token, endOffset?: number): string;
     private _matchImportedSymbol(text, kind);
     private _resolveQualified(name, pos);
     private _resolveUnqualified(name, kind);
@@ -88,6 +89,7 @@ export declare class SymbolTable {
     readonly symbols: PhpSymbol[];
     readonly count: number;
     filter(predicate: Predicate<PhpSymbol>): PhpSymbol[];
+    find(predicate: Predicate<PhpSymbol>): PhpSymbol;
     static create(parsedDocument: ParsedDocument): SymbolTable;
 }
 export declare class SymbolStore {

@@ -10,6 +10,4 @@ export declare class CompletionProvider {
     provideCompletions(uri: string, position: lsp.Position): lsp.CompletionList;
     private _importedSymbolFilter(s);
     private _phraseType(p);
-    private _hasMatch(patterns, spinePattern);
-    private _isEqualPattern(pattern, spinePattern);
 }

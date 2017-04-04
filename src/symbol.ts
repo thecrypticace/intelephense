@@ -198,7 +198,7 @@ export class NameResolver {
     }
 
     qualifiedNameText(node: FullyQualifiedName | QualifiedName | RelativeQualifiedName,
-        kind: SymbolKind, endOffset?: number) {
+        kind: SymbolKind) {
 
         if (!node || !node.name) {
             return '';
@@ -215,6 +215,14 @@ export class NameResolver {
                 return name;
         }
 
+    }
+
+    tokenText(t:Token, endOffset?:number){
+        let text = this.document.tokenText(t).slice();
+        if(endOffset){
+            text = text.substr(0, endOffset + 1 - t.offset);
+        }
+        return text;
     }
 
     private _matchImportedSymbol(text: string, kind: SymbolKind) {
@@ -500,6 +508,11 @@ export class SymbolTable {
     filter(predicate: Predicate<PhpSymbol>) {
         let traverser = new TreeTraverser([this.root]);
         return traverser.filter(predicate)
+    }
+
+    find(predicate:Predicate<PhpSymbol>){
+        let traverser = new TreeTraverser([this.root]);
+        return traverser.find(predicate);
     }
 
     static create(parsedDocument: ParsedDocument) {
