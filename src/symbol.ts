@@ -22,7 +22,9 @@ import {
     AnonymousClassDeclarationHeader, AnonymousFunctionCreationExpression, AnonymousFunctionUseVariable,
     TraitUseClause, SimpleVariable, ObjectCreationExpression, TypeDesignator, SubscriptExpression,
     FunctionCallExpression, FullyQualifiedName, RelativeQualifiedName, MethodCallExpression,
-    MemberName, PropertyAccessExpression, ClassTypeDesignator
+    MemberName, PropertyAccessExpression, ClassTypeDesignator, ScopedCallExpression,
+    ScopedMemberName, ScopedPropertyAccessExpression, BinaryExpression, TernaryExpression,
+    RelativeScope
 } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam } from './phpDoc';
 import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
@@ -170,13 +172,21 @@ export class NameResolver {
             return this.thisName;
         }
 
+        if (notFqName === 'parent') {
+            return this.thisBaseName;
+        }
+
         let pos = notFqName.indexOf('\\');
         return pos < 0 ?
             this._resolveUnqualified(notFqName, kind) :
             this._resolveQualified(name, pos);
     }
 
-    namespaceNameText(node: NamespaceName, endOffset?: number) {
+    createAnonymousName(node: Phrase) {
+        return this.document.createAnonymousName(node);
+    }
+
+    namespaceNamePhraseText(node: NamespaceName, endOffset?: number) {
 
         if (!node || !node.parts || node.parts.length < 1) {
             return '';
@@ -197,14 +207,14 @@ export class NameResolver {
 
     }
 
-    qualifiedNameText(node: FullyQualifiedName | QualifiedName | RelativeQualifiedName,
+    qualifiedNamePhraseText(node: FullyQualifiedName | QualifiedName | RelativeQualifiedName,
         kind: SymbolKind) {
 
         if (!node || !node.name) {
             return '';
         }
 
-        let name = this.namespaceNameText(node.name);
+        let name = this.namespaceNamePhraseText(node.name);
         switch (node.phraseType) {
             case PhraseType.QualifiedName:
                 return this.resolveNotFullyQualified(name, kind);
@@ -217,9 +227,9 @@ export class NameResolver {
 
     }
 
-    tokenText(t:Token, endOffset?:number){
+    tokenText(t: Token, endOffset?: number) {
         let text = this.document.tokenText(t).slice();
-        if(endOffset){
+        if (endOffset) {
             text = text.substr(0, endOffset + 1 - t.offset);
         }
         return text;
@@ -324,6 +334,10 @@ export class TypeString {
     }
 
     merge(type: string | TypeString) {
+
+        if (!type) {
+            return this;
+        }
 
         let parts = util.isString(type) ? this._chunk(<string>type) : (<TypeString>type)._parts;
         Array.prototype.push.apply(parts, this._parts);
@@ -510,7 +524,7 @@ export class SymbolTable {
         return traverser.filter(predicate)
     }
 
-    find(predicate:Predicate<PhpSymbol>){
+    find(predicate: Predicate<PhpSymbol>) {
         let traverser = new TreeTraverser([this.root]);
         return traverser.find(predicate);
     }
@@ -1288,7 +1302,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     classConstantDeclaration(node: ClassConstDeclaration) {
         return node.modifierList ?
             this.modifierListElementsToSymbolModifier(node.modifierList.elements) :
-            SymbolModifier.None;
+            SymbolModifier.Public;
     }
 
     classConstElement(modifiers: SymbolModifier, node: ClassConstElement, phpDoc: PhpDoc) {
@@ -1865,7 +1879,7 @@ interface SymbolIndexNode {
 }
 
 export interface LookupVariableTypeDelegate {
-    (name: string): TypeString;
+    (name: string, offset: number): TypeString;
 }
 
 function resolveNamePhraseFqn(p: Phrase, nameResolver: NameResolver, parsedDocument: ParsedDocument, symbolKind: SymbolKind) {
@@ -1883,12 +1897,11 @@ function resolveNamePhraseFqn(p: Phrase, nameResolver: NameResolver, parsedDocum
     }
 }
 
-export class ExpressionResolver {
+export class ExpressionTypeResolver {
 
     constructor(
         public nameResolver: NameResolver,
         public symbolStore: SymbolStore,
-        public parsedDocument: ParsedDocument,
         public lookupVariableTypeDelegate: LookupVariableTypeDelegate) {
 
     }
@@ -1896,7 +1909,7 @@ export class ExpressionResolver {
     resolveExpression(node: Phrase | Token): TypeString {
 
         if (!node) {
-            return new TypeString('');
+            return null;
         }
 
         switch ((<Phrase>node).phraseType) {
@@ -1906,48 +1919,129 @@ export class ExpressionResolver {
             case PhraseType.SubscriptExpression:
                 return this.subscriptExpression(<SubscriptExpression>node);
             case PhraseType.ScopedCallExpression:
+                return this.scopedMemberAccessExpression(<ScopedCallExpression>node, SymbolKind.Method);
             case PhraseType.ScopedPropertyAccessExpression:
-
+                return this.scopedMemberAccessExpression(<ScopedPropertyAccessExpression>node, SymbolKind.Property);
             case PhraseType.PropertyAccessExpression:
-                return this.propertyAccessExpression(<PropertyAccessExpression>node);
+                return this.instanceMemberAccessExpression(<PropertyAccessExpression>node, SymbolKind.Property);
+            case PhraseType.MethodCallExpression:
+                return this.instanceMemberAccessExpression(<MethodCallExpression>node, SymbolKind.Method);
             case PhraseType.FunctionCallExpression:
                 return this.functionCallExpression(<FunctionCallExpression>node);
             case PhraseType.TernaryExpression:
-
-            case PhraseType.MethodCallExpression:
-                return this.methodCallExpression(<MethodCallExpression>node);
+                return this.ternaryExpression(<TernaryExpression>node);
             case PhraseType.SimpleAssignmentExpression:
             case PhraseType.ByRefAssignmentExpression:
-
+                return this.resolveExpression((<BinaryExpression>node).right);
             case PhraseType.ObjectCreationExpression:
-
+                return this.objectCreationExpression(<ObjectCreationExpression>node);
             case PhraseType.ClassTypeDesignator:
             case PhraseType.InstanceofTypeDesignator:
-
+                return this.classTypeDesignator(<any>node);
+            case PhraseType.AnonymousClassDeclaration:
+                return new TypeString(this.nameResolver.createAnonymousName(<AnonymousClassDeclaration>node));
             default:
                 return null;
         }
 
     }
 
-    classTypeDesignator(node: ClassTypeDesignator) {
+    ternaryExpression(node: TernaryExpression) {
 
-        if (!node.type) {
+        return new TypeString('')
+            .merge(this.resolveExpression(node.trueExpr))
+            .merge(this.resolveExpression(node.falseExpr));
+
+    }
+
+    scopedMemberAccessExpression(node: ScopedPropertyAccessExpression | ScopedCallExpression, kind: SymbolKind) {
+
+        let memberName = this.scopedMemberName(node.memberName);
+
+        let scopeTypeString: TypeString;
+        if (ParsedDocument.isPhrase(node.scope, [PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName])) {
+            scopeTypeString = new TypeString(this.nameResolver.qualifiedNamePhraseText(<any>node.scope, SymbolKind.Class));
+        } else if (ParsedDocument.isPhrase(node.scope, [PhraseType.RelativeScope])) {
+            scopeTypeString = new TypeString(this.nameResolver.thisName);
+        } else {
+            scopeTypeString = this.resolveExpression(node.scope);
+        }
+
+        if (!scopeTypeString || scopeTypeString.isEmpty() || !memberName) {
             return null;
         }
 
+        let typeNames = scopeTypeString.atomicClassArray();
+        let symbols = this.lookupMemberOnTypes(typeNames, kind, memberName, SymbolModifier.Static, 0);
+        return this.mergeTypes(symbols);
+
+    }
+
+    lookupMemberOnTypes(typeNames: string[], kind: SymbolKind, memberName: string, modifierMask: SymbolModifier, notModifierMask: SymbolModifier) {
+
+        let symbols: PhpSymbol[] = [];
+        let s: PhpSymbol;
+        let visibilityNotModifierMask = 0;
+        let typeName: string;
+
+        for (let n = 0, l = typeNames.length; n < l; ++n) {
+
+            typeName = typeNames[n];
+            if (typeName === this.nameResolver.thisName) {
+                visibilityNotModifierMask = 0;
+            } else if (typeName === this.nameResolver.thisBaseName) {
+                visibilityNotModifierMask = SymbolModifier.Private;
+            } else {
+                visibilityNotModifierMask = SymbolModifier.Private | SymbolModifier.Protected;
+            }
+
+            let memberPredicate = (x: PhpSymbol) => {
+                return x.kind === kind &&
+                    (!modifierMask || (x.modifiers & modifierMask) > 0) &&
+                    !(visibilityNotModifierMask & x.modifiers) &&
+                    !(notModifierMask & x.modifiers) &&
+                    x.name === memberName;
+            }
+
+            s = this.symbolStore.lookupTypeMember(typeName, memberPredicate);
+            if (s) {
+                symbols.push(s);
+            }
+        }
+
+        return symbols;
+
+    }
+
+    scopedMemberName(node: ScopedMemberName) {
+
+        if (node && ParsedDocument.isToken(node.name, [TokenType.VariableName])) {
+            return this.nameResolver.tokenText(<Token>node.name);
+        } else if (node && ParsedDocument.isPhrase(node.name, [PhraseType.Identifier])) {
+            return this.nameResolver.tokenText((<Identifier>node.name).name);
+        }
+
+        return '';
+    }
+
+    classTypeDesignator(node: ClassTypeDesignator) {
+
+        if (node && ParsedDocument.isPhrase(node.type,
+            [PhraseType.QualifiedName | PhraseType.FullyQualifiedName | PhraseType.RelativeQualifiedName])) {
+            return new TypeString(this.nameResolver.qualifiedNamePhraseText(<any>node.type, SymbolKind.Class));
+        } else if (node && ParsedDocument.isPhrase(node.type, [PhraseType.RelativeScope])) {
+            return new TypeString(this.nameResolver.thisName);
+        } else {
+            return null;
+        }
 
     }
 
     objectCreationExpression(node: ObjectCreationExpression) {
 
-        if (!node.type) {
-            return null;
-        }
-
-        if (node.type.phraseType === PhraseType.AnonymousClassDeclaration) {
-            return this.parsedDocument.createAnonymousName(node);
-        } else if (node.type.phraseType === PhraseType.ClassTypeDesignator) {
+        if (ParsedDocument.isPhrase(node.type, [PhraseType.AnonymousClassDeclaration])) {
+            return new TypeString(this.nameResolver.createAnonymousName(node));
+        } else if (ParsedDocument.isPhrase(node.type, [PhraseType.ClassTypeDesignator])) {
             return this.classTypeDesignator(<ClassTypeDesignator>node.type);
         } else {
             return null;
@@ -1955,16 +2049,13 @@ export class ExpressionResolver {
 
     }
 
-    anonymousClassDeclaration(node: AnonymousClassDeclaration) {
-
-    }
-
     simpleVariable(node: SimpleVariable) {
-        if (!node.name || (<Token>node.name).tokenType !== TokenType.VariableName) {
-            return null;
+        if (ParsedDocument.isToken(node.name, [TokenType.VariableName])) {
+            return this.lookupVariableTypeDelegate(
+                this.nameResolver.tokenText((<Token>node.name)), (<Token>node.name).offset);
         }
 
-        return this.lookupVariableTypeDelegate(this.parsedDocument.tokenText((<Token>node.name)));
+        return null;
     }
 
     subscriptExpression(node: SubscriptExpression) {
@@ -1975,80 +2066,35 @@ export class ExpressionResolver {
     functionCallExpression(node: FunctionCallExpression) {
 
         let qName = <Phrase>node.callableExpr;
-        if (ParsedDocument.isPhrase(qName,
+        if (!ParsedDocument.isPhrase(qName,
             [PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName])) {
             return null;
         }
 
-        let functionName = resolveNamePhraseFqn(qName, this.nameResolver, this.parsedDocument, SymbolKind.Function);
+        let functionName = this.nameResolver.qualifiedNamePhraseText(<any>qName, SymbolKind.Function)
         let symbol = this.symbolStore.find(functionName, (x) => { return x.kind === SymbolKind.Function });
         return symbol && symbol.type ? symbol.type : null;
 
     }
 
-    methodCallExpression(node: MethodCallExpression) {
-
-        if (!node.memberName || node.variable) {
-            return null;
-        }
-
-        let methodName = ParsedDocument.isToken(node.memberName) ?
-            this.parsedDocument.tokenText(<Token>node.memberName) :
-            this.memberName(<MemberName>node.memberName);
-
-        let type = this.resolveExpression(node.variable);
-
-        if (!methodName || !type) {
-            return null;
-        }
-
-        return this.mergeTypes(this.lookupMemberSymbols(type.atomicClassArray(), methodName, SymbolKind.Method));
-
-    }
-
     memberName(node: MemberName) {
-        return this.parsedDocument.tokenText((<Token>node.name));
+        return node ? this.nameResolver.tokenText((<Token>node.name)) : '';
     }
 
-    propertyAccessExpression(node: PropertyAccessExpression) {
+    instanceMemberAccessExpression(node: PropertyAccessExpression, kind: SymbolKind) {
 
-        if (!node.memberName || !node.variable) {
-            return null;
-        }
-
-        let propName = ParsedDocument.isToken(node.memberName) ?
-            this.parsedDocument.tokenText(<Token>node.memberName) :
+        let memberName = ParsedDocument.isToken(node.memberName) ?
+            this.nameResolver.tokenText(<Token>node.memberName) :
             this.memberName(<MemberName>node.memberName);
 
         let type = this.resolveExpression(node.variable);
 
-        if (!propName || !type) {
+        if (!memberName || !type) {
             return null;
         }
 
-        let propSymbols = this.lookupMemberSymbols(type.atomicClassArray(), propName, SymbolKind.Property);
-        return this.mergeTypes(propSymbols);
-
-    }
-
-    lookupMemberSymbols(typeNames: string[], memberName: string, kind: SymbolKind) {
-
-        let member: PhpSymbol;
-        let members: PhpSymbol[] = [];
-        let memberPredicate: Predicate<PhpSymbol> = (x) => {
-            return kind === x.kind && memberName === x.name;
-        }
-
-        for (let n = 0, l = typeNames.length; n < l; ++n) {
-
-            member = this.symbolStore.lookupTypeMember(typeNames[n], memberPredicate);
-            if (member) {
-                members.push(member);
-            }
-
-        }
-
-        return members;
+        let symbols = this.lookupMemberOnTypes(type.atomicClassArray(), kind, memberName, 0, SymbolModifier.Static);
+        return this.mergeTypes(symbols);
 
     }
 
@@ -2058,13 +2104,10 @@ export class ExpressionResolver {
         let symbol: PhpSymbol;
 
         for (let n = 0, l = symbols.length; n < l; ++n) {
-            symbol = symbols[n];
-            if (symbol.type) {
-                type = type.merge(symbol.type);
-            }
+            type = type.merge(symbols[n].type);
         }
 
-        return type;
+        return !type.isEmpty() ? type : null;
     }
 
 }
