@@ -165,7 +165,7 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
         let nsNameNode = traverser.parent() as NamespaceName;
         let qNameNode = traverser.parent() as Phrase;
         let nameResolver = context.createNameResolver();
-        let text = nameResolver.namespaceNameText(nsNameNode, context.offset);
+        let text = nameResolver.namespaceNamePhraseText(nsNameNode, context.offset);
         if (!text) {
             return noCompletionResponse;
         }
@@ -347,7 +347,7 @@ class NameCompletion implements CompletionStrategy {
         let qNameNode = traverser.parent() as Phrase;
         let qNameParent = traverser.parent() as Phrase;
         let nameResolver = context.createNameResolver();
-        let text = nameResolver.namespaceNameText(nsNameNode, context.offset);
+        let text = nameResolver.namespaceNamePhraseText(nsNameNode, context.offset);
 
         if (!text) {
             return noCompletionResponse;

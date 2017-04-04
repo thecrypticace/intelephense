@@ -1,6 +1,6 @@
 import { Location } from 'vscode-languageserver-types';
 import { Predicate, TreeVisitor } from './types';
-import { Phrase, Token, NamespaceName, FunctionDeclarationHeader, TypeDeclaration, QualifiedName, ParameterDeclaration, ConstElement, FunctionDeclaration, ClassDeclaration, ClassDeclarationHeader, ClassBaseClause, ClassInterfaceClause, QualifiedNameList, InterfaceDeclaration, InterfaceDeclarationHeader, InterfaceBaseClause, TraitDeclaration, TraitDeclarationHeader, ClassConstDeclaration, ClassConstElement, Identifier, MethodDeclaration, MethodDeclarationHeader, PropertyDeclaration, PropertyElement, MemberModifierList, NamespaceDefinition, NamespaceUseDeclaration, NamespaceUseClause, AnonymousClassDeclaration, AnonymousFunctionCreationExpression, AnonymousFunctionUseVariable, TraitUseClause, SimpleVariable, ObjectCreationExpression, SubscriptExpression, FunctionCallExpression, FullyQualifiedName, RelativeQualifiedName, MethodCallExpression, MemberName, PropertyAccessExpression, ClassTypeDesignator } from 'php7parser';
+import { Phrase, Token, NamespaceName, FunctionDeclarationHeader, TypeDeclaration, QualifiedName, ParameterDeclaration, ConstElement, FunctionDeclaration, ClassDeclaration, ClassDeclarationHeader, ClassBaseClause, ClassInterfaceClause, QualifiedNameList, InterfaceDeclaration, InterfaceDeclarationHeader, InterfaceBaseClause, TraitDeclaration, TraitDeclarationHeader, ClassConstDeclaration, ClassConstElement, Identifier, MethodDeclaration, MethodDeclarationHeader, PropertyDeclaration, PropertyElement, MemberModifierList, NamespaceDefinition, NamespaceUseDeclaration, NamespaceUseClause, AnonymousClassDeclaration, AnonymousFunctionCreationExpression, AnonymousFunctionUseVariable, TraitUseClause, SimpleVariable, ObjectCreationExpression, SubscriptExpression, FunctionCallExpression, FullyQualifiedName, RelativeQualifiedName, MemberName, PropertyAccessExpression, ClassTypeDesignator, ScopedCallExpression, ScopedMemberName, ScopedPropertyAccessExpression, TernaryExpression } from 'php7parser';
 import { PhpDoc, Tag, MethodTagParam } from './phpDoc';
 import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
 export declare const enum SymbolKind {
@@ -60,8 +60,9 @@ export declare class NameResolver {
     constructor(document: ParsedDocument, importedSymbols: PhpSymbol[], namespaceName: string, thisName: string, thisBaseName: string);
     resolveRelative(relativeName: string): string;
     resolveNotFullyQualified(notFqName: string, kind: SymbolKind): string;
-    namespaceNameText(node: NamespaceName, endOffset?: number): string;
-    qualifiedNameText(node: FullyQualifiedName | QualifiedName | RelativeQualifiedName, kind: SymbolKind): string;
+    createAnonymousName(node: Phrase): string;
+    namespaceNamePhraseText(node: NamespaceName, endOffset?: number): string;
+    qualifiedNamePhraseText(node: FullyQualifiedName | QualifiedName | RelativeQualifiedName, kind: SymbolKind): string;
     tokenText(t: Token, endOffset?: number): string;
     private _matchImportedSymbol(text, kind);
     private _resolveQualified(name, pos);
@@ -198,24 +199,24 @@ export declare class SymbolIndex {
     private _symbolSuffixes(s);
 }
 export interface LookupVariableTypeDelegate {
-    (name: string): TypeString;
+    (name: string, offset: number): TypeString;
 }
-export declare class ExpressionResolver {
+export declare class ExpressionTypeResolver {
     nameResolver: NameResolver;
     symbolStore: SymbolStore;
-    parsedDocument: ParsedDocument;
     lookupVariableTypeDelegate: LookupVariableTypeDelegate;
-    constructor(nameResolver: NameResolver, symbolStore: SymbolStore, parsedDocument: ParsedDocument, lookupVariableTypeDelegate: LookupVariableTypeDelegate);
+    constructor(nameResolver: NameResolver, symbolStore: SymbolStore, lookupVariableTypeDelegate: LookupVariableTypeDelegate);
     resolveExpression(node: Phrase | Token): TypeString;
-    classTypeDesignator(node: ClassTypeDesignator): any;
-    objectCreationExpression(node: ObjectCreationExpression): any;
-    anonymousClassDeclaration(node: AnonymousClassDeclaration): void;
+    ternaryExpression(node: TernaryExpression): TypeString;
+    scopedMemberAccessExpression(node: ScopedPropertyAccessExpression | ScopedCallExpression, kind: SymbolKind): TypeString;
+    lookupMemberOnTypes(typeNames: string[], kind: SymbolKind, memberName: string, modifierMask: SymbolModifier, notModifierMask: SymbolModifier): PhpSymbol[];
+    scopedMemberName(node: ScopedMemberName): string;
+    classTypeDesignator(node: ClassTypeDesignator): TypeString;
+    objectCreationExpression(node: ObjectCreationExpression): TypeString;
     simpleVariable(node: SimpleVariable): TypeString;
     subscriptExpression(node: SubscriptExpression): TypeString;
     functionCallExpression(node: FunctionCallExpression): TypeString;
-    methodCallExpression(node: MethodCallExpression): TypeString;
     memberName(node: MemberName): string;
-    propertyAccessExpression(node: PropertyAccessExpression): TypeString;
-    lookupMemberSymbols(typeNames: string[], memberName: string, kind: SymbolKind): PhpSymbol[];
+    instanceMemberAccessExpression(node: PropertyAccessExpression, kind: SymbolKind): TypeString;
     mergeTypes(symbols: PhpSymbol[]): TypeString;
 }
