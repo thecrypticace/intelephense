@@ -56,7 +56,7 @@ export class TreeTraverser<T extends TreeLike> {
     private _spine: T[];
 
     constructor(spine: T[]) {
-        this._spine = spine;
+        this._spine = spine.slice(0);
     }
 
     get spine() {

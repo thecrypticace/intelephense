@@ -88,6 +88,7 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
     canSuggest(context: Context) {
 
         let traverser = context.createTraverser();
+
         return ParsedDocument.isToken(traverser.node, [TokenType.Backslash, TokenType.Name]) &&
             ParsedDocument.isPhrase(traverser.parent(), [PhraseType.NamespaceName]) &&
             ParsedDocument.isPhrase(traverser.parent(),
@@ -104,7 +105,6 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
         let qNameNode = traverser.parent() as Phrase;
         let nameResolver = context.createNameResolver();
         let text = nameResolver.namespaceNameText(nsNameNode, context.offset);
-
         if (!text) {
             return noCompletionResponse;
         }
@@ -114,6 +114,7 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
         }
 
         let matches = context.symbolStore.match(text, this._symbolFilter);
+
         let limit = Math.min(matches.length, this.maxSuggestions);
         let isIncomplete = matches.length > this.maxSuggestions;
 
