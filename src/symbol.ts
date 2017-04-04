@@ -427,77 +427,6 @@ export class TypeString {
 
 }
 
-/*
-export class SymbolTree {
-
-    static parametersPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
-        return x.value.kind === SymbolKind.Parameter;
-    };
-
-    static closureUseVariablesPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
-        return x.value.kind === SymbolKind.Variable &&
-            (x.value.modifiers & SymbolModifier.Use) > 0;
-    };
-
-    static variablesPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
-        return x.value.kind === SymbolKind.Variable;
-    };
-
-    static instanceExternalMembersPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
-        return (x.value.kind === SymbolKind.Property || x.value.kind === SymbolKind.Method) &&
-            (x.value.modifiers & SymbolModifier.Public) > 0 &&
-            !(x.value.modifiers & SymbolModifier.Static);
-    }
-
-    static instanceInternalMembersPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
-        return (x.value.kind === SymbolKind.Property || x.value.kind === SymbolKind.Method) &&
-            !(x.value.modifiers & SymbolModifier.Static);
-    }
-
-    static instanceInheritedMembersPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
-        return (x.value.kind === SymbolKind.Property || x.value.kind === SymbolKind.Method) &&
-            (x.value.modifiers & (SymbolModifier.Public | SymbolModifier.Protected)) > 0 &&
-            !(x.value.modifiers & SymbolModifier.Static);
-    }
-
-    static staticInternalMembersPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
-        return (x.value.kind === SymbolKind.Property ||
-            x.value.kind === SymbolKind.Method ||
-            x.value.kind === SymbolKind.Constant) &&
-            (x.value.modifiers & SymbolModifier.Static) > 0;
-    }
-
-    static staticExternalMembersPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
-        return (x.value.kind === SymbolKind.Property ||
-            x.value.kind === SymbolKind.Method ||
-            x.value.kind === SymbolKind.Constant) &&
-            (x.value.modifiers & SymbolModifier.Public) > 0 &&
-            (x.value.modifiers & SymbolModifier.Static) > 0;
-    }
-
-    static staticInheritedMembersPredicate: Predicate<Tree<PhpSymbol>> = (x) => {
-        return (x.value.kind === SymbolKind.Property ||
-            x.value.kind === SymbolKind.Method ||
-            x.value.kind === SymbolKind.Constant) &&
-            (x.value.modifiers & (SymbolModifier.Public | SymbolModifier.Protected)) > 0 &&
-            (x.value.modifiers & SymbolModifier.Static) > 0;
-    }
-
-    static parameters(node: Tree<PhpSymbol>) {
-        return node.children.filter(SymbolTree.parametersPredicate);
-    }
-
-    static closureUseVariables(node: Tree<PhpSymbol>) {
-        return node.children.filter(SymbolTree.closureUseVariablesPredicate);
-    }
-
-    static variables(node: Tree<PhpSymbol>) {
-        return node.children.filter(SymbolTree.variablesPredicate);
-    }
-
-}
-*/
-
 export class SymbolTable {
 
     constructor(
@@ -1879,22 +1808,7 @@ interface SymbolIndexNode {
 }
 
 export interface LookupVariableTypeDelegate {
-    (name: string, offset: number): TypeString;
-}
-
-function resolveNamePhraseFqn(p: Phrase, nameResolver: NameResolver, parsedDocument: ParsedDocument, symbolKind: SymbolKind) {
-    switch (p.phraseType) {
-        case PhraseType.RelativeQualifiedName:
-            return nameResolver.resolveRelative(
-                parsedDocument.namespaceNameToString((<FullyQualifiedName>p).name));
-        case PhraseType.QualifiedName:
-            return nameResolver.resolveNotFullyQualified(
-                parsedDocument.namespaceNameToString((<FullyQualifiedName>p).name), symbolKind);
-        case PhraseType.FullyQualifiedName:
-            return parsedDocument.namespaceNameToString((<FullyQualifiedName>p).name);
-        default:
-            return '';
-    }
+    (t:Token): TypeString;
 }
 
 export class ExpressionTypeResolver {
@@ -2051,8 +1965,7 @@ export class ExpressionTypeResolver {
 
     simpleVariable(node: SimpleVariable) {
         if (ParsedDocument.isToken(node.name, [TokenType.VariableName])) {
-            return this.lookupVariableTypeDelegate(
-                this.nameResolver.tokenText((<Token>node.name)), (<Token>node.name).offset);
+            return this.lookupVariableTypeDelegate(<Token>node.name);
         }
 
         return null;
@@ -2112,3 +2025,269 @@ export class ExpressionTypeResolver {
 
 }
 
+export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
+
+    private _haltAtNode: Phrase | Token;
+    private _exprResolver: ExpressionTypeResolver;
+    private _varName: string;
+
+    haltTraverse: boolean;
+
+    constructor(public variableTable: VariableTable,
+        public nameResolver: NameResolver,
+        public symbolStore: SymbolStore,
+        haltAtNode: Phrase | Token = null,
+        varName: string = null) {
+        this._exprResolver = exprResolver;
+        this._haltAtNode = haltAtNode;
+        this.haltTraverse = false;
+        this._varName = varName;
+    }
+
+    preOrder(node: Tree<Phrase | Token>) {
+
+        if (this._haltAtNode === node) {
+            this.haltTraverse = true;
+            return false;
+        }
+
+        if (!node.value) {
+            return false;
+        }
+
+        switch ((<Phrase>node.value).phraseType) {
+            case PhraseType.FunctionDeclaration:
+                this._methodOrFunction(node, SymbolKind.Function);
+                return true;
+            case PhraseType.MethodDeclaration:
+                this._methodOrFunction(node, SymbolKind.Method);
+                return true;
+            case PhraseType.ClassDeclaration:
+            case PhraseType.TraitDeclaration:
+            case PhraseType.InterfaceDeclaration:
+            case PhraseType.AnonymousClassDeclaration:
+                this.variableTable.pushScope();
+                return true;
+            case PhraseType.Closure:
+                this._closure(node);
+                return true;
+            case PhraseType.IfList:
+            case PhraseType.Switch:
+                this.variableTable.pushBranchGroup();
+                return true;
+            case PhraseType.If:
+            case PhraseType.Case:
+                this.variableTable.pushBranch();
+                return true;
+            case PhraseType.BinaryExpression:
+                if ((<Phrase>node.value).flag === PhraseFlag.BinaryAssign ||
+                    (<Phrase>node.value).flag === PhraseFlag.BinaryInstanceOf) {
+                    this._binaryExpression(node);
+                }
+                return true;
+            case PhraseType.Foreach:
+                this._foreach(node);
+                return true;
+            default:
+                return true;
+        }
+
+    }
+
+    postOrder(node: Tree<Phrase | Token>) {
+
+        if (!node.value) {
+            return;
+        }
+
+        switch ((<Phrase>node.value).phraseType) {
+            case PhraseType.IfList:
+            case PhraseType.Switch:
+                this.variableTable.popBranchGroup();
+                break;
+            case PhraseType.If:
+            case PhraseType.Case:
+                this.variableTable.popBranch();
+                break;
+            case PhraseType.FunctionDeclaration:
+            case PhraseType.MethodDeclaration:
+            case PhraseType.ClassDeclaration:
+            case PhraseType.TraitDeclaration:
+            case PhraseType.InterfaceDeclaration:
+            case PhraseType.AnonymousClassDeclaration:
+            case PhraseType.Closure:
+                this.variableTable.popScope();
+                break;
+            default:
+                break;
+        }
+
+    }
+
+    private _methodOrFunction(node: Tree<Phrase | Token>, kind: SymbolKind) {
+
+        this.variableTable.pushScope();
+        let name = tokenNodeToString(node.children[0]);
+
+        if (!name) {
+            return;
+        }
+
+        let symbol: Tree<PhpSymbol>;
+
+        if (kind === SymbolKind.Function) {
+            name = this.nameResolver.resolveRelative(name);
+            symbol = this.symbolStore.match(name, SymbolKind.Function).shift();
+        } else {
+            symbol = this.symbolStore.lookupTypeMember(this.nameResolver.thisName, SymbolKind.Method, name);
+        }
+
+        if (symbol) {
+            this._variableTableSetParams(SymbolTree.parameters(symbol));
+        }
+
+    }
+
+    private _closure(node: Tree<Phrase | Token>) {
+
+        let name = anonymousName(node);
+        let symbol = this.symbolStore.match(name, SymbolKind.Function).shift();
+
+        if (symbol) {
+            let useVarNames = SymbolTree.closureUseVariables(symbol).map((v, i, a) => {
+                return v.value.name;
+            });
+
+            this.variableTable.pushScope(useVarNames);
+            this._variableTableSetParams(SymbolTree.parameters(symbol));
+        }
+
+    }
+
+    private _variableTableSetParams(parameters: Tree<PhpSymbol>[]) {
+        for (let n = 0; n < parameters.length; ++n) {
+            if (parameters[n].value.type) {
+                this.variableTable.setType(parameters[n].value.name, parameters[n].value.type);
+            }
+        }
+    }
+
+    private _binaryExpression(node: Tree<Phrase | Token>) {
+
+        let lhs = node.children[0];
+        let rhs = node.children[1];
+
+        //if only resolving single variable then check it's in this expr
+        if (this._varName && !this._varExists(lhs, this._varName)) {
+            return;
+        }
+
+        if (!lhs.value ||
+            ((<Phrase>lhs.value).phraseType !== PhraseType.Variable &&
+                (<Phrase>lhs.value).phraseType !== PhraseType.Array &&
+                (<Phrase>lhs.value).phraseType !== PhraseType.Dimension) ||
+            !rhs.value) {
+            return;
+        }
+
+        this._exprResolver.clear();
+        rhs.traverse(this._exprResolver);
+        if (!this._exprResolver.type || this._exprResolver.type.isEmpty()) {
+            return;
+        }
+
+        this._assignType(lhs, this._exprResolver.type);
+
+    }
+
+    private _foreach(node: Tree<Phrase | Token>) {
+
+        let expr1 = node.children[0];
+        let expr3 = node.children[2];
+
+        //if only resolving single variable then check it's in this expr
+        if (this._varName && !this._varExists(expr3, this._varName)) {
+            return;
+        }
+
+        if (!expr3.value ||
+            ((<Phrase>expr3.value).phraseType !== PhraseType.Variable &&
+                (<Phrase>expr3.value).phraseType !== PhraseType.Array &&
+                (<Phrase>expr3.value).phraseType !== PhraseType.Dimension) ||
+            !expr1.value) {
+            return;
+        }
+
+        this._exprResolver.clear();
+        expr1.traverse(this._exprResolver);
+        if (!this._exprResolver.type || this._exprResolver.type.isEmpty()) {
+            return;
+        }
+
+        this._assignType(expr3, this._exprResolver.type);
+
+    }
+
+    private _varExists(node: Tree<Phrase | Token>, varName: string) {
+
+        return !!node.find((x) => {
+            return x.value && (<Token>x.value).text === varName;
+        });
+    }
+
+    private _assignType(node: Tree<Phrase | Token>, typeString: TypeString) {
+
+        if (!node.value) {
+            return;
+        }
+
+        switch ((<Phrase>node.value).phraseType) {
+            case PhraseType.Array:
+                this._array(node, typeString);
+            case PhraseType.ArrayPair:
+                this._arrayPair(node.children[1], typeString);
+                break;
+            case PhraseType.Dimension:
+                this._dimension(node, typeString);
+                break;
+            case PhraseType.Variable:
+                this._variable(node, typeString);
+                break;
+            default:
+                break;
+        }
+
+    }
+
+    private _dimension(node: Tree<Phrase | Token>, typeString: TypeString) {
+        this._assignType(node.children[0], typeString.array());
+    }
+
+    private _array(node: Tree<Phrase | Token>, typeString: TypeString) {
+        let type = typeString.arrayDereference();
+
+        if (!node.children) {
+            return;
+        }
+
+        for (let n = 0; n < node.children.length; ++n) {
+            this._arrayPair(node.children[n], type);
+        }
+    }
+
+    private _arrayPair(node: Tree<Phrase | Token>, typeString: TypeString) {
+        this._assignType(node.children[1], typeString);
+    }
+
+    private _variable(node: Tree<Phrase | Token>, typeString: TypeString) {
+
+        if (node.children && node.children.length &&
+            (<Token>node.children[0].value).tokenType === TokenType.T_VARIABLE &&
+            typeString &&
+            !typeString.isEmpty()) {
+            this.variableTable.setType((<Token>node.children[0].value).text, typeString);
+        }
+
+    }
+
+}
