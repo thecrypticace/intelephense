@@ -165,6 +165,10 @@ export class PhpDoc {
         return this.tags.filter(PhpDoc.isMethodTag);
     }
 
+    get varTags() {
+        return this.tags.filter(PhpDoc.isVarTag);
+    }
+
     findParamTag(name: string) {
         let fn = (x) => {
             return x.tagName === '@param' && x.name === name;
@@ -194,6 +198,10 @@ export namespace PhpDoc {
 
     export function isMethodTag(t: Tag) {
         return t.tagName === '@method';
+    }
+
+    export function isVarTag(t:Tag){
+        return t.tagName === '@var';
     }
 
 }
