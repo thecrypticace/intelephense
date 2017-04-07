@@ -1,4 +1,4 @@
-import { Location } from 'vscode-languageserver-types';
+import { Position, Location } from 'vscode-languageserver-types';
 import { Predicate, TreeVisitor } from './types';
 import { Phrase, Token, NamespaceName, FunctionDeclarationHeader, TypeDeclaration, QualifiedName, ParameterDeclaration, ConstElement, FunctionDeclaration, ClassDeclaration, ClassDeclarationHeader, ClassBaseClause, ClassInterfaceClause, QualifiedNameList, InterfaceDeclaration, InterfaceDeclarationHeader, InterfaceBaseClause, TraitDeclaration, TraitDeclarationHeader, ClassConstDeclaration, ClassConstElement, Identifier, MethodDeclaration, MethodDeclarationHeader, PropertyDeclaration, PropertyElement, MemberModifierList, NamespaceDefinition, NamespaceUseDeclaration, NamespaceUseClause, AnonymousClassDeclaration, AnonymousFunctionCreationExpression, AnonymousFunctionUseVariable, TraitUseClause, SimpleVariable, ObjectCreationExpression, SubscriptExpression, FunctionCallExpression, FullyQualifiedName, RelativeQualifiedName, MemberName, PropertyAccessExpression, ClassTypeDesignator, ScopedCallExpression, ScopedMemberName, ScopedPropertyAccessExpression, TernaryExpression } from 'php7parser';
 import { PhpDoc, Tag, MethodTagParam } from './phpDoc';
@@ -91,6 +91,7 @@ export declare class SymbolTable {
     readonly count: number;
     filter(predicate: Predicate<PhpSymbol>): PhpSymbol[];
     find(predicate: Predicate<PhpSymbol>): PhpSymbol;
+    symbolAtPosition(position: Position): PhpSymbol;
     static create(parsedDocument: ParsedDocument): SymbolTable;
 }
 export declare class SymbolStore {

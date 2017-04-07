@@ -28,6 +28,8 @@ export declare class TreeTraverser<T extends TreeLike> {
     filter(predicate: Predicate<T>): T[];
     toArray(): T[];
     count(): number;
+    depth(): number;
+    up(n: number): void;
     find(predicate: Predicate<T>): T;
     prevSibling(): T;
     nextSibling(): T;

@@ -91,6 +91,15 @@ export class TreeTraverser<T extends TreeLike> {
         return visitor.count;
     }
 
+    depth(){
+        return this._spine.length - 1;
+    }
+
+    up(n:number){
+        let steps = Math.max(this._spine.length -1, n);
+        this._spine = this._spine.slice(0, this._spine.length - steps);
+    }
+
     find(predicate: Predicate<T>) {
 
         let visitor = new FindVisitor<T>(predicate);

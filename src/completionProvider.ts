@@ -10,7 +10,7 @@ import {
 } from 'php7parser';
 import {
     PhpSymbol, SymbolStore, SymbolTable, SymbolKind, SymbolModifier,
-    TypeString, NameResolver
+    TypeString, NameResolver, ExpressionTypeResolver, VariableTypeResolver
 } from './symbol';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Predicate } from './types';
@@ -62,8 +62,7 @@ function toNameCompletionItem(s: PhpSymbol, namespace: string, namePhraseType: P
         label: label,
         kind: kind,
         detail: detail,
-        documentation: s.description,
-        insertText:label + '($1)'
+        documentation: s.description
     }
 
 }
@@ -391,6 +390,10 @@ class NameCompletion implements CompletionStrategy {
 
 class ScopedAccessCompletion implements CompletionStrategy {
 
+    constructor(public symbolStore:SymbolStore){
+
+    }
+
     canSuggest(context: Context) {
         let traverser = context.createTraverser();
         let scopedAccessPhrases = [
@@ -414,8 +417,25 @@ class ScopedAccessCompletion implements CompletionStrategy {
 
     completions(context: Context) {
 
+        let traverser = context.createTraverser();
+        let accessee = traverser.ancestor(this._isScopedAccessExpr);
+
+        let typeResolver = context.createExpressionTypeResolver();
+
         return noCompletionResponse;
 
+    }
+
+    private _isScopedAccessExpr(node:Phrase|Token){
+        switch((<Phrase>node).phraseType){
+            case PhraseType.ScopedCallExpression:
+            case PhraseType.ErrorScopedAccessExpression:
+            case PhraseType.ScopedMemberName:
+            case PhraseType.ScopedPropertyAccessExpression:
+                return true;
+            default:
+                return false;
+        }
     }
 
 }
