@@ -19,6 +19,7 @@ export declare class PhpDoc {
     readonly returnTag: Tag;
     readonly propertyTags: Tag[];
     readonly methodTags: Tag[];
+    readonly varTags: Tag[];
     findParamTag(name: string): Tag;
     findVarTag(name: string): Tag;
 }
@@ -26,4 +27,5 @@ export declare namespace PhpDoc {
     function isPropertyTag(t: Tag): boolean;
     function isReturnTag(t: Tag): boolean;
     function isMethodTag(t: Tag): boolean;
+    function isVarTag(t: Tag): boolean;
 }

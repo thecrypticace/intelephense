@@ -199,13 +199,13 @@ export declare class SymbolIndex {
     private _symbolSuffixes(s);
 }
 export interface LookupVariableTypeDelegate {
-    (name: string, offset: number): TypeString;
+    (t: Token): TypeString;
 }
 export declare class ExpressionTypeResolver {
     nameResolver: NameResolver;
     symbolStore: SymbolStore;
-    lookupVariableTypeDelegate: LookupVariableTypeDelegate;
-    constructor(nameResolver: NameResolver, symbolStore: SymbolStore, lookupVariableTypeDelegate: LookupVariableTypeDelegate);
+    variableTable: VariableTable;
+    constructor(nameResolver: NameResolver, symbolStore: SymbolStore, variableTable: VariableTable);
     resolveExpression(node: Phrase | Token): TypeString;
     ternaryExpression(node: TernaryExpression): TypeString;
     scopedMemberAccessExpression(node: ScopedPropertyAccessExpression | ScopedCallExpression, kind: SymbolKind): TypeString;
@@ -219,4 +219,46 @@ export declare class ExpressionTypeResolver {
     memberName(node: MemberName): string;
     instanceMemberAccessExpression(node: PropertyAccessExpression, kind: SymbolKind): TypeString;
     mergeTypes(symbols: PhpSymbol[]): TypeString;
+}
+export declare class VariableTypeResolver implements TreeVisitor<Phrase | Token> {
+    variableTable: VariableTable;
+    document: ParsedDocument;
+    nameResolver: NameResolver;
+    symbolStore: SymbolStore;
+    private _haltAtNode;
+    private _varName;
+    haltTraverse: boolean;
+    constructor(variableTable: VariableTable, document: ParsedDocument, nameResolver: NameResolver, symbolStore: SymbolStore, haltAtNode?: Phrase | Token);
+    preOrder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
+    postOrder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
+    private _listIntrinsic(node);
+    private _token(t);
+    private _parameterSymbolFilter(s);
+    private _methodOrFunction(node, kind);
+    private _findSymbolForPhrase(p);
+    private _anonymousFunctionUseVariableSymbolFilter(s);
+    private _anonymousFunctionCreationExpression(node);
+    private _simpleVariable(node);
+    private _instanceOfExpression(node);
+    private _isNonDynamicSimpleVariable(node);
+    private _assignmentExpression(node);
+    private _foreachStatement(node);
+}
+export declare class VariableTable {
+    private _typeVariableSetStack;
+    constructor();
+    setType(varName: string, type: TypeString): void;
+    setTypeMany(varNames: string[], type: TypeString): void;
+    pushScope(carry?: string[]): void;
+    popScope(): void;
+    pushBranch(): void;
+    popBranch(): void;
+    /**
+     * consolidates variables.
+     * each variable can be any of types discovered in branches after this.
+     */
+    pruneBranches(): void;
+    getType(varName: string, thisName: string): TypeString;
+    private _mergeSets(a, b);
+    private _top();
 }
