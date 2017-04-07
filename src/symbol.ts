@@ -24,7 +24,8 @@ import {
     FunctionCallExpression, FullyQualifiedName, RelativeQualifiedName, MethodCallExpression,
     MemberName, PropertyAccessExpression, ClassTypeDesignator, ScopedCallExpression,
     ScopedMemberName, ScopedPropertyAccessExpression, BinaryExpression, TernaryExpression,
-    RelativeScope, ListIntrinsic, IfStatement
+    RelativeScope, ListIntrinsic, IfStatement, InstanceOfExpression, InstanceofTypeDesignator,
+    ArrayInitialiserList, ArrayElement, ForeachStatement
 } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam } from './phpDoc';
 import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
@@ -1927,11 +1928,16 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
                 return true;
             case PhraseType.SimpleAssignmentExpression:
             case PhraseType.ByRefAssignmentExpression:
+                if(ParsedDocument.isPhrase((<BinaryExpression>node).left, [PhraseType.SimpleVariable, PhraseType.ListIntrinsic])){
+                    this._assignmentExpression(<BinaryExpression>node);
+                    return false;
+                }
+                return true;
             case PhraseType.InstanceOfExpression:
-                this._binaryExpression(<BinaryExpression>node);
+                this._instanceOfExpression(<InstanceOfExpression>node);
                 return false;
-            case PhraseType.Foreach:
-                this._foreach(node);
+            case PhraseType.ForeachStatement:
+                this._foreachStatement(<ForeachStatement>node);
                 return true;
             case undefined:
                 this._token(<Token>node);
@@ -1975,8 +1981,23 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
     }
 
-    private _list(node: ListIntrinsic) {
-        node.initialiserList
+    private _listIntrinsic(node: ListIntrinsic) {
+
+        let elements = node.initialiserList.elements;
+        let element: ArrayElement;
+        let varNames:string[] = [];
+        let varName:string;
+        
+        for (let n = 0, l = elements.length; n < l; ++n) {
+            element = elements[n];
+            varName = this._simpleVariable(<SimpleVariable>element.value.expr);
+            if(varName){
+                varNames.push(varName);
+            }
+        }
+
+        return varNames;
+
     }
 
     private _token(t: Token) {
@@ -2051,145 +2072,55 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
         this.variableTable.pushScope(carry);
     }
 
-    private _isSimpleVariableListIntrinsic(node: Phrase) {
+    private _simpleVariable(node:SimpleVariable){
+        return this._isNonDynamicSimpleVariable(node) ? this.nameResolver.tokenText(<Token>node.name) : '';
+    }
+
+    private _instanceOfExpression(node: InstanceOfExpression) {
+
+        let lhs = node.left as SimpleVariable;
+        let rhs = node.right as InstanceofTypeDesignator;
+        let varName = this._simpleVariable(lhs);
+        let exprTypeResolver = new ExpressionTypeResolver(this.nameResolver, this.symbolStore, this.variableTable);
+        this.variableTable.setType(varName, exprTypeResolver.resolveExpression(rhs));
 
     }
 
-    private _binaryExpression(node: BinaryExpression) {
+    private _isNonDynamicSimpleVariable(node: Phrase|Token) {
+        return ParsedDocument.isPhrase(node, [PhraseType.SimpleVariable]) &&
+            ParsedDocument.isToken((<SimpleVariable>node).name, [TokenType.Name]);
+    }
 
+    private _assignmentExpression(node: BinaryExpression) {
 
         let lhs = node.left;
         let rhs = node.right;
-
-        if ((!ParsedDocument.isPhrase(lhs, [PhraseType.SimpleVariable]) ||
-            !ParsedDocument.isToken((<SimpleVariable>lhs).name, [TokenType.Name])) &&
-            !this._isSimpleVariableListIntrinsic(<Phrase>lhs)) {
-            //can't resolve variable types in this assignment but descend
-            //should there be chained assignments
-            return true;
-        }
-
         let exprTypeResolver = new ExpressionTypeResolver(this.nameResolver, this.symbolStore, this.variableTable);
-        let rhsType = exprTypeResolver.resolveExpression(rhs);
 
-        if(!rhsType || rhsType.isEmpty()){
-            return false;
+        if(ParsedDocument.isPhrase(lhs, [PhraseType.SimpleVariable])){
+            let varName = this._simpleVariable(<SimpleVariable>lhs);
+            this.variableTable.setType(varName, exprTypeResolver.resolveExpression(rhs));
+        } else if(ParsedDocument.isPhrase(node, [PhraseType.ListIntrinsic])){
+            let varNames = this._listIntrinsic(<ListIntrinsic>rhs);
+            this.variableTable.setTypeMany(varNames, exprTypeResolver.resolveExpression(rhs).arrayDereference());
         }
 
+    }
+
+    private _foreachStatement(node: ForeachStatement) {
+
+        let collection = node.collection;
+        let value = node.value;
+
+        let exprResolver = new ExpressionTypeResolver(this.nameResolver, this.symbolStore, this.variableTable);
+        let type = exprResolver.resolveExpression(collection).arrayDereference();
         
-
-        if (ParsedDocument.r)
-
-
-            //if only resolving single variable then check it's in this expr
-            if (this._varName && !this._varExists(lhs, this._varName)) {
-                return;
-            }
-
-        if (!lhs.value ||
-            ((<Phrase>lhs.value).phraseType !== PhraseType.Variable &&
-                (<Phrase>lhs.value).phraseType !== PhraseType.Array &&
-                (<Phrase>lhs.value).phraseType !== PhraseType.Dimension) ||
-            !rhs.value) {
-            return;
-        }
-
-        this._exprResolver.clear();
-        rhs.traverse(this._exprResolver);
-        if (!this._exprResolver.type || this._exprResolver.type.isEmpty()) {
-            return;
-        }
-
-        this._assignType(lhs, this._exprResolver.type);
-
-    }
-
-    private _foreach(node: Tree<Phrase | Token>) {
-
-        let expr1 = node.children[0];
-        let expr3 = node.children[2];
-
-        //if only resolving single variable then check it's in this expr
-        if (this._varName && !this._varExists(expr3, this._varName)) {
-            return;
-        }
-
-        if (!expr3.value ||
-            ((<Phrase>expr3.value).phraseType !== PhraseType.Variable &&
-                (<Phrase>expr3.value).phraseType !== PhraseType.Array &&
-                (<Phrase>expr3.value).phraseType !== PhraseType.Dimension) ||
-            !expr1.value) {
-            return;
-        }
-
-        this._exprResolver.clear();
-        expr1.traverse(this._exprResolver);
-        if (!this._exprResolver.type || this._exprResolver.type.isEmpty()) {
-            return;
-        }
-
-        this._assignType(expr3, this._exprResolver.type);
-
-    }
-
-    private _varExists(node: Tree<Phrase | Token>, varName: string) {
-
-        return !!node.find((x) => {
-            return x.value && (<Token>x.value).text === varName;
-        });
-    }
-
-    private _assignType(node: Tree<Phrase | Token>, typeString: TypeString) {
-
-        if (!node.value) {
-            return;
-        }
-
-        switch ((<Phrase>node.value).phraseType) {
-            case PhraseType.Array:
-                this._array(node, typeString);
-            case PhraseType.ArrayPair:
-                this._arrayPair(node.children[1], typeString);
-                break;
-            case PhraseType.Dimension:
-                this._dimension(node, typeString);
-                break;
-            case PhraseType.Variable:
-                this._variable(node, typeString);
-                break;
-            default:
-                break;
-        }
-
-    }
-
-    private _dimension(node: Tree<Phrase | Token>, typeString: TypeString) {
-        this._assignType(node.children[0], typeString.array());
-    }
-
-    private _array(node: Tree<Phrase | Token>, typeString: TypeString) {
-        let type = typeString.arrayDereference();
-
-        if (!node.children) {
-            return;
-        }
-
-        for (let n = 0; n < node.children.length; ++n) {
-            this._arrayPair(node.children[n], type);
-        }
-    }
-
-    private _arrayPair(node: Tree<Phrase | Token>, typeString: TypeString) {
-        this._assignType(node.children[1], typeString);
-    }
-
-    private _variable(node: Tree<Phrase | Token>, typeString: TypeString) {
-
-        if (node.children && node.children.length &&
-            (<Token>node.children[0].value).tokenType === TokenType.T_VARIABLE &&
-            typeString &&
-            !typeString.isEmpty()) {
-            this.variableTable.setType((<Token>node.children[0].value).text, typeString);
+        if(ParsedDocument.isPhrase(value.expr, [PhraseType.SimpleVariable])){
+            let varName = this._simpleVariable(<SimpleVariable>value.expr);
+            this.variableTable.setType(varName, type);
+        } else if(ParsedDocument.isPhrase(value.expr, [PhraseType.ListIntrinsic])){
+            let varNames = this._listIntrinsic(<ListIntrinsic>value.expr);
+            this.variableTable.setTypeMany(varNames, type.arrayDereference());
         }
 
     }
@@ -2229,6 +2160,12 @@ export class VariableTable {
             return;
         }
         this._top().variables[varName] = { name: varName, type: type };
+    }
+
+    setTypeMany(varNames:string[], type:TypeString){
+        for(let n = 0, l = varNames.length; n < l; ++n){
+            this.setType(varNames[n], type);
+        }
     }
 
     pushScope(carry?: string[]) {
