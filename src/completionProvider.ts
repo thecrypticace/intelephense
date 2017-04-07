@@ -59,10 +59,11 @@ function toNameCompletionItem(s: PhpSymbol, namespace: string, namePhraseType: P
     }
 
     return <lsp.CompletionItem>{
-        label: label + '(',
+        label: label,
         kind: kind,
         detail: detail,
-        documentation: s.description
+        documentation: s.description,
+        insertText:label + '($1)'
     }
 
 }
