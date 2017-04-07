@@ -459,6 +459,17 @@ export class SymbolTable {
         return traverser.find(predicate);
     }
 
+    symbolAtPosition(position: Position) {
+
+        let pred = (x: PhpSymbol) => {
+            return x.location &&
+                x.location.range.start.line === position.line &&
+                x.location.range.start.character === position.character;
+        };
+
+        return this.filter(pred).pop();
+    }
+
     static create(parsedDocument: ParsedDocument) {
 
         let symbolReader = new SymbolReader(
@@ -1926,7 +1937,7 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
                 return true;
             case PhraseType.SimpleAssignmentExpression:
             case PhraseType.ByRefAssignmentExpression:
-                if(ParsedDocument.isPhrase((<BinaryExpression>node).left, [PhraseType.SimpleVariable, PhraseType.ListIntrinsic])){
+                if (ParsedDocument.isPhrase((<BinaryExpression>node).left, [PhraseType.SimpleVariable, PhraseType.ListIntrinsic])) {
                     this._assignmentExpression(<BinaryExpression>node);
                     return false;
                 }
@@ -1983,13 +1994,13 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
         let elements = node.initialiserList.elements;
         let element: ArrayElement;
-        let varNames:string[] = [];
-        let varName:string;
-        
+        let varNames: string[] = [];
+        let varName: string;
+
         for (let n = 0, l = elements.length; n < l; ++n) {
             element = elements[n];
             varName = this._simpleVariable(<SimpleVariable>element.value.expr);
-            if(varName){
+            if (varName) {
                 varNames.push(varName);
             }
         }
@@ -2070,7 +2081,7 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
         this.variableTable.pushScope(carry);
     }
 
-    private _simpleVariable(node:SimpleVariable){
+    private _simpleVariable(node: SimpleVariable) {
         return this._isNonDynamicSimpleVariable(node) ? this.nameResolver.tokenText(<Token>node.name) : '';
     }
 
@@ -2084,7 +2095,7 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
     }
 
-    private _isNonDynamicSimpleVariable(node: Phrase|Token) {
+    private _isNonDynamicSimpleVariable(node: Phrase | Token) {
         return ParsedDocument.isPhrase(node, [PhraseType.SimpleVariable]) &&
             ParsedDocument.isToken((<SimpleVariable>node).name, [TokenType.Name]);
     }
@@ -2095,10 +2106,10 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
         let rhs = node.right;
         let exprTypeResolver = new ExpressionTypeResolver(this.nameResolver, this.symbolStore, this.variableTable);
 
-        if(ParsedDocument.isPhrase(lhs, [PhraseType.SimpleVariable])){
+        if (ParsedDocument.isPhrase(lhs, [PhraseType.SimpleVariable])) {
             let varName = this._simpleVariable(<SimpleVariable>lhs);
             this.variableTable.setType(varName, exprTypeResolver.resolveExpression(rhs));
-        } else if(ParsedDocument.isPhrase(node, [PhraseType.ListIntrinsic])){
+        } else if (ParsedDocument.isPhrase(node, [PhraseType.ListIntrinsic])) {
             let varNames = this._listIntrinsic(<ListIntrinsic>rhs);
             this.variableTable.setTypeMany(varNames, exprTypeResolver.resolveExpression(rhs).arrayDereference());
         }
@@ -2112,11 +2123,11 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
         let exprResolver = new ExpressionTypeResolver(this.nameResolver, this.symbolStore, this.variableTable);
         let type = exprResolver.resolveExpression(collection).arrayDereference();
-        
-        if(ParsedDocument.isPhrase(value.expr, [PhraseType.SimpleVariable])){
+
+        if (ParsedDocument.isPhrase(value.expr, [PhraseType.SimpleVariable])) {
             let varName = this._simpleVariable(<SimpleVariable>value.expr);
             this.variableTable.setType(varName, type);
-        } else if(ParsedDocument.isPhrase(value.expr, [PhraseType.ListIntrinsic])){
+        } else if (ParsedDocument.isPhrase(value.expr, [PhraseType.ListIntrinsic])) {
             let varNames = this._listIntrinsic(<ListIntrinsic>value.expr);
             this.variableTable.setTypeMany(varNames, type.arrayDereference());
         }
@@ -2160,8 +2171,8 @@ export class VariableTable {
         this._top().variables[varName] = { name: varName, type: type };
     }
 
-    setTypeMany(varNames:string[], type:TypeString){
-        for(let n = 0, l = varNames.length; n < l; ++n){
+    setTypeMany(varNames: string[], type: TypeString) {
+        for (let n = 0, l = varNames.length; n < l; ++n) {
             this.setType(varNames[n], type);
         }
     }
