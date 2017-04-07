@@ -42,7 +42,7 @@ function keywordCompletionItems(keywords: string[], text: string) {
 
 }
 
-function toNameCompletionItem(s: PhpSymbol, namespace: string, namePhraseType: PhraseType) {
+function toNameCompletionItem(s: PhpSymbol, namespace: string, namePhraseType: PhraseType, kind?: lsp.SymbolKind) {
 
     let label = s.name;
     let detail = s.name;
@@ -54,20 +54,8 @@ function toNameCompletionItem(s: PhpSymbol, namespace: string, namePhraseType: P
         detail = s.associated[0].name;
     }
 
-    let kind: lsp.CompletionItemKind;
-
-    switch (s.kind) {
-        case SymbolKind.Class:
-            kind = lsp.SymbolKind.Class;
-            break;
-        case SymbolKind.Function:
-            kind = lsp.SymbolKind.Function;
-            break;
-        case SymbolKind.Constant:
-            kind = lsp.SymbolKind.Constant;
-            break;
-        default:
-            break;
+    if (!kind) {
+        kind = symbolKindToLspSymbolKind(s.kind);
     }
 
     return <lsp.CompletionItem>{
@@ -77,6 +65,20 @@ function toNameCompletionItem(s: PhpSymbol, namespace: string, namePhraseType: P
         documentation: s.description
     }
 
+}
+
+function symbolKindToLspSymbolKind(kind: SymbolKind) {
+
+    switch (kind) {
+        case SymbolKind.Class:
+            return lsp.SymbolKind.Class;
+        case SymbolKind.Function:
+            return lsp.SymbolKind.Function;
+        case SymbolKind.Constant:
+            return lsp.SymbolKind.Constant;
+        default:
+            return lsp.SymbolKind.String;
+    }
 }
 
 export class CompletionProvider {
@@ -185,7 +187,7 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
         let isIncomplete = matches.length > this.maxSuggestions - items.length;
 
         for (let n = 0; n < limit; ++n) {
-            items.push(toNameCompletionItem(matches[n], nameResolver.namespaceName, qNameNode.phraseType));
+            items.push(toNameCompletionItem(matches[n], nameResolver.namespaceName, qNameNode.phraseType, lsp.SymbolKind.Constructor));
         }
 
         return <lsp.CompletionList>{

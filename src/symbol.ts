@@ -1669,7 +1669,7 @@ export class ExpressionTypeResolver {
     resolveExpression(node: Phrase | Token): TypeString {
 
         if (!node) {
-            return null;
+            return new TypeString('');
         }
 
         switch ((<Phrase>node).phraseType) {
@@ -1700,8 +1700,14 @@ export class ExpressionTypeResolver {
                 return this.classTypeDesignator(<any>node);
             case PhraseType.AnonymousClassDeclaration:
                 return new TypeString(this.nameResolver.createAnonymousName(<AnonymousClassDeclaration>node));
+            case PhraseType.QualifiedName:
+            case PhraseType.FullyQualifiedName:
+            case PhraseType.RelativeQualifiedName:
+                return new TypeString(this.nameResolver.qualifiedNamePhraseText(<any>node, SymbolKind.Class));
+            case PhraseType.RelativeScope:
+                return new TypeString(this.nameResolver.thisName);
             default:
-                return null;
+                return new TypeString('');
         }
 
     }
@@ -1717,18 +1723,10 @@ export class ExpressionTypeResolver {
     scopedMemberAccessExpression(node: ScopedPropertyAccessExpression | ScopedCallExpression, kind: SymbolKind) {
 
         let memberName = this.scopedMemberName(node.memberName);
-
-        let scopeTypeString: TypeString;
-        if (ParsedDocument.isPhrase(node.scope, [PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName])) {
-            scopeTypeString = new TypeString(this.nameResolver.qualifiedNamePhraseText(<any>node.scope, SymbolKind.Class));
-        } else if (ParsedDocument.isPhrase(node.scope, [PhraseType.RelativeScope])) {
-            scopeTypeString = new TypeString(this.nameResolver.thisName);
-        } else {
-            scopeTypeString = this.resolveExpression(node.scope);
-        }
+        let scopeTypeString = this.resolveExpression(node.scope);
 
         if (!scopeTypeString || scopeTypeString.isEmpty() || !memberName) {
-            return null;
+            return new TypeString('');
         }
 
         let typeNames = scopeTypeString.atomicClassArray();
@@ -1792,7 +1790,7 @@ export class ExpressionTypeResolver {
         } else if (node && ParsedDocument.isPhrase(node.type, [PhraseType.RelativeScope])) {
             return new TypeString(this.nameResolver.thisName);
         } else {
-            return null;
+            return new TypeString('');
         }
 
     }
@@ -1804,7 +1802,7 @@ export class ExpressionTypeResolver {
         } else if (ParsedDocument.isPhrase(node.type, [PhraseType.ClassTypeDesignator])) {
             return this.classTypeDesignator(<ClassTypeDesignator>node.type);
         } else {
-            return null;
+            return new TypeString('');
         }
 
     }
@@ -1814,12 +1812,12 @@ export class ExpressionTypeResolver {
             return this.variableTable.getType(this.nameResolver.tokenText(<Token>node.name), this.nameResolver.thisName);
         }
 
-        return null;
+        return new TypeString('');
     }
 
     subscriptExpression(node: SubscriptExpression) {
         let type = this.resolveExpression(node.dereferencable);
-        return type ? type.arrayDereference() : null;
+        return type ? type.arrayDereference() : new TypeString('');
     }
 
     functionCallExpression(node: FunctionCallExpression) {
@@ -1827,12 +1825,12 @@ export class ExpressionTypeResolver {
         let qName = <Phrase>node.callableExpr;
         if (!ParsedDocument.isPhrase(qName,
             [PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName])) {
-            return null;
+            return new TypeString('');
         }
 
         let functionName = this.nameResolver.qualifiedNamePhraseText(<any>qName, SymbolKind.Function)
         let symbol = this.symbolStore.find(functionName, (x) => { return x.kind === SymbolKind.Function });
-        return symbol && symbol.type ? symbol.type : null;
+        return symbol && symbol.type ? symbol.type : new TypeString('');
 
     }
 
@@ -1849,7 +1847,7 @@ export class ExpressionTypeResolver {
         let type = this.resolveExpression(node.variable);
 
         if (!memberName || !type) {
-            return null;
+            return new TypeString('');
         }
 
         let symbols = this.lookupMemberOnTypes(type.atomicClassArray(), kind, memberName, 0, SymbolModifier.Static);
@@ -1866,7 +1864,7 @@ export class ExpressionTypeResolver {
             type = type.merge(symbols[n].type);
         }
 
-        return !type.isEmpty() ? type : null;
+        return !type.isEmpty() ? type : new TypeString('');
     }
 
 }
