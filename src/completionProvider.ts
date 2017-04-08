@@ -31,7 +31,7 @@ function keywordCompletionItems(keywords: string[], text: string) {
     for (let n = 0, l = keywords.length; n < l; ++n) {
 
         kw = keywords[n];
-        if (kw.indexOf(text) === 0) {
+        if (util.fuzzyStringMatch(text, kw)) {
             items.push({
                 label: kw,
                 kind: lsp.CompletionItemKind.Keyword
@@ -40,7 +40,7 @@ function keywordCompletionItems(keywords: string[], text: string) {
 
     }
 
-    return keywords;
+    return items;
 
 }
 

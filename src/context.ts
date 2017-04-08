@@ -166,9 +166,14 @@ export class Context {
         if (this._thisSymbol === undefined) {
 
             let phrase = this.thisPhrase;
-            let symbolTable = this.symbolStore.getSymbolTable(this.document.uri);
-            let phrasePos = this.document.phraseRange(phrase).start;
-            this._thisSymbol = symbolTable.symbolAtPosition(phrasePos);
+            if (phrase) {
+                let symbolTable = this.symbolStore.getSymbolTable(this.document.uri);
+                let phrasePos = this.document.phraseRange(phrase).start;
+                this._thisSymbol = symbolTable.symbolAtPosition(phrasePos);
+            } else {
+                this._thisSymbol = null;
+            }
+
         }
 
         return this._thisSymbol;
