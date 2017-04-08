@@ -84,7 +84,7 @@ export class Context {
 
     constructor(public symbolStore: SymbolStore, public document: ParsedDocument, public position: Position) {
 
-        this._offset = document.offsetAtPosition(position);
+        this._offset = document.offsetAtPosition(position) - 1;
         let contextVisitor = new ContextVisitor(this._offset);
         document.traverse(contextVisitor);
         this._namespaceDefinition = contextVisitor.namespaceDefinition;

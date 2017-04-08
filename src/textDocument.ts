@@ -37,9 +37,9 @@ export class TextDocument {
     }
 
     lineText(line:number){
-        let endOffset = line + 1 < this._textLineOffsets.length ? 
-            this._textLineOffsets[line + 1] : this._text.length;
-        return this._text.slice(this._textLineOffsets[line], endOffset);
+        let endOffset = line + 1 < this._lineOffsets.length ? 
+            this._lineOffsets[line + 1] : this._text.length;
+        return this._text.slice(this._lineOffsets[line], endOffset);
     }
 
     lineAtOffset(offset:number){
@@ -53,7 +53,7 @@ export class TextDocument {
 
     lineSubstring(offset:number){
         let lineNumber = this.lineAtOffset(offset);
-        return this.text.slice(this._textLineOffsets[lineNumber], offset + 1);
+        return this._text.slice(this._lineOffsets[lineNumber], offset + 1);
     }
 
     offsetAtLine(line: number) {

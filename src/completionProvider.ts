@@ -404,7 +404,7 @@ class ScopedAccessCompletion implements CompletionStrategy {
         let scopedAccessPhrases = [
             PhraseType.ScopedCallExpression,
             PhraseType.ErrorScopedAccessExpression,
-            PhraseType.ScopedMemberName,
+            PhraseType.ClassConstantAccessExpression,
             PhraseType.ScopedPropertyAccessExpression
         ];
 
@@ -428,13 +428,14 @@ class ScopedAccessCompletion implements CompletionStrategy {
     completions(context: Context) {
 
         let traverser = context.createTraverser();
-        let accessee = (<ScopedExpression>traverser.ancestor(this._isScopedAccessExpr)).scope;
+        let scopedAccessExpr = traverser.ancestor(this._isScopedAccessExpr) as ScopedExpression;
+        let accessee = scopedAccessExpr.scope;
         let type = context.resolveExpressionType(<Phrase>accessee);
 
         let text = context.word;
-        let types = type.atomicClassArray();
+        let typeNames = type.atomicClassArray();
 
-        if (!types.length) {
+        if (!typeNames.length) {
             return noCompletionResponse;
         }
 
@@ -445,8 +446,8 @@ class ScopedAccessCompletion implements CompletionStrategy {
         let typeName: string;
         let pred: Predicate<PhpSymbol>;
 
-        for (let n = 0, l = types.length; n < l; ++n) {
-            typeName = types[n];
+        for (let n = 0, l = typeNames.length; n < l; ++n) {
+            typeName = typeNames[n];
 
             if (typeName === context.thisName) {
                 pred = ownMemberPred;
@@ -551,7 +552,7 @@ class ScopedAccessCompletion implements CompletionStrategy {
         switch ((<Phrase>node).phraseType) {
             case PhraseType.ScopedCallExpression:
             case PhraseType.ErrorScopedAccessExpression:
-            case PhraseType.ScopedMemberName:
+            case PhraseType.ClassConstantAccessExpression:
             case PhraseType.ScopedPropertyAccessExpression:
                 return true;
             default:

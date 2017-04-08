@@ -86,7 +86,6 @@ export function trigrams(text: string) {
 }
 
 export function fuzzyStringMatch(query: string, subject: string) {
-
     if (!query) {
         return true;
     }

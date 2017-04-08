@@ -32,7 +32,7 @@ var scopedSrc =
         public static $myProperty = 1;
     }
 
-    $myVar = MyClass::
+    $myVar = MyClass::$m
 `;
 
 function setup(src:string){
@@ -58,51 +58,48 @@ describe('CompletionProvider', () => {
             var completions = completionProvider.provideCompletions('test', { line: 5, character: 0 });
             assert.deepEqual(completions, noCompletions);
         });
-/*
+
         it('Should suggest completions', function () {
 
-            var expected = {
-                items: [
-                    {
-                        label: "MyClass",
-                        kind: lsp.CompletionItemKind.Constructor,
-                        detail: "MyClass",
-                        documentation:"I'm a class"
-                    }
-                ],
-                isIncomplete: false
-            };
             var completions = completionProvider.provideCompletions('test', { line: 7, character: 18 });
-            assert.deepEqual(completions, expected);
             console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, 'MyClass');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Constructor);
+            
         });
-*/
+
     });
 
     describe('scoped completions', () => {
 
         before(function(){
             setup(scopedSrc);
-            console.log(JSON.stringify(symbolStore, null, 4));
+            //console.log(JSON.stringify(symbolStore, null, 4));
         });
 
 
-        it('Should suggest completions', function () {
+        it('Should suggest completions on $', function () {
 
-            var expected = {
-                items: [
-                    {
-                        label: "$myProperty",
-                        kind: lsp.CompletionItemKind.Property,
-                        detail: '',
-                        documentation:undefined
-                    }
-                ],
-                isIncomplete: false
-            };
+            var completions = completionProvider.provideCompletions('test', { line: 5, character: 23 });
+            assert.equal(completions.items[0].label, '$myProperty');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Property);
+            //console.log(JSON.stringify(completions, null, 4));
+        });
+
+        it('Should suggest completions on :', function () {
+
             var completions = completionProvider.provideCompletions('test', { line: 5, character: 22 });
-            assert.deepEqual(completions, expected);
-            console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, '$myProperty');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Property);
+            //console.log(JSON.stringify(completions, null, 4));
+        });
+
+        it('Should suggest completions on $m', function () {
+
+            var completions = completionProvider.provideCompletions('test', { line: 5, character: 24 });
+            assert.equal(completions.items[0].label, '$myProperty');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Property);
+            //console.log(JSON.stringify(completions, null, 4));
         });
 
     });
