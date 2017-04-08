@@ -6,7 +6,7 @@
 
 import {
     Token, TokenType, Phrase, PhraseType,
-    NamespaceName, ScopedExpression
+    NamespaceName, ScopedExpression, ObjectAccessExpression
 } from 'php7parser';
 import {
     PhpSymbol, SymbolStore, SymbolTable, SymbolKind, SymbolModifier,
@@ -85,6 +85,32 @@ function symbolKindToLspSymbolKind(kind: SymbolKind) {
     }
 }
 
+function toMethodCompletionItem(s: PhpSymbol) {
+    return <lsp.CompletionItem>{
+        kind: lsp.CompletionItemKind.Method,
+        label: s.name,
+        documentation: s.description,
+        detail: '' //@todo signature string
+    }
+}
+
+function toClassConstantCompletionItem(s: PhpSymbol) {
+    return <lsp.CompletionItem>{
+        kind: lsp.CompletionItemKind.Value, //@todo use Constant
+        label: s.name,
+        documentation: s.description
+    }
+}
+
+function toPropertyCompletionItem(s: PhpSymbol) {
+    return <lsp.CompletionItem>{
+        kind: lsp.CompletionItemKind.Property,
+        label: !(s.modifiers & SymbolModifier.Static) ? s.name.slice(1) : s.name,
+        documentation: s.description,
+        detail: s.type ? s.type.toString() : ''
+    }
+}
+
 export class CompletionProvider {
 
     private _strategies: CompletionStrategy[];
@@ -97,7 +123,9 @@ export class CompletionProvider {
         this._strategies = [
             new ClassTypeDesignatorCompletion(maxSuggestions),
             new ScopedAccessCompletion(this.symbolStore, maxSuggestions),
-            new SimpleVariableCompletion(maxSuggestions)
+            new ObjectAccessCompletion(this.symbolStore, this.maxSuggestions),
+            new SimpleVariableCompletion(maxSuggestions),
+            new NameCompletion(this.maxSuggestions)
         ];
 
     }
@@ -466,15 +494,15 @@ class ScopedAccessCompletion implements CompletionStrategy {
         let symbols = this.symbolStore.lookupMembersOnTypes(memberQueries);
         let isIncomplete = symbols.length > this.maxSuggestions;
         let limit = Math.min(symbols.length, this.maxSuggestions);
-        let items:lsp.CompletionItem[] = [];
-        
-        for(let n = 0; n < limit; ++n){
+        let items: lsp.CompletionItem[] = [];
+
+        for (let n = 0; n < limit; ++n) {
             items.push(this._toCompletionItem(symbols[n]));
         }
 
         return <lsp.CompletionList>{
-            isIncomplete:isIncomplete,
-            items:items
+            isIncomplete: isIncomplete,
+            items: items
         }
 
     }
@@ -482,39 +510,13 @@ class ScopedAccessCompletion implements CompletionStrategy {
     private _toCompletionItem(s: PhpSymbol) {
         switch (s.kind) {
             case SymbolKind.ClassConstant:
-                return this._toConstantCompletionItem(s);
+                return toClassConstantCompletionItem(s);
             case SymbolKind.Method:
-                return this._toMethodCompletionItem(s);
+                return toMethodCompletionItem(s);
             case SymbolKind.Property:
-                return this._toPropertyCompletionItem(s);
+                return toPropertyCompletionItem(s);
             default:
                 throw Error('Invalid Argument');
-        }
-    }
-
-    private _toMethodCompletionItem(s: PhpSymbol) {
-        return <lsp.CompletionItem>{
-            kind: lsp.CompletionItemKind.Method,
-            label: s.name,
-            documentation: s.description,
-            detail: '' //@todo signature string
-        }
-    }
-
-    private _toConstantCompletionItem(s: PhpSymbol) {
-        return <lsp.CompletionItem>{
-            kind: lsp.CompletionItemKind.Value, //@todo use Constant
-            label: s.name,
-            documentation: s.description
-        }
-    }
-
-    private _toPropertyCompletionItem(s: PhpSymbol) {
-        return <lsp.CompletionItem>{
-            kind: lsp.CompletionItemKind.Property,
-            label: s.name,
-            documentation: s.description,
-            detail: s.type ? s.type.toString() : ''
         }
     }
 
@@ -562,7 +564,9 @@ class ScopedAccessCompletion implements CompletionStrategy {
 
 }
 
-class MemberAccessCompletion implements CompletionStrategy {
+class ObjectAccessCompletion implements CompletionStrategy {
+
+    constructor(public symbolStore: SymbolStore, public maxSuggestions: number) { }
 
     canSuggest(context: Context) {
         let traverser = context.createTraverser();
@@ -580,8 +584,103 @@ class MemberAccessCompletion implements CompletionStrategy {
 
     completions(context: Context) {
 
-        return noCompletionResponse;
+        let traverser = context.createTraverser();
+        let objAccessExpr = traverser.ancestor(this._isMemberAccessExpr) as ObjectAccessExpression;
+        let type = context.resolveExpressionType(<Phrase>objAccessExpr.variable);
+        let typeNames = type.atomicClassArray();
+        let text = context.word;
 
+        if (!typeNames.length) {
+            return noCompletionResponse;
+        }
+
+        let memberPred = this._createMembersPredicate(text);
+        let basePred = this._createBaseMembersPredicate(text);
+        let ownPred = this._createOwnMembersPredicate(text);
+        let typeName: string;
+        let pred: Predicate<PhpSymbol>;
+        let memberQueries: MemberQuery[] = [];
+
+        for (let n = 0, l = typeNames.length; n < l; ++n) {
+            typeName = typeNames[n];
+
+            if (typeName === context.thisName) {
+                pred = ownPred;
+            } else if (typeName === context.thisBaseName) {
+                pred = basePred;
+            } else {
+                pred = memberPred;
+            }
+
+            memberQueries.push({
+                typeName: typeName,
+                memberPredicate: pred
+            });
+        }
+
+        let symbols = this.symbolStore.lookupMembersOnTypes(memberQueries);
+        let isIncomplete = symbols.length > this.maxSuggestions;
+        let limit = Math.min(symbols.length, this.maxSuggestions);
+        let items: lsp.CompletionItem[] = [];
+
+        for (let n = 0; n < limit; ++n) {
+            items.push(this._toCompletionItem(symbols[n]));
+        }
+
+        return <lsp.CompletionList>{
+            isIncomplete: isIncomplete,
+            items: items
+        }
+
+
+    }
+
+    private _toCompletionItem(s: PhpSymbol) {
+
+        switch(s.kind){
+            case SymbolKind.Method:
+                return toMethodCompletionItem(s);
+            case SymbolKind.Property:
+                return toPropertyCompletionItem(s);
+            default:
+                throw new Error('Invalid Argument');
+
+        }
+
+    }
+
+
+    private _createMembersPredicate(text: string) {
+        return (s: PhpSymbol) => {
+            return (s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
+                !(s.modifiers & (SymbolModifier.Private | SymbolModifier.Protected)) &&
+                util.fuzzyStringMatch(text, s.name);
+        };
+    }
+
+    private _createBaseMembersPredicate(text: string) {
+        return (s: PhpSymbol) => {
+            return (s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
+                !(s.modifiers & SymbolModifier.Private) &&
+                util.fuzzyStringMatch(text, s.name);
+        };
+    }
+
+    private _createOwnMembersPredicate(text: string) {
+        return (s: PhpSymbol) => {
+            return (s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
+                util.fuzzyStringMatch(text, s.name);
+        };
+    }
+
+    private _isMemberAccessExpr(node: Phrase | Token) {
+        switch ((<Phrase>node).phraseType) {
+            case PhraseType.PropertyAccessExpression:
+            case PhraseType.MethodCallExpression:
+                return true;
+            default:
+                return false;
+        }
     }
 
 }
