@@ -5,7 +5,8 @@
 		"module": "commonjs",
 		"moduleResolution": "node",
 		"outDir": "lib",
-		"declaration": true
+		"declaration": true,
+		"allowUnreachableCode": true
 	},
 	"exclude": [
 		"node_modules",

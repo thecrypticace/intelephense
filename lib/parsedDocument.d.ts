@@ -12,6 +12,7 @@ export declare class ParsedDocument {
     private _debounce;
     private _reparse;
     constructor(uri: string, text: string);
+    readonly tree: Phrase;
     readonly uri: string;
     readonly changeEvent: Event<ParsedDocumentChangeEventArgs>;
     wordAtOffset(offset: number): string;

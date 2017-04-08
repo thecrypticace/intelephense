@@ -40,6 +40,10 @@ export class ParsedDocument {
         this._changeEvent = new Event<ParsedDocumentChangeEventArgs>();
     }
 
+    get tree(){
+        return this._parseTree;
+    }
+
     get uri() {
         return this._textDocument.uri;
     }
