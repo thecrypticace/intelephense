@@ -715,8 +715,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 return true;
 
             case PhraseType.FunctionDeclarationHeader:
-                this.spine[this.spine.length - 1].name =
-                    this.functionDeclarationHeader(<FunctionDeclarationHeader>node);
+                this.functionDeclarationHeader(this._top(), <FunctionDeclarationHeader>node);
                 return true;
 
             case PhraseType.ParameterDeclaration:
@@ -774,8 +773,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 return true;
 
             case PhraseType.InterfaceDeclarationHeader:
-                this.spine[this.spine.length - 1].name =
-                    this.interfaceDeclarationHeader(<InterfaceDeclarationHeader>node);
+                this.interfaceDeclarationHeader(this._top(), <InterfaceDeclarationHeader>node);
                 return false;
 
             case PhraseType.InterfaceBaseClause:
@@ -850,14 +848,8 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 return true;
 
             case PhraseType.MethodDeclarationHeader:
-                this.spine[this.spine.length - 1].name =
-                    this.methodDeclarationHeader(<MethodDeclarationHeader>node);
+                this.methodDeclarationHeader(this._top(), <MethodDeclarationHeader>node);
                 return true;
-
-            case PhraseType.MemberModifierList:
-                this.spine[this.spine.length - 1].modifiers =
-                    this.memberModifierList(<MemberModifierList>node);
-                return false;
 
             case PhraseType.AnonymousClassDeclaration:
                 this._addSymbol(
@@ -915,10 +907,34 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.AnonymousFunctionCreationExpression:
                 this.spine.pop();
                 break;
+            case PhraseType.PropertyDeclaration:
+                this.propertyDeclarationModifier = 0;
+                break;
+            case PhraseType.ClassConstDeclaration:
+                this.classConstDeclarationModifier = 0;
+                break;
+            case PhraseType.NamespaceUseDeclaration:
+                this.namespaceUseDeclarationKind = 0;
+                this.namespaceUseDeclarationPrefix = '';
+                break;
+            case PhraseType.FunctionDeclarationHeader:
+            case PhraseType.MethodDeclarationHeader:
+            case PhraseType.ClassDeclarationHeader:
+            case PhraseType.InterfaceDeclarationHeader:
+            case PhraseType.TraitDeclarationHeader:
+            case PhraseType.AnonymousFunctionHeader:
+            case PhraseType.AnonymousClassDeclarationHeader:
+                this.lastPhpDoc = null;
+                this.lastPhpDocLocation = null;
+                break;
             default:
                 break;
         }
 
+    }
+
+    private _top() {
+        return this.spine[this.spine.length - 1];
     }
 
     private _variableExists(name: string) {
@@ -1031,8 +1047,9 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     }
 
-    functionDeclarationHeader(node: FunctionDeclarationHeader) {
-        return this.nameTokenToFqn(node.name);
+    functionDeclarationHeader(s: PhpSymbol, node: FunctionDeclarationHeader) {
+        s.name = this.nameTokenToFqn(node.name);
+        return s;
     }
 
     parameterDeclaration(node: ParameterDeclaration, phpDoc: PhpDoc) {
@@ -1152,8 +1169,10 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
         return this.modifierListElementsToSymbolModifier(node.elements);
     }
 
-    methodDeclarationHeader(node: MethodDeclarationHeader) {
-        return this.identifier(node.name);
+    methodDeclarationHeader(s: PhpSymbol, node: MethodDeclarationHeader) {
+        s.name = this.identifier(node.name);
+        s.modifiers = this.memberModifierList(node.modifierList);
+        return s;
     }
 
     propertyDeclaration(node: PropertyDeclaration) {
@@ -1278,8 +1297,9 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
         }
     }
 
-    interfaceDeclarationHeader(node: InterfaceDeclarationHeader) {
-        return this.nameTokenToFqn(node.name);
+    interfaceDeclarationHeader(s: PhpSymbol, node: InterfaceDeclarationHeader) {
+        s.name = this.nameTokenToFqn(node.name);
+        return s;
     }
 
     interfaceBaseClause(node: InterfaceBaseClause) {
@@ -1435,7 +1455,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
         let flag = SymbolModifier.None;
         if (!tokens || tokens.length < 1) {
-            return flag
+            return flag;
         }
 
         for (let n = 0, l = tokens.length; n < l; ++n) {
@@ -1446,7 +1466,6 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     }
 
     modifierTokenToSymbolModifier(t: Token) {
-
         switch (t.tokenType) {
             case TokenType.Public:
                 return SymbolModifier.Public;
@@ -1602,7 +1621,17 @@ export class SymbolIndex {
 
     match(text: string) {
 
-        let nodes = this._nodeMatch(text);
+        let substrings = util.trigrams(text);
+        if (text.length > 3 || text.length < 3) {
+            substrings.unshift(text);
+        }
+
+        let nodes: SymbolIndexNode[] = [];
+
+        for (let n = 0, l = substrings.length; n < l; ++n) {
+            Array.prototype.push.apply(nodes, this._nodeMatch(text));
+        }
+
         let matches: PhpSymbol[] = [];
 
         for (let n = 0; n < nodes.length; ++n) {
@@ -1670,13 +1699,13 @@ export class SymbolIndex {
         let nsSeparatorPos = s.name.lastIndexOf('\\');
         let name = s.name;
         if (nsSeparatorPos > -1) {
-            keys.push(name);
+            keys.push(name.toLowerCase());
             name = name.slice(nsSeparatorPos + 1);
         }
 
         Array.prototype.push.apply(keys, util.trigrams(name));
         if (name.length > 3 || name.length < 3) {
-            keys.push(name);
+            keys.push(name.toLowerCase());
         }
 
         let acronym = util.acronym(name);

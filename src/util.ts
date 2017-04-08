@@ -75,13 +75,14 @@ export function trigrams(text: string) {
         return [];
     }
 
+    text = text.toLowerCase();
     let trigrams: string[] = [];
 
     for (let n = 0, l = text.length - 2; n < l; ++n) {
         trigrams.push(text.substr(n, 3));
     }
 
-    return trigrams;
+    return Array.from(new Set<string>(trigrams));
 }
 
 export function fuzzyStringMatch(query: string, subject: string) {

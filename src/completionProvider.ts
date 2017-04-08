@@ -425,6 +425,7 @@ class ScopedAccessCompletion implements CompletionStrategy {
         let traverser = context.createTraverser();
         let accessee = (<ScopedExpression>traverser.ancestor(this._isScopedAccessExpr)).scope;
         let type = context.resolveExpressionType(<Phrase>accessee);
+
         let text = context.word;
         let types = type.atomicClassArray();
 
@@ -439,7 +440,7 @@ class ScopedAccessCompletion implements CompletionStrategy {
         let typeName: string;
         let pred: Predicate<PhpSymbol>;
 
-        for (let n = 0, l = types.length; n < l; +n) {
+        for (let n = 0, l = types.length; n < l; ++n) {
             typeName = types[n];
 
             if (typeName === context.thisName) {
@@ -540,7 +541,6 @@ class ScopedAccessCompletion implements CompletionStrategy {
         };
     }
 
-    private _
 
     private _isScopedAccessExpr(node: Phrase | Token) {
         switch ((<Phrase>node).phraseType) {

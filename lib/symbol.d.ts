@@ -134,13 +134,14 @@ export declare class SymbolReader implements TreeVisitor<Phrase | Token> {
     constructor(parsedDocument: ParsedDocument, nameResolver: NameResolver, spine: PhpSymbol[]);
     preOrder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
     postOrder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
+    private _top();
     private _variableExists(name);
     private _token(t);
     private _addSymbol(symbol, pushToSpine);
     nameTokenToFqn(t: Token): string;
     phraseLocation(p: Phrase): Location;
     functionDeclaration(node: FunctionDeclaration, phpDoc: PhpDoc): PhpSymbol;
-    functionDeclarationHeader(node: FunctionDeclarationHeader): string;
+    functionDeclarationHeader(s: PhpSymbol, node: FunctionDeclarationHeader): PhpSymbol;
     parameterDeclaration(node: ParameterDeclaration, phpDoc: PhpDoc): PhpSymbol;
     typeDeclaration(node: TypeDeclaration): string;
     qualifiedName(node: QualifiedName, kind: SymbolKind): string;
@@ -149,7 +150,7 @@ export declare class SymbolReader implements TreeVisitor<Phrase | Token> {
     classConstElement(modifiers: SymbolModifier, node: ClassConstElement, phpDoc: PhpDoc): PhpSymbol;
     methodDeclaration(node: MethodDeclaration, phpDoc: PhpDoc): PhpSymbol;
     memberModifierList(node: MemberModifierList): SymbolModifier;
-    methodDeclarationHeader(node: MethodDeclarationHeader): string;
+    methodDeclarationHeader(s: PhpSymbol, node: MethodDeclarationHeader): PhpSymbol;
     propertyDeclaration(node: PropertyDeclaration): SymbolModifier;
     propertyElement(modifiers: SymbolModifier, node: PropertyElement, phpDoc: PhpDoc): PhpSymbol;
     identifier(node: Identifier): string;
@@ -159,7 +160,7 @@ export declare class SymbolReader implements TreeVisitor<Phrase | Token> {
     magicMethodParameterToSymbol(p: MethodTagParam, phpDocLoc: Location): PhpSymbol;
     propertyTagToSymbol(t: Tag, phpDocLoc: Location): PhpSymbol;
     magicPropertyModifier(t: Tag): SymbolModifier;
-    interfaceDeclarationHeader(node: InterfaceDeclarationHeader): string;
+    interfaceDeclarationHeader(s: PhpSymbol, node: InterfaceDeclarationHeader): PhpSymbol;
     interfaceBaseClause(node: InterfaceBaseClause): PhpSymbol[];
     traitDeclaration(node: TraitDeclaration, phpDoc: PhpDoc, phpDocLoc: Location): PhpSymbol;
     traitDeclarationHeader(node: TraitDeclarationHeader): string;
