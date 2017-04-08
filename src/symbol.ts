@@ -556,13 +556,13 @@ export class SymbolStore {
      * Matches any indexed symbol by name or partial name with optional additional filter
      * Parameters and variables that are not file scoped are not indexed.
      */
-    match(text: string, filter?: Predicate<PhpSymbol>) {
+    match(text: string, filter?: Predicate<PhpSymbol>, fuzzy?:boolean) {
 
         if (!text) {
             return [];
         }
 
-        let matched = this._index.match(text);
+        let matched = this._index.match(text, fuzzy);
 
         if (!filter) {
             return matched;
@@ -1619,11 +1619,17 @@ export class SymbolIndex {
         }
     }
 
-    match(text: string) {
+    match(text: string, fuzzy?: boolean) {
 
-        let substrings = util.trigrams(text);
-        if (text.length > 3 || text.length < 3) {
-            substrings.unshift(text);
+        let substrings: string[];
+        if (fuzzy) {
+            substrings = util.trigrams(text);
+            if (text.length > 3 || text.length < 3) {
+                substrings.unshift(text);
+            }
+            
+        } else {
+            substrings = [text];
         }
 
         let nodes: SymbolIndexNode[] = [];
