@@ -416,6 +416,11 @@ class ScopedAccessCompletion implements CompletionStrategy {
             return ParsedDocument.isPhrase(traverser.parent(), [PhraseType.ScopedMemberName]);
         }
 
+        if (ParsedDocument.isToken(traverser.node, [TokenType.Dollar])) {
+            return ParsedDocument.isPhrase(traverser.parent(), [PhraseType.SimpleVariable]) &&
+                ParsedDocument.isPhrase(traverser.parent(), [PhraseType.ScopedMemberName]);
+        }
+
         return ParsedDocument.isPhrase(traverser.parent(), [PhraseType.Identifier]) &&
             ParsedDocument.isPhrase(traverser.parent(), [PhraseType.ScopedMemberName]);
     }
