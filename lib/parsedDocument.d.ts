@@ -1,10 +1,11 @@
-import { Phrase, Token, NamespaceName, TokenType, PhraseType, NamespaceDefinition } from 'php7parser';
+import { Phrase, Token, NamespaceName, TokenType, PhraseType } from 'php7parser';
 import * as lsp from 'vscode-languageserver-types';
-import { TreeVisitor, TreeTraverser, Event } from './types';
+import { TreeVisitor, Event } from './types';
 export interface ParsedDocumentChangeEventArgs {
     parsedDocument: ParsedDocument;
 }
 export declare class ParsedDocument {
+    private static _wordRegex;
     private _textDocument;
     private _parseTree;
     private _changeEvent;
@@ -13,6 +14,7 @@ export declare class ParsedDocument {
     constructor(uri: string, text: string);
     readonly uri: string;
     readonly changeEvent: Event<ParsedDocumentChangeEventArgs>;
+    wordAtOffset(offset: number): string;
     flush(): void;
     traverse(visitor: TreeVisitor<Phrase | Token>): void;
     applyChanges(contentChanges: lsp.TextDocumentContentChangeEvent[]): void;
@@ -44,15 +46,4 @@ export declare class ParsedDocumentStore {
     add(parsedDocument: ParsedDocument): void;
     remove(uri: string): void;
     find(uri: string): ParsedDocument;
-}
-export declare class Context {
-    private _namespaceDefinition;
-    private _spine;
-    private _offset;
-    constructor(spine: (Phrase | Token)[], namespaceDefinition: NamespaceDefinition, offset: number);
-    readonly offset: number;
-    readonly spine: (Token | Phrase)[];
-    readonly namespace: NamespaceDefinition;
-    readonly token: Token | Phrase;
-    readonly traverser: TreeTraverser<Token | Phrase>;
 }

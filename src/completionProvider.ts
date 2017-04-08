@@ -6,16 +6,18 @@
 
 import {
     Token, TokenType, Phrase, PhraseType,
-    NamespaceName
+    NamespaceName, ScopedExpression
 } from 'php7parser';
 import {
     PhpSymbol, SymbolStore, SymbolTable, SymbolKind, SymbolModifier,
-    TypeString, NameResolver, ExpressionTypeResolver, VariableTypeResolver
+    TypeString, NameResolver, ExpressionTypeResolver, VariableTypeResolver,
+    MemberQuery
 } from './symbol';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Predicate } from './types';
 import { Context } from './context';
 import * as lsp from 'vscode-languageserver-types';
+import * as util from './util';
 
 const noCompletionResponse: lsp.CompletionList = {
     items: [],
@@ -63,8 +65,8 @@ function toNameCompletionItem(s: PhpSymbol, namespace: string, namePhraseType: P
         kind: kind,
         detail: detail,
         documentation: s.description,
-        insertText:label + '($0)',
-        insertTextFormat:lsp.InsertTextFormat.Snippet
+        insertText: label + '($0)',
+        insertTextFormat: lsp.InsertTextFormat.Snippet
     }
 
 }
@@ -94,6 +96,7 @@ export class CompletionProvider {
 
         this._strategies = [
             new ClassTypeDesignatorCompletion(maxSuggestions),
+            new ScopedAccessCompletion(this.symbolStore, maxSuggestions),
             new SimpleVariableCompletion(maxSuggestions)
         ];
 
@@ -143,7 +146,7 @@ interface CompletionStrategy {
 class ClassTypeDesignatorCompletion implements CompletionStrategy {
 
     private static _keywords = [
-        'class', 'static'
+        'class', 'static', 'namespace'
     ];
 
     constructor(public maxSuggestions: number) {
@@ -392,7 +395,7 @@ class NameCompletion implements CompletionStrategy {
 
 class ScopedAccessCompletion implements CompletionStrategy {
 
-    constructor(public symbolStore:SymbolStore){
+    constructor(public symbolStore: SymbolStore, public maxSuggestions: number) {
 
     }
 
@@ -420,16 +423,127 @@ class ScopedAccessCompletion implements CompletionStrategy {
     completions(context: Context) {
 
         let traverser = context.createTraverser();
-        let accessee = traverser.ancestor(this._isScopedAccessExpr);
+        let accessee = (<ScopedExpression>traverser.ancestor(this._isScopedAccessExpr)).scope;
+        let type = context.resolveExpressionType(<Phrase>accessee);
+        let text = context.word;
+        let types = type.atomicClassArray();
 
-        let typeResolver = context.createExpressionTypeResolver();
+        if (!types.length) {
+            return noCompletionResponse;
+        }
 
-        return noCompletionResponse;
+        let memberPred = this._createMembersPredicate(text);
+        let baseMemberPred = this._createBaseMembersPredicate(text);
+        let ownMemberPred = this._createOwnMembersPredicate(text);
+        let memberQueries: MemberQuery[] = [];
+        let typeName: string;
+        let pred: Predicate<PhpSymbol>;
+
+        for (let n = 0, l = types.length; n < l; +n) {
+            typeName = types[n];
+
+            if (typeName === context.thisName) {
+                pred = ownMemberPred;
+            } else if (typeName === context.thisBaseName) {
+                pred = baseMemberPred;
+            } else {
+                pred = memberPred;
+            }
+
+            memberQueries.push({
+                typeName: typeName,
+                memberPredicate: pred
+            });
+        }
+
+        let symbols = this.symbolStore.lookupMembersOnTypes(memberQueries);
+        let isIncomplete = symbols.length > this.maxSuggestions;
+        let limit = Math.min(symbols.length, this.maxSuggestions);
+        let items:lsp.CompletionItem[] = [];
+        
+        for(let n = 0; n < limit; ++n){
+            items.push(this._toCompletionItem(symbols[n]));
+        }
+
+        return <lsp.CompletionList>{
+            isIncomplete:isIncomplete,
+            items:items
+        }
 
     }
 
-    private _isScopedAccessExpr(node:Phrase|Token){
-        switch((<Phrase>node).phraseType){
+    private _toCompletionItem(s: PhpSymbol) {
+        switch (s.kind) {
+            case SymbolKind.ClassConstant:
+                return this._toConstantCompletionItem(s);
+            case SymbolKind.Method:
+                return this._toMethodCompletionItem(s);
+            case SymbolKind.Property:
+                return this._toPropertyCompletionItem(s);
+            default:
+                throw Error('Invalid Argument');
+        }
+    }
+
+    private _toMethodCompletionItem(s: PhpSymbol) {
+        return <lsp.CompletionItem>{
+            kind: lsp.CompletionItemKind.Method,
+            label: s.name,
+            documentation: s.description,
+            detail: '' //@todo signature string
+        }
+    }
+
+    private _toConstantCompletionItem(s: PhpSymbol) {
+        return <lsp.CompletionItem>{
+            kind: lsp.CompletionItemKind.Value, //@todo use Constant
+            label: s.name,
+            documentation: s.description
+        }
+    }
+
+    private _toPropertyCompletionItem(s: PhpSymbol) {
+        return <lsp.CompletionItem>{
+            kind: lsp.CompletionItemKind.Property,
+            label: s.name,
+            documentation: s.description,
+            detail: s.type ? s.type.toString() : ''
+        }
+    }
+
+    private _createMembersPredicate(text: string) {
+        return (s: PhpSymbol) => {
+            return (((s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
+                (s.modifiers & SymbolModifier.Static) > 0) ||
+                s.kind === SymbolKind.ClassConstant) &&
+                !(s.modifiers & (SymbolModifier.Private | SymbolModifier.Protected)) &&
+                util.fuzzyStringMatch(text, s.name);
+        };
+    }
+
+    private _createBaseMembersPredicate(text: string) {
+        return (s: PhpSymbol) => {
+            return (((s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
+                (s.modifiers & SymbolModifier.Static) > 0) ||
+                s.kind === SymbolKind.ClassConstant) &&
+                !(s.modifiers & SymbolModifier.Private) &&
+                util.fuzzyStringMatch(text, s.name);
+        };
+    }
+
+    private _createOwnMembersPredicate(text: string) {
+        return (s: PhpSymbol) => {
+            return (((s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
+                (s.modifiers & SymbolModifier.Static) > 0) ||
+                s.kind === SymbolKind.ClassConstant) &&
+                util.fuzzyStringMatch(text, s.name);
+        };
+    }
+
+    private _
+
+    private _isScopedAccessExpr(node: Phrase | Token) {
+        switch ((<Phrase>node).phraseType) {
             case PhraseType.ScopedCallExpression:
             case PhraseType.ErrorScopedAccessExpression:
             case PhraseType.ScopedMemberName:

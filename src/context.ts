@@ -6,7 +6,8 @@
 
 import {
     SymbolStore, NameResolver, PhpSymbol, SymbolKind, SymbolModifier,
-    ExpressionTypeResolver, VariableTypeResolver, VariableTable
+    ExpressionTypeResolver, VariableTypeResolver, VariableTable,
+    TypeString
 } from './symbol';
 import { TreeVisitor, TreeTraverser } from './types';
 import { ParsedDocument } from './parsedDocument';
@@ -79,6 +80,7 @@ export class Context {
     private _thisPhrase: ClassDeclaration;
     private _thisSymbol: PhpSymbol;
     private _thisBaseSymbol: PhpSymbol;
+    private _namespaceName: string;
 
     constructor(public symbolStore: SymbolStore, public document: ParsedDocument, public position: Position) {
 
@@ -92,6 +94,10 @@ export class Context {
 
     }
 
+    get word() {
+        return this.document.wordAtOffset(this._offset);
+    }
+
     get token() {
         return this._parseTreeSpine.length ? <Token>this._parseTreeSpine[this._parseTreeSpine.length - 1] : null;
     }
@@ -102,6 +108,29 @@ export class Context {
 
     get spine() {
         return this._parseTreeSpine.slice(0);
+    }
+
+    get thisName() {
+        let s = this.thisSymbol;
+        return s ? s.name : '';
+    }
+
+    get thisBaseName() {
+
+        let s = this.thisBaseSymbol;
+        return s ? s.name : '';
+
+    }
+
+    get namespaceName() {
+        if (this._namespaceName === undefined) {
+            if (this.namespacePhrase) {
+                this._namespaceName = this.document.namespaceNameToString(this.namespacePhrase.name);
+            } else {
+                this._namespaceName = '';
+            }
+        }
+        return this._namespaceName;
     }
 
     get namespacePhrase() {
@@ -146,9 +175,9 @@ export class Context {
     }
 
     get thisBaseSymbol() {
-        
+
         if (this._thisBaseSymbol === undefined) {
-            
+
             let thisSymbol = this.thisSymbol;
             if (!thisSymbol || !thisSymbol.associated) {
                 this._thisBaseSymbol = null;
@@ -159,7 +188,7 @@ export class Context {
             }
 
         }
-        
+
         return this._thisBaseSymbol;
     }
 
@@ -209,13 +238,17 @@ export class Context {
 
     }
 
+    resolveExpressionType(expr: Phrase) {
+        let exprResolver = this.createExpressionTypeResolver();
+        return exprResolver.resolveExpression(expr);
+    }
+
     createNameResolver() {
         let symbolTable = this.symbolStore.getSymbolTable(this.document.uri);
         let imported = symbolTable ? symbolTable.filter(this._importFilter) : [];
-        let namespaceName = this._namespaceDefinition ?
-            this.document.namespaceNameToString(this._namespaceDefinition.name) : '';
-        let thisName = '';
-        let baseName = '';
+        let namespaceName = this.namespaceName;
+        let thisName = this.thisName;
+        let baseName = this.thisBaseName;
         return new NameResolver(this.document, imported, namespaceName, thisName, baseName);
     }
 

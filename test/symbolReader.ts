@@ -7,7 +7,7 @@ function symbolReaderOutput(src: string) {
 
     let parsedDoc = new ParsedDocument('test', src);
     let symbolTree: PhpSymbol = { kind: SymbolKind.None, name: '' };
-    let sr = new SymbolReader(parsedDoc, new NameResolver('', '', []), [symbolTree]);
+    let sr = new SymbolReader(parsedDoc, new NameResolver(parsedDoc, [], '','',''), [symbolTree]);
     parsedDoc.traverse(sr);
     return symbolTree;
 

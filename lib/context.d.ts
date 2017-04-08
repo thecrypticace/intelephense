@@ -1,4 +1,4 @@
-import { SymbolStore, NameResolver, PhpSymbol, ExpressionTypeResolver, VariableTable } from './symbol';
+import { SymbolStore, NameResolver, PhpSymbol, ExpressionTypeResolver, VariableTable, TypeString } from './symbol';
 import { TreeTraverser } from './types';
 import { ParsedDocument } from './parsedDocument';
 import { Position } from 'vscode-languageserver-types';
@@ -16,10 +16,15 @@ export declare class Context {
     private _thisPhrase;
     private _thisSymbol;
     private _thisBaseSymbol;
+    private _namespaceName;
     constructor(symbolStore: SymbolStore, document: ParsedDocument, position: Position);
+    readonly word: string;
     readonly token: Token;
     readonly offset: number;
     readonly spine: (Token | Phrase)[];
+    readonly thisName: string;
+    readonly thisBaseName: string;
+    readonly namespaceName: string;
     readonly namespacePhrase: NamespaceDefinition;
     readonly thisPhrase: ClassDeclaration;
     readonly thisSymbol: PhpSymbol;
@@ -27,6 +32,7 @@ export declare class Context {
     readonly scopePhrase: Phrase;
     readonly scopeSymbol: PhpSymbol;
     readonly variableTable: VariableTable;
+    resolveExpressionType(expr: Phrase): TypeString;
     createNameResolver(): NameResolver;
     createTraverser(): TreeTraverser<Token | Phrase>;
     createExpressionTypeResolver(): ExpressionTypeResolver;
