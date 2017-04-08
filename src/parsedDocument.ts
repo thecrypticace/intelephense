@@ -23,6 +23,7 @@ export interface ParsedDocumentChangeEventArgs {
 
 export class ParsedDocument {
 
+    private static _wordRegex = /[$a-zA-Z_\x80-\xff][\\a-zA-Z0-9_\x80-\xff]*$/;
     private _textDocument: TextDocument;
     private _parseTree: Phrase;
     private _changeEvent: Event<ParsedDocumentChangeEventArgs>;
@@ -45,6 +46,12 @@ export class ParsedDocument {
 
     get changeEvent() {
         return this._changeEvent;
+    }
+
+    wordAtOffset(offset:number){
+        let lineText = this._textDocument.lineSubstring(offset);
+        let match = lineText.match(ParsedDocument._wordRegex);
+        return match ? match[0] : '';
     }
 
     flush() {
@@ -245,89 +252,5 @@ export class ParsedDocumentStore {
     find(uri: string) {
         return this._parsedDocumentmap[uri];
     }
-
-}
-
-class ContextVisitor implements TreeVisitor<Phrase | Token>{
-
-    haltTraverse: boolean;
-
-    private _spine: (Phrase | Token)[];
-    private _namespaceDefinition: NamespaceDefinition;
-
-    constructor(public offset) {
-        this.haltTraverse = false;
-    }
-
-    get context() {
-        return new Context(this._spine, this._namespaceDefinition, this.offset);
-    }
-
-    preOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
-
-        if (this.haltTraverse) {
-            return false;
-        }
-
-        if (ParsedDocument.isOffsetInToken(this.offset, <Token>node)) {
-            this.haltTraverse = true;
-            this._spine = spine.slice(0);
-            return false;
-        }
-
-        if ((<Phrase>node).phraseType === PhraseType.NamespaceDefinition) {
-            this._namespaceDefinition = <NamespaceDefinition>node;
-        }
-
-        return true;
-
-    }
-
-    postOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
-
-        if (this.haltTraverse) {
-            return;
-        }
-
-        if ((<Phrase>node).phraseType === PhraseType.NamespaceDefinition &&
-            (<NamespaceDefinition>node).statementList) {
-            this._namespaceDefinition = undefined;
-        }
-    }
-
-
-}
-
-export class Context {
-
-    private _namespaceDefinition: NamespaceDefinition;
-    private _spine: (Phrase | Token)[];
-    private _offset:number;
-
-    constructor(spine: (Phrase | Token)[], namespaceDefinition: NamespaceDefinition, offset:number) {
-        this._namespaceDefinition = namespaceDefinition;
-        this._spine = spine.slice(0);
-    }
-
-    get offset(){
-        return this._offset;
-    }
-
-    get spine() {
-        return this._spine.slice(0);
-    }
-
-    get namespace() {
-        return this._namespaceDefinition;
-    }
-
-    get token() {
-        return this._spine.length ? this._spine[this._spine.length - 1] : null;
-    }
-
-    get traverser() {
-        return new TreeTraverser(this._spine);
-    }
-
 
 }

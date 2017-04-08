@@ -75,6 +75,7 @@ export interface PhpSymbol {
     scope?: string;
 }
 
+/*
 export namespace PhpSymbol {
 
     export function acronym(s: PhpSymbol) {
@@ -112,7 +113,7 @@ export namespace PhpSymbol {
 
     /**
      * Get suffixes after $, namespace separator, underscore and on lowercase uppercase boundary
-     */
+     *
     export function suffixArray(s: PhpSymbol) {
         if (!s.name) {
             return [];
@@ -143,8 +144,9 @@ export namespace PhpSymbol {
 
         return suffixes;
     }
+    
 
-}
+}*/
 
 export class NameResolver {
 
@@ -488,6 +490,10 @@ export class SymbolTable {
 
 }
 
+export interface MemberQuery {
+    typeName: string;
+    memberPredicate: Predicate<PhpSymbol>;
+}
 
 export class SymbolStore {
 
@@ -579,13 +585,23 @@ export class SymbolStore {
         return (s.kind & (SymbolKind.Class | SymbolKind.Interface)) > 0;
     }
 
-    lookupTypeMembers(typeName: string, memberPredicate: Predicate<PhpSymbol>) {
-        let type = this.match(typeName, this._classOrInterfaceFilter).shift();
-        return this._lookupTypeMembers(type, memberPredicate);
+    lookupTypeMembers(query: MemberQuery) {
+        let type = this.match(query.typeName, this._classOrInterfaceFilter).shift();
+        return this._lookupTypeMembers(type, query.memberPredicate);
     }
 
-    lookupTypeMember(typeName: string, memberPredicate: Predicate<PhpSymbol>) {
-        return this.lookupTypeMembers(typeName, memberPredicate).shift();
+    lookupTypeMember(query: MemberQuery) {
+        return this.lookupTypeMembers(query).shift();
+    }
+
+    lookupMembersOnTypes(queries: MemberQuery[]) {
+        let symbols: PhpSymbol[] = [];
+
+        for (let n = 0, l = queries.length; n < l; ++n) {
+            Array.prototype.push.apply(symbols, this.lookupTypeMembers(queries[n]));
+        }
+
+        return symbols;
     }
 
     private _lookupTypeMembers(type: PhpSymbol, predicate: Predicate<PhpSymbol>) {
@@ -1530,7 +1546,7 @@ export class SymbolIndex {
 
     add(item: PhpSymbol) {
 
-        let suffixes = this._symbolSuffixes(item);
+        let suffixes = this._symbolKeys(item);
         let node: SymbolIndexNode;
 
         for (let n = 0; n < suffixes.length; ++n) {
@@ -1554,7 +1570,7 @@ export class SymbolIndex {
 
     remove(item: PhpSymbol) {
 
-        let suffixes = this._symbolSuffixes(item);
+        let suffixes = this._symbolKeys(item);
         let node: SymbolIndexNode;
         let i: number;
 
@@ -1648,13 +1664,26 @@ export class SymbolIndex {
 
     }
 
-    private _symbolSuffixes(s: PhpSymbol) {
-        let suffixes = PhpSymbol.suffixArray(s);
-        let acronym = PhpSymbol.acronym(s);
-        if (acronym.length > 1) {
-            suffixes.push(acronym);
+    private _symbolKeys(s: PhpSymbol) {
+
+        let keys: string[] = [];
+        let nsSeparatorPos = s.name.lastIndexOf('\\');
+        let name = s.name;
+        if (nsSeparatorPos > -1) {
+            keys.push(name);
+            name = name.slice(nsSeparatorPos + 1);
         }
-        return suffixes;
+
+        Array.prototype.push.apply(keys, util.trigrams(name));
+        if (name.length > 3 || name.length < 3) {
+            keys.push(name);
+        }
+
+        let acronym = util.acronym(name);
+        if (acronym.length > 1) {
+            keys.push(acronym);
+        }
+        return keys;
     }
 
 }
@@ -1772,7 +1801,7 @@ export class ExpressionTypeResolver {
                     x.name === memberName;
             }
 
-            s = this.symbolStore.lookupTypeMember(typeName, memberPredicate);
+            s = this.symbolStore.lookupTypeMember({ typeName: typeName, memberPredicate: memberPredicate });
             if (s) {
                 symbols.push(s);
             }

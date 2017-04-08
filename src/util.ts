@@ -24,24 +24,83 @@ export function isString(s: any) {
 
 export function isInRange(position: Position, startRange: Position, endRange: Position) {
 
-    if(position.line < startRange.line || 
-        (position.line === startRange.line && position.character < startRange.character)){
-            return -1;
-        }
+    if (position.line < startRange.line ||
+        (position.line === startRange.line && position.character < startRange.character)) {
+        return -1;
+    }
 
-    if(position.line > endRange.line || 
-        (position.line === endRange.line && position.character > endRange.character)){
-            return 1;
-        }
+    if (position.line > endRange.line ||
+        (position.line === endRange.line && position.character > endRange.character)) {
+        return 1;
+    }
 
     return 0;
 
 }
 
-export function guid(){
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        let r = Math.random()*16|0;
-        let v = c == 'x' ? r : (r&0x3|0x8);
-        return v.toString(16);
-    });
+export function acronym(text: string) {
+
+    if (!text) {
+        return '';
+    }
+
+    let lcText = text.toLowerCase();
+    let n = 0;
+    let l = text.length;
+    let c: string;
+    let acronym = lcText[0] !== '_' && lcText[0] !== '$' ? lcText[0] : '';
+
+    while (n < l) {
+
+        c = text[n];
+
+        if ((c === '$' || c === '_') && n + 1 < l && text[n + 1] !== '_') {
+            ++n;
+            acronym += lcText[n];
+        } else if (n > 0 && c !== lcText[n] && text[n - 1] === lcText[n - 1]) {
+            //uppercase
+            acronym += lcText[n];
+        }
+
+        ++n;
+
+    }
+
+    return acronym;
+}
+
+export function trigrams(text: string) {
+
+    if (text.length < 3) {
+        return [];
+    }
+
+    let trigrams: string[] = [];
+
+    for (let n = 0, l = text.length - 2; n < l; ++n) {
+        trigrams.push(text.substr(n, 3));
+    }
+
+    return trigrams;
+}
+
+export function fuzzyStringMatch(query: string, subject: string) {
+
+    if (!query) {
+        return true;
+    }
+
+    let substrings = trigrams(query);
+    if (query.length > 3 || query.length < 3) {
+        substrings.unshift(query);
+    }
+
+    for (let n = 0, l = substrings.length; n < l; ++n) {
+        if (subject.indexOf(substrings[n]) > -1) {
+            return true;
+        }
+    }
+
+    return acronym(subject).indexOf(query) > -1;
+
 }

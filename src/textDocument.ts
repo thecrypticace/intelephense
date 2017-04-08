@@ -36,6 +36,26 @@ export class TextDocument {
         return this._lineOffsets;
     }
 
+    lineText(line:number){
+        let endOffset = line + 1 < this._textLineOffsets.length ? 
+            this._textLineOffsets[line + 1] : this._text.length;
+        return this._text.slice(this._textLineOffsets[line], endOffset);
+    }
+
+    lineAtOffset(offset:number){
+        let search = new BinarySearch<number>(this._lineOffsets);
+        let compareFn = (x) => {
+            return x - offset;
+        };
+        let rank = search.rank(compareFn);
+        return Math.max(rank - 1, 0);
+    }
+
+    lineSubstring(offset:number){
+        let lineNumber = this.lineAtOffset(offset);
+        return this.text.slice(this._textLineOffsets[lineNumber], offset + 1);
+    }
+
     offsetAtLine(line: number) {
 
         if (line <= 0 || this._lineOffsets.length < 1) {
@@ -53,12 +73,7 @@ export class TextDocument {
 
     positionAtOffset(offset: number) {
 
-        let search = new BinarySearch<number>(this._lineOffsets);
-        let compareFn = (x) => {
-            return x - offset;
-        };
-        let rank = search.rank(compareFn);
-        let index = Math.max(rank - 1, 0);
+        let index = this.lineAtOffset(offset);
 
         return <Position>{
             line: index,

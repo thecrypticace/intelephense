@@ -44,13 +44,6 @@ export interface PhpSymbol {
     children?: PhpSymbol[];
     scope?: string;
 }
-export declare namespace PhpSymbol {
-    function acronym(s: PhpSymbol): string;
-    /**
-     * Get suffixes after $, namespace separator, underscore and on lowercase uppercase boundary
-     */
-    function suffixArray(s: PhpSymbol): string[];
-}
 export declare class NameResolver {
     document: ParsedDocument;
     importedSymbols: PhpSymbol[];
@@ -94,6 +87,10 @@ export declare class SymbolTable {
     symbolAtPosition(position: Position): PhpSymbol;
     static create(parsedDocument: ParsedDocument): SymbolTable;
 }
+export interface MemberQuery {
+    typeName: string;
+    memberPredicate: Predicate<PhpSymbol>;
+}
 export declare class SymbolStore {
     private _map;
     private _index;
@@ -117,8 +114,9 @@ export declare class SymbolStore {
      */
     match(text: string, filter?: Predicate<PhpSymbol>): PhpSymbol[];
     private _classOrInterfaceFilter(s);
-    lookupTypeMembers(typeName: string, memberPredicate: Predicate<PhpSymbol>): PhpSymbol[];
-    lookupTypeMember(typeName: string, memberPredicate: Predicate<PhpSymbol>): PhpSymbol;
+    lookupTypeMembers(query: MemberQuery): PhpSymbol[];
+    lookupTypeMember(query: MemberQuery): PhpSymbol;
+    lookupMembersOnTypes(queries: MemberQuery[]): PhpSymbol[];
     private _lookupTypeMembers(type, predicate);
     private _indexSymbols(root);
     private _indexFilter(s);
@@ -197,7 +195,7 @@ export declare class SymbolIndex {
     private _nodeFind(text);
     private _insertNode(node);
     private _deleteNode(node);
-    private _symbolSuffixes(s);
+    private _symbolKeys(s);
 }
 export interface LookupVariableTypeDelegate {
     (t: Token): TypeString;
