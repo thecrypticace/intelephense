@@ -43,7 +43,7 @@ export class SymbolProvider {
      * @param query 
      */
     provideWorkspaceSymbols(query: string) {
-        let matches = this.symbolStore.match(query);
+        let matches = this.symbolStore.match(query, null, true);
         let symbolInformationList: lsp.SymbolInformation[] = [];
 
         let s: PhpSymbol;

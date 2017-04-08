@@ -58,7 +58,7 @@ describe('CompletionProvider', () => {
             var completions = completionProvider.provideCompletions('test', { line: 5, character: 0 });
             assert.deepEqual(completions, noCompletions);
         });
-
+/*
         it('Should suggest completions', function () {
 
             var expected = {
@@ -76,14 +76,14 @@ describe('CompletionProvider', () => {
             assert.deepEqual(completions, expected);
             console.log(JSON.stringify(completions, null, 4));
         });
-
+*/
     });
 
     describe('scoped completions', () => {
 
         before(function(){
             setup(scopedSrc);
-            //console.log(JSON.stringify(doc.tree, (k,v)=>{return k === 'children' ? undefined : v;}, 4));
+            console.log(JSON.stringify(symbolStore, null, 4));
         });
 
 
