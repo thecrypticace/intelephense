@@ -112,7 +112,7 @@ export declare class SymbolStore {
      * Matches any indexed symbol by name or partial name with optional additional filter
      * Parameters and variables that are not file scoped are not indexed.
      */
-    match(text: string, filter?: Predicate<PhpSymbol>): PhpSymbol[];
+    match(text: string, filter?: Predicate<PhpSymbol>, fuzzy?: boolean): PhpSymbol[];
     private _classOrInterfaceFilter(s);
     lookupTypeMembers(query: MemberQuery): PhpSymbol[];
     lookupTypeMember(query: MemberQuery): PhpSymbol;
@@ -191,7 +191,7 @@ export declare class SymbolIndex {
     addMany(items: PhpSymbol[]): void;
     remove(item: PhpSymbol): void;
     removeMany(items: PhpSymbol[]): void;
-    match(text: string): PhpSymbol[];
+    match(text: string, fuzzy?: boolean): PhpSymbol[];
     private _nodeMatch(text);
     private _nodeFind(text);
     private _insertNode(node);
