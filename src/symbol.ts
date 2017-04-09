@@ -1861,9 +1861,8 @@ export class ExpressionTypeResolver {
     }
 
     classTypeDesignator(node: ClassTypeDesignator) {
-
         if (node && ParsedDocument.isPhrase(node.type,
-            [PhraseType.QualifiedName | PhraseType.FullyQualifiedName | PhraseType.RelativeQualifiedName])) {
+            [PhraseType.QualifiedName , PhraseType.FullyQualifiedName , PhraseType.RelativeQualifiedName])) {
             return new TypeString(this.nameResolver.qualifiedNamePhraseText(<any>node.type, SymbolKind.Class));
         } else if (node && ParsedDocument.isPhrase(node.type, [PhraseType.RelativeScope])) {
             return new TypeString(this.nameResolver.thisName);
@@ -2164,7 +2163,7 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
     private _isNonDynamicSimpleVariable(node: Phrase | Token) {
         return ParsedDocument.isPhrase(node, [PhraseType.SimpleVariable]) &&
-            ParsedDocument.isToken((<SimpleVariable>node).name, [TokenType.Name]);
+            ParsedDocument.isToken((<SimpleVariable>node).name, [TokenType.VariableName]);
     }
 
     private _assignmentExpression(node: BinaryExpression) {
@@ -2172,10 +2171,12 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
         let lhs = node.left;
         let rhs = node.right;
         let exprTypeResolver = new ExpressionTypeResolver(this.nameResolver, this.symbolStore, this.variableTable);
+        let type:TypeString;
 
         if (ParsedDocument.isPhrase(lhs, [PhraseType.SimpleVariable])) {
             let varName = this._simpleVariable(<SimpleVariable>lhs);
-            this.variableTable.setType(varName, exprTypeResolver.resolveExpression(rhs));
+            type = exprTypeResolver.resolveExpression(rhs);
+            this.variableTable.setType(varName, type);
         } else if (ParsedDocument.isPhrase(node, [PhraseType.ListIntrinsic])) {
             let varNames = this._listIntrinsic(<ListIntrinsic>rhs);
             this.variableTable.setTypeMany(varNames, exprTypeResolver.resolveExpression(rhs).arrayDereference());
