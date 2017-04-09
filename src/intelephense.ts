@@ -112,7 +112,7 @@ export namespace Intelephense {
         return query ? symbolProvider.provideWorkspaceSymbols(query) : [];
     }
 
-    export function completions(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position) {
+    export function provideCompletions(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position) {
         let parsedDocument = documentStore.find(textDocument.uri);
         if (parsedDocument) {
             parsedDocument.flush();
