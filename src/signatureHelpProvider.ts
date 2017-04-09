@@ -43,17 +43,17 @@ export class SignatureHelpProvider {
             return ParsedDocument.isPhrase(x, [PhraseType.ArgumentExpressionList]);
         }), context);
 
-
+        return this._createSignatureHelp(symbol, argNumber);
 
     }
 
-    private _createSignatureHelp(s: PhpSymbol, argNumber: number) {
+    private _createSignatureHelp(fn: PhpSymbol, argNumber: number) {
 
-        let params = s.children.filter((x) => {
+        let params = fn.children.filter((x) => {
             return x.kind === SymbolKind.Parameter;
         });
 
-        if (!params.length) {
+        if (!params.length || argNumber > params.length - 1) {
             return null;
         }
 
@@ -65,11 +65,11 @@ export class SignatureHelpProvider {
         let signatures: lsp.SignatureInformation[] = [];
 
         if (nRequiredParams > 0) {
-            signatures.push(this._signatureInfo(s, params.slice(0, nRequiredParams)));
+            signatures.push(this._signatureInfo(fn, params.slice(0, nRequiredParams)));
         }
 
         for (let n = 1; n <= nOptionalParams; ++n) {
-            signatures.push(this._signatureInfo(s, params.slice(0, nRequiredParams + n)));
+            signatures.push(this._signatureInfo(fn, params.slice(0, nRequiredParams + n)));
         }
 
         let activeSig = signatures.findIndex((v)=>{
