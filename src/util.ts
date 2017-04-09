@@ -104,3 +104,7 @@ export function fuzzyStringMatch(query: string, subject: string) {
     return acronym(subject).indexOf(query) > -1;
 
 }
+
+export function ciStringMatch(a:string, b:string){
+    return a.toLowerCase() === b.toLowerCase();
+}

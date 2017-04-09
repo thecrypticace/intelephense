@@ -6,7 +6,8 @@
 
 import {
     Phrase, Token, NamespaceName, MemberName, TokenType,
-    PhraseType, NamespaceDefinition, Parser
+    PhraseType, NamespaceDefinition, Parser, SimpleVariable,
+    ScopedMemberName
 } from 'php7parser';
 import { TextDocument } from './textDocument';
 import * as lsp from 'vscode-languageserver-types';
@@ -40,7 +41,7 @@ export class ParsedDocument {
         this._changeEvent = new Event<ParsedDocumentChangeEventArgs>();
     }
 
-    get tree(){
+    get tree() {
         return this._parseTree;
     }
 
@@ -52,7 +53,7 @@ export class ParsedDocument {
         return this._changeEvent;
     }
 
-    wordAtOffset(offset:number){
+    wordAtOffset(offset: number) {
         let lineText = this._textDocument.lineSubstring(offset);
         let match = lineText.match(ParsedDocument._wordRegex);
         return match ? match[0] : '';
@@ -81,8 +82,8 @@ export class ParsedDocument {
 
     }
 
-    tokenRange(t:Token){
-        if(!t){
+    tokenRange(t: Token) {
+        if (!t) {
             return null;
         }
 
@@ -144,19 +145,16 @@ export class ParsedDocument {
         return ParsedDocument.isToken(t) ? this._textDocument.textAtOffset(t.offset, t.length) : '';
     }
 
-    namespaceNameToString(node: NamespaceName) {
+    nodeText(node:Phrase|Token, ignore?:TokenType[]){
 
-        if (!node || !node.parts || node.parts.length < 1) {
+        if(!node){
             return '';
         }
 
-        let parts: string[] = [];
-        for (let n = 0, l = node.parts.length; n < l; ++n) {
-            parts.push(this.tokenText(node.parts[n]));
-        }
-
-        return parts.join('\\');
-
+        let visitor = new ToStringVisitor(this, ignore);
+        let traverser = new TreeTraverser([node]);
+        traverser.traverse(visitor);
+        return visitor.text; 
     }
 
     createAnonymousName(node: Phrase) {
@@ -169,7 +167,7 @@ export class ParsedDocument {
         return this._textDocument.positionAtOffset(offset);
     }
 
-    offsetAtPosition(position:lsp.Position){
+    offsetAtPosition(position: lsp.Position) {
         return this._textDocument.offsetAtPosition(position);
     }
 
@@ -201,6 +199,22 @@ export namespace ParsedDocument {
         return ParsedDocument.isToken(t) &&
             t.offset <= offset &&
             t.offset + t.length - 1 >= offset;
+    }
+
+    export function isFixedMemberName(phrase: MemberName) {
+        return ParsedDocument.isPhrase(phrase, [PhraseType.MemberName]) &&
+            ParsedDocument.isToken(phrase.name, [TokenType.Name]);
+    }
+
+    export function isFixedSimpleVariable(phrase: SimpleVariable) {
+        return ParsedDocument.isPhrase(phrase, [PhraseType.SimpleVariable]) &&
+            ParsedDocument.isToken(phrase.name, [TokenType.VariableName]);
+    }
+
+    export function isFixedScopedMemberName(phrase: ScopedMemberName) {
+        return ParsedDocument.isPhrase(phrase, [PhraseType.ScopedMemberName]) &&
+            (ParsedDocument.isToken(phrase.name, [TokenType.VariableName]) ||
+                ParsedDocument.isPhrase(phrase.name, [PhraseType.Identifier]));
     }
 
 }
@@ -255,6 +269,31 @@ export class ParsedDocumentStore {
 
     find(uri: string) {
         return this._parsedDocumentmap[uri];
+    }
+
+}
+
+class ToStringVisitor implements TreeVisitor<Phrase|Token> {
+
+    private _text:string;
+    private _doc:ParsedDocument;
+    private _ignore:TokenType[];
+
+    constructor(doc:ParsedDocument, ignore?:TokenType[]){
+        this._text = '';
+        this._doc = doc;
+    }
+
+    get text(){
+        return this._text;
+    }
+
+    postOrder(node:Phrase|Token, spine:(Phrase|Token)[]){
+
+        if(ParsedDocument.isToken(node) && (!this._ignore || this._ignore.indexOf((<Token>node).tokenType) < 0)){
+            this._text += this._doc.tokenText(<Token>node);
+        }
+
     }
 
 }

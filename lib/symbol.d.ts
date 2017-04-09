@@ -1,6 +1,6 @@
 import { Position, Location } from 'vscode-languageserver-types';
 import { Predicate, TreeVisitor } from './types';
-import { Phrase, Token, NamespaceName, FunctionDeclarationHeader, TypeDeclaration, QualifiedName, ParameterDeclaration, ConstElement, FunctionDeclaration, ClassDeclaration, ClassDeclarationHeader, ClassBaseClause, ClassInterfaceClause, QualifiedNameList, InterfaceDeclaration, InterfaceDeclarationHeader, InterfaceBaseClause, TraitDeclaration, TraitDeclarationHeader, ClassConstDeclaration, ClassConstElement, Identifier, MethodDeclaration, MethodDeclarationHeader, PropertyDeclaration, PropertyElement, MemberModifierList, NamespaceDefinition, NamespaceUseDeclaration, NamespaceUseClause, AnonymousClassDeclaration, AnonymousFunctionCreationExpression, AnonymousFunctionUseVariable, TraitUseClause, SimpleVariable, ObjectCreationExpression, SubscriptExpression, FunctionCallExpression, FullyQualifiedName, RelativeQualifiedName, MemberName, PropertyAccessExpression, ClassTypeDesignator, ScopedCallExpression, ScopedMemberName, ScopedPropertyAccessExpression, TernaryExpression } from 'php7parser';
+import { Phrase, Token, NamespaceName, FunctionDeclarationHeader, TypeDeclaration, QualifiedName, ParameterDeclaration, ConstElement, FunctionDeclaration, ClassDeclaration, ClassDeclarationHeader, ClassBaseClause, ClassInterfaceClause, QualifiedNameList, InterfaceDeclaration, InterfaceDeclarationHeader, InterfaceBaseClause, TraitDeclaration, TraitDeclarationHeader, ClassConstDeclaration, ClassConstElement, Identifier, MethodDeclaration, MethodDeclarationHeader, PropertyDeclaration, PropertyElement, MemberModifierList, NamespaceDefinition, NamespaceUseDeclaration, NamespaceUseClause, AnonymousClassDeclaration, AnonymousFunctionCreationExpression, AnonymousFunctionUseVariable, TraitUseClause, SimpleVariable, ObjectCreationExpression, SubscriptExpression, FunctionCallExpression, MemberName, PropertyAccessExpression, ClassTypeDesignator, ScopedCallExpression, ScopedMemberName, ScopedPropertyAccessExpression, TernaryExpression } from 'php7parser';
 import { PhpDoc, Tag, MethodTagParam } from './phpDoc';
 import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
 export declare const enum SymbolKind {
@@ -43,6 +43,7 @@ export interface PhpSymbol {
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
     scope?: string;
+    value?: string;
 }
 export declare class NameResolver {
     document: ParsedDocument;
@@ -55,7 +56,7 @@ export declare class NameResolver {
     resolveNotFullyQualified(notFqName: string, kind: SymbolKind): string;
     createAnonymousName(node: Phrase): string;
     namespaceNamePhraseText(node: NamespaceName, endOffset?: number): string;
-    qualifiedNamePhraseText(node: FullyQualifiedName | QualifiedName | RelativeQualifiedName, kind: SymbolKind): string;
+    namePhraseToFqn(node: Phrase, kind: SymbolKind): string;
     tokenText(t: Token, endOffset?: number): string;
     private _matchImportedSymbol(text, kind);
     private _resolveQualified(name, pos);

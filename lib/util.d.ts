@@ -6,3 +6,4 @@ export declare function isInRange(position: Position, startRange: Position, endR
 export declare function acronym(text: string): string;
 export declare function trigrams(text: string): string[];
 export declare function fuzzyStringMatch(query: string, subject: string): boolean;
+export declare function ciStringMatch(a: string, b: string): boolean;

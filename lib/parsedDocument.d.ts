@@ -1,4 +1,4 @@
-import { Phrase, Token, NamespaceName, TokenType, PhraseType } from 'php7parser';
+import { Phrase, Token, MemberName, TokenType, PhraseType, SimpleVariable, ScopedMemberName } from 'php7parser';
 import * as lsp from 'vscode-languageserver-types';
 import { TreeVisitor, Event } from './types';
 export interface ParsedDocumentChangeEventArgs {
@@ -24,7 +24,7 @@ export declare class ParsedDocument {
     firstToken(node: Phrase | Token): Token;
     lastToken(node: Phrase | Token): Token;
     tokenText(t: Token): string;
-    namespaceNameToString(node: NamespaceName): string;
+    nodeText(node: Phrase | Token, ignore?: TokenType[]): string;
     createAnonymousName(node: Phrase): string;
     positionAtOffset(offset: number): lsp.Position;
     offsetAtPosition(position: lsp.Position): number;
@@ -34,6 +34,9 @@ export declare namespace ParsedDocument {
     function isToken(node: Phrase | Token, types?: TokenType[]): boolean;
     function isPhrase(node: Phrase | Token, types?: PhraseType[]): boolean;
     function isOffsetInToken(offset: number, t: Token): boolean;
+    function isFixedMemberName(phrase: MemberName): boolean;
+    function isFixedSimpleVariable(phrase: SimpleVariable): boolean;
+    function isFixedScopedMemberName(phrase: ScopedMemberName): boolean;
 }
 export declare class ParsedDocumentStore {
     private _parsedDocumentChangeEvent;

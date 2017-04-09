@@ -73,6 +73,7 @@ export interface PhpSymbol {
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
     scope?: string;
+    value?:string;
 }
 
 /*
@@ -210,22 +211,24 @@ export class NameResolver {
 
     }
 
-    qualifiedNamePhraseText(node: FullyQualifiedName | QualifiedName | RelativeQualifiedName,
-        kind: SymbolKind) {
+    namePhraseToFqn(node: Phrase, kind: SymbolKind) {
 
-        if (!node || !node.name) {
+        if (!ParsedDocument.isPhrase(node, [
+            PhraseType.FullyQualifiedName, PhraseType.RelativeQualifiedName, PhraseType.QualifiedName
+        ])) {
             return '';
         }
 
-        let name = this.namespaceNamePhraseText(node.name);
+        let name = this.namespaceNamePhraseText((<any>node).name);
         switch (node.phraseType) {
             case PhraseType.QualifiedName:
                 return this.resolveNotFullyQualified(name, kind);
             case PhraseType.RelativeQualifiedName:
                 return this.resolveRelative(name);
             case PhraseType.FullyQualifiedName:
-            default:
                 return name;
+            default:
+                return '';
         }
 
     }
@@ -556,7 +559,7 @@ export class SymbolStore {
      * Matches any indexed symbol by name or partial name with optional additional filter
      * Parameters and variables that are not file scoped are not indexed.
      */
-    match(text: string, filter?: Predicate<PhpSymbol>, fuzzy?:boolean) {
+    match(text: string, filter?: Predicate<PhpSymbol>, fuzzy?: boolean) {
 
         if (!text) {
             return [];
@@ -1085,7 +1088,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             return '';
         }
 
-        let name = this.parsedDocument.namespaceNameToString(node.name);
+        let name = this.parsedDocument.nodeText(node.name, [TokenType.Whitespace]);
         switch (node.phraseType) {
             case PhraseType.QualifiedName:
                 return this.nameResolver.resolveNotFullyQualified(name, kind);
@@ -1171,10 +1174,10 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     methodDeclarationHeader(s: PhpSymbol, node: MethodDeclarationHeader) {
         s.name = this.identifier(node.name);
-        if(node.modifierList){
+        if (node.modifierList) {
             s.modifiers = this.memberModifierList(node.modifierList);
         }
-        
+
         return s;
     }
 
@@ -1507,7 +1510,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             location: this.phraseLocation(node)
         };
 
-        let fqn = this.concatNamespaceName(prefix, this.parsedDocument.namespaceNameToString(node.name));
+        let fqn = this.concatNamespaceName(prefix, this.parsedDocument.nodeText(node.name, [TokenType.Whitespace]));
         if (!fqn) {
             return s;
         }
@@ -1536,7 +1539,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
         return [
             node.kind ? this.tokenToSymbolKind(node.kind) : SymbolKind.None,
-            node.prefix ? this.parsedDocument.namespaceNameToString(node.prefix) : null
+            node.prefix ? this.parsedDocument.nodeText(node.prefix, [TokenType.Whitespace]) : null
         ];
 
     }
@@ -1545,7 +1548,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
         return <PhpSymbol>{
             kind: SymbolKind.Namespace,
-            name: this.parsedDocument.namespaceNameToString(node.name),
+            name: this.parsedDocument.nodeText(node.name, [TokenType.Whitespace]),
             location: this.phraseLocation(node),
             children: []
         };
@@ -1630,7 +1633,7 @@ export class SymbolIndex {
             if (text.length > 3 || text.length < 3) {
                 substrings.unshift(text);
             }
-            
+
         } else {
             substrings = [text];
         }
@@ -1781,7 +1784,7 @@ export class ExpressionTypeResolver {
             case PhraseType.QualifiedName:
             case PhraseType.FullyQualifiedName:
             case PhraseType.RelativeQualifiedName:
-                return new TypeString(this.nameResolver.qualifiedNamePhraseText(<any>node, SymbolKind.Class));
+                return new TypeString(this.nameResolver.namePhraseToFqn(<any>node, SymbolKind.Class));
             case PhraseType.RelativeScope:
                 return new TypeString(this.nameResolver.thisName);
             default:
@@ -1862,8 +1865,8 @@ export class ExpressionTypeResolver {
 
     classTypeDesignator(node: ClassTypeDesignator) {
         if (node && ParsedDocument.isPhrase(node.type,
-            [PhraseType.QualifiedName , PhraseType.FullyQualifiedName , PhraseType.RelativeQualifiedName])) {
-            return new TypeString(this.nameResolver.qualifiedNamePhraseText(<any>node.type, SymbolKind.Class));
+            [PhraseType.QualifiedName, PhraseType.FullyQualifiedName, PhraseType.RelativeQualifiedName])) {
+            return new TypeString(this.nameResolver.namePhraseToFqn(<any>node.type, SymbolKind.Class));
         } else if (node && ParsedDocument.isPhrase(node.type, [PhraseType.RelativeScope])) {
             return new TypeString(this.nameResolver.thisName);
         } else {
@@ -1905,7 +1908,7 @@ export class ExpressionTypeResolver {
             return new TypeString('');
         }
 
-        let functionName = this.nameResolver.qualifiedNamePhraseText(<any>qName, SymbolKind.Function)
+        let functionName = this.nameResolver.namePhraseToFqn(<any>qName, SymbolKind.Function)
         let symbol = this.symbolStore.find(functionName, (x) => { return x.kind === SymbolKind.Function });
         return symbol && symbol.type ? symbol.type : new TypeString('');
 
@@ -2171,7 +2174,7 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
         let lhs = node.left;
         let rhs = node.right;
         let exprTypeResolver = new ExpressionTypeResolver(this.nameResolver, this.symbolStore, this.variableTable);
-        let type:TypeString;
+        let type: TypeString;
 
         if (ParsedDocument.isPhrase(lhs, [PhraseType.SimpleVariable])) {
             let varName = this._simpleVariable(<SimpleVariable>lhs);

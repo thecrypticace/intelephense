@@ -1,8 +1,8 @@
-import { SymbolStore, NameResolver, PhpSymbol, ExpressionTypeResolver, VariableTable, TypeString } from './symbol';
+import { SymbolStore, NameResolver, PhpSymbol, SymbolKind, ExpressionTypeResolver, VariableTable, TypeString } from './symbol';
 import { TreeTraverser } from './types';
 import { ParsedDocument } from './parsedDocument';
 import { Position } from 'vscode-languageserver-types';
-import { Phrase, Token, NamespaceDefinition, ClassDeclaration } from 'php7parser';
+import { Phrase, Token, NamespaceDefinition, ClassDeclaration, TokenType } from 'php7parser';
 export declare class Context {
     symbolStore: SymbolStore;
     document: ParsedDocument;
@@ -32,6 +32,8 @@ export declare class Context {
     readonly scopePhrase: Phrase;
     readonly scopeSymbol: PhpSymbol;
     readonly variableTable: VariableTable;
+    nodeText(node: Phrase | Token, ignore?: TokenType[]): string;
+    resolveFqn(phrase: Phrase, kind: SymbolKind): string;
     resolveExpressionType(expr: Phrase): TypeString;
     createNameResolver(): NameResolver;
     createTraverser(): TreeTraverser<Token | Phrase>;
