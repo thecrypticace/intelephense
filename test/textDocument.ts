@@ -11,6 +11,26 @@ var src =
 
 `;
 
+var afterInsert =
+`<?php
+
+    $var = 101;
+
+`;
+
+var afterDelete = 
+`<?php
+
+
+`;
+
+var afterReplace = 
+`<?php
+
+    $foobar = 1;
+
+`;
+
 var doc = new TextDocument('test', src);
 
 describe('TextDocument', function () {
@@ -21,7 +41,7 @@ describe('TextDocument', function () {
 
             assert.deepEqual(doc.lineOffsets, [0, 6, 7, 21, 22]);
 
-        })
+        });
 
 
     });
@@ -47,7 +67,53 @@ describe('TextDocument', function () {
 
         });
 
-    })
+    });
+
+    describe('applyEdit', function(){
+
+        it('insert', function(){
+
+            var insertDoc = new TextDocument('test', src);
+            insertDoc.applyEdit({
+                line:2,
+                character:11
+            }, {
+                line:2,
+                character:11
+            }, '10');
+            assert.equal(insertDoc.text, afterInsert);
+
+        });
+
+        it('delete', function(){
+
+            var deleteDoc = new TextDocument('test', src);
+            deleteDoc.applyEdit({
+                line:2,
+                character:0
+            }, {
+                line:3,
+                character:0
+            }, '');
+            assert.equal(deleteDoc.text, afterDelete);
+
+        });
+
+        it('replace', function(){
+
+            var replaceDoc = new TextDocument('test', src);
+            replaceDoc.applyEdit({
+                line:2,
+                character:5
+            }, {
+                line:2,
+                character:8
+            }, 'foobar');
+            assert.equal(replaceDoc.text, afterReplace);
+
+        });
+
+    });
 
 
 });
