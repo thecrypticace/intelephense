@@ -1171,7 +1171,10 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     methodDeclarationHeader(s: PhpSymbol, node: MethodDeclarationHeader) {
         s.name = this.identifier(node.name);
-        s.modifiers = this.memberModifierList(node.modifierList);
+        if(node.modifierList){
+            s.modifiers = this.memberModifierList(node.modifierList);
+        }
+        
         return s;
     }
 
