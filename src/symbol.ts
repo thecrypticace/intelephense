@@ -1942,7 +1942,7 @@ export class ExpressionTypeResolver {
             type = type.merge(symbols[n].type);
         }
 
-        return !type.isEmpty() ? type : new TypeString('');
+        return type;
     }
 
 }
@@ -2318,7 +2318,7 @@ export class VariableTable {
             }
         }
 
-        return null;
+        return new TypeString('');
 
     }
 

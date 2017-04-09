@@ -35,6 +35,18 @@ var scopedSrc =
     $myVar = MyClass::$m
 `;
 
+var variableSrc = 
+`<?php
+    class MyClass {
+        function myFn(){ 
+            $myFnVar = 1;
+        }
+    }
+
+    $myVar = new MyClass();
+    $
+`;
+
 function setup(src:string){
     symbolStore = new SymbolStore();
     parsedDocumentStore = new ParsedDocumentStore();
@@ -103,5 +115,16 @@ describe('CompletionProvider', () => {
         });
 
     });
+
+    describe('variable completions', function(){
+        before(function(){
+            setup(variableSrc);
+        });
+
+        it('variable completions from correct scope', function(){
+            var completions = completionProvider.provideCompletions('test', { line: 8, character: 5 });
+            console.log(JSON.stringify(completions, null, 4));
+        });
+    })
 
 });

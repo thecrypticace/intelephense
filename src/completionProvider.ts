@@ -253,8 +253,7 @@ class SimpleVariableCompletion implements CompletionStrategy {
     completions(context: Context) {
 
         let nameResolver = context.createNameResolver();
-        let text = ParsedDocument.isToken(context.token, [TokenType.Dollar]) ?
-            '$' : nameResolver.tokenText(context.token, context.offset);
+        let text = context.word;
 
         if (!text) {
             return noCompletionResponse;
