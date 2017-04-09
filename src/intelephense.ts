@@ -10,6 +10,7 @@ import { SymbolProvider } from './symbolProvider';
 import { CompletionProvider } from './completionProvider';
 import { DiagnosticsProvider } from './diagnosticsProvider';
 import { Debounce, Unsubscribe } from './types';
+import {SignatureHelpProvider} from './signatureHelpProvider';
 import * as lsp from 'vscode-languageserver-types';
 
 export namespace Intelephense {
@@ -23,6 +24,7 @@ export namespace Intelephense {
     let symbolProvider = new SymbolProvider(symbolStore);
     let completionProvider = new CompletionProvider(symbolStore, documentStore, maxCompletions);
     let diagnosticsProvider = new DiagnosticsProvider();
+    let signatureHelpProvider = new SignatureHelpProvider(symbolStore, documentStore);
 
     let unsubscribes: Unsubscribe[] = [];
     unsubscribes.push(documentStore.parsedDocumentChangeEvent.subscribe(symbolStore.onParsedDocumentChange));
@@ -118,6 +120,10 @@ export namespace Intelephense {
         }
         return <lsp.CompletionList>{ items: [] };
 
+    }
+
+    export function provideSignatureHelp(uri:string, position:lsp.Position){
+        return signatureHelpProvider.provideSignatureHelp(uri, position);
     }
 
     export function discover(textDocument: lsp.TextDocumentItem) {

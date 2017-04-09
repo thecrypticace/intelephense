@@ -5,8 +5,8 @@ export declare class SignatureHelpProvider {
     symbolStore: SymbolStore;
     docStore: ParsedDocumentStore;
     constructor(symbolStore: SymbolStore, docStore: ParsedDocumentStore);
-    provideSignatureHelp(uri: string, position: lsp.Position): any;
-    private _createSignatureHelp(s, argNumber);
+    provideSignatureHelp(uri: string, position: lsp.Position): lsp.SignatureHelp;
+    private _createSignatureHelp(fn, argNumber);
     private _signatureInfo(fn, params);
     private _parameterInfoArray(params);
     private _parameterInfo(s);
