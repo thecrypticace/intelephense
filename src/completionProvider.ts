@@ -652,7 +652,7 @@ class ObjectAccessCompletion implements CompletionStrategy {
     private _createMembersPredicate(text: string) {
         return (s: PhpSymbol) => {
             return (s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
-                !(s.modifiers & (SymbolModifier.Private | SymbolModifier.Protected)) &&
+                !(s.modifiers & (SymbolModifier.Private | SymbolModifier.Protected | SymbolModifier.Static)) &&
                 util.fuzzyStringMatch(text, s.name);
         };
     }
@@ -660,7 +660,7 @@ class ObjectAccessCompletion implements CompletionStrategy {
     private _createBaseMembersPredicate(text: string) {
         return (s: PhpSymbol) => {
             return (s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
-                !(s.modifiers & SymbolModifier.Private) &&
+                !(s.modifiers & SymbolModifier.Private | SymbolModifier.Static) &&
                 util.fuzzyStringMatch(text, s.name);
         };
     }
@@ -668,6 +668,7 @@ class ObjectAccessCompletion implements CompletionStrategy {
     private _createOwnMembersPredicate(text: string) {
         return (s: PhpSymbol) => {
             return (s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
+                !(s.modifiers & SymbolModifier.Static) &&
                 util.fuzzyStringMatch(text, s.name);
         };
     }
