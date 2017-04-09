@@ -1,4 +1,4 @@
-/* Copyright © Ben Mewburn ben@mewburn.id.au
+/* Copyright (c) Ben Mewburn ben@mewburn.id.au
  * Licensed under the MIT Licence.
  */
 

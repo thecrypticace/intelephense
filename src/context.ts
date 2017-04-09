@@ -12,7 +12,10 @@ import {
 import { TreeVisitor, TreeTraverser } from './types';
 import { ParsedDocument } from './parsedDocument';
 import { Position } from 'vscode-languageserver-types';
-import { Phrase, Token, PhraseType, NamespaceDefinition, ClassDeclaration } from 'php7parser';
+import {
+    Phrase, Token, PhraseType, NamespaceDefinition, ClassDeclaration,
+    TokenType
+} from 'php7parser';
 
 class ContextVisitor implements TreeVisitor<Phrase | Token>{
 
@@ -90,8 +93,6 @@ export class Context {
         this._namespaceDefinition = contextVisitor.namespaceDefinition;
         this._parseTreeSpine = contextVisitor.spine;
 
-
-
     }
 
     get word() {
@@ -125,7 +126,7 @@ export class Context {
     get namespaceName() {
         if (this._namespaceName === undefined) {
             if (this.namespacePhrase) {
-                this._namespaceName = this.document.namespaceNameToString(this.namespacePhrase.name);
+                this._namespaceName = this.nodeText(this.namespacePhrase.name, [TokenType.Whitespace]);
             } else {
                 this._namespaceName = '';
             }
@@ -233,7 +234,8 @@ export class Context {
 
     get variableTable() {
         if (!this._variableTable) {
-            let varTypeResolver = new VariableTypeResolver(new VariableTable(), this.document, this.createNameResolver(), this.symbolStore, this.token);
+            let varTypeResolver = new VariableTypeResolver(
+                new VariableTable(), this.document, this.createNameResolver(), this.symbolStore, this.token);
             let scope = this.scopePhrase;
             let traverser = new TreeTraverser([scope]);
             traverser.traverse(varTypeResolver);
@@ -241,6 +243,15 @@ export class Context {
         }
         return this._variableTable;
 
+    }
+
+    nodeText(node: Phrase | Token, ignore?: TokenType[]) {
+        return this.document.nodeText(node, ignore);
+    }
+
+    resolveFqn(phrase: Phrase, kind: SymbolKind) {
+        let nameResolver = this.createNameResolver();
+        return nameResolver.namePhraseToFqn(phrase, kind);
     }
 
     resolveExpressionType(expr: Phrase) {
