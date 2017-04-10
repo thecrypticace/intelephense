@@ -34,7 +34,7 @@ export class SignatureHelpProvider {
         let traverser = context.createTraverser();
         let callableExpr = traverser.ancestor(this._isCallablePhrase);
 
-        if (!callableExpr) {
+        if (!callableExpr || ParsedDocument.isToken(context.token, [TokenType.CloseParenthesis])) {
             return null;
         }
 
