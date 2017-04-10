@@ -95,7 +95,7 @@ foreach ($dir as $fileinfo) {
         }
     }   
     
-    $out = '/home/ben/tmp/builtInSymbols.ts';
+    $out = 'builtInSymbols.json';
     
     $otherSymbols = [
         '$GLOBALS'=> [
@@ -393,11 +393,14 @@ foreach ($dir as $fileinfo) {
     
     function write($symbols, $file){
         
-        $string = "export var builtInSymbols: SymbolMap = ";
+        file_put_contents($file, json_encode(array_values($symbols)));
+        return;
+
+        //$string = "export var builtInSymbols: SymbolMap = ";
         
-        $string .= writeSymbolMap($symbols);
+        $string = writeSymbolMap(array_values($symbols));
         
-        $string .= ";";
+        //$string .= ";";
         file_put_contents($file, $string);
     }
 
@@ -425,11 +428,11 @@ foreach ($dir as $fileinfo) {
                 $properties[] = $propName . ':' . $propValue; 
             }
             
-            $symbolStrings[] = "$key : {    \n" . implode(",\n", $properties) . "\n    }";
+            $symbolStrings[] = " {    \n" . implode(",\n", $properties) . "\n    }";
             
         }
 
-        return "{\n" . implode(",\n", $symbolStrings) . "\n}";
+        return "[\n" . implode(",\n", $symbolStrings) . "\n]";
 
     }
     
@@ -623,7 +626,9 @@ foreach ($dir as $fileinfo) {
             $classSymbol['children'][$symbol['name']] = $symbol;
             //var_dump($symbol);
         }
-        
+        if(isset($classSymbol['children'])){
+            $classSymbol['children'] = array_values($classSymbol['children']);
+        }
         return $classSymbol;
     }
     
@@ -707,7 +712,7 @@ foreach ($dir as $fileinfo) {
             'name'=>$class ? $classMethod : $function,
             'modifiers'=>$flags,
             'description'=>$description,
-            'type'=>explode('|', $returnType),
+            'type'=>$returnType,//explode('|', $returnType),
             'children'=>array()
         );
         if($symbol['name']){
@@ -780,5 +785,12 @@ if($class && isset($symbols[$class])){
                 $symbols[$symbol['name']] = $symbol;
             }
         }
+
+        array_walk($symbols, function(&$v, $k){
+            if(isset($v['children'])){
+                $v['children'] = array_values($v['children']);
+            }
+        });
+
         return $symbols;
     }
