@@ -4,6 +4,7 @@ export declare namespace Intelephense {
     var diagnosticsDebounceWait: number;
     var onDiagnosticsStart: (uri: string) => void;
     var onDiagnosticsEnd: (uri: string, diagnostics: lsp.Diagnostic[]) => void;
+    function initialise(): void;
     function openDocument(textDocument: lsp.TextDocumentItem): void;
     function closeDocument(textDocument: lsp.TextDocumentIdentifier): void;
     function editDocument(textDocument: lsp.VersionedTextDocumentIdentifier, contentChanges: lsp.TextDocumentContentChangeEvent[]): void;
