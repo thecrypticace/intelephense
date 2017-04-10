@@ -10,7 +10,7 @@ import { SymbolProvider } from './symbolProvider';
 import { CompletionProvider } from './completionProvider';
 import { DiagnosticsProvider } from './diagnosticsProvider';
 import { Debounce, Unsubscribe } from './types';
-import {SignatureHelpProvider} from './signatureHelpProvider';
+import { SignatureHelpProvider } from './signatureHelpProvider';
 import * as lsp from 'vscode-languageserver-types';
 
 export namespace Intelephense {
@@ -99,13 +99,8 @@ export namespace Intelephense {
     }
 
     export function documentSymbols(textDocument: lsp.TextDocumentIdentifier) {
-
-        let parsedDocument = documentStore.find(textDocument.uri);
-        if (parsedDocument) {
-            parsedDocument.flush();
-            return symbolProvider.provideDocumentSymbols(textDocument.uri);
-        }
-        return [];
+        flushParseDebounce(textDocument.uri);
+        return symbolProvider.provideDocumentSymbols(textDocument.uri);
     }
 
     export function workspaceSymbols(query: string) {
@@ -113,17 +108,13 @@ export namespace Intelephense {
     }
 
     export function provideCompletions(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position) {
-        let parsedDocument = documentStore.find(textDocument.uri);
-        if (parsedDocument) {
-            parsedDocument.flush();
-            return completionProvider.provideCompletions(textDocument.uri, position);
-        }
-        return <lsp.CompletionList>{ items: [] };
-
+        flushParseDebounce(textDocument.uri);
+        return completionProvider.provideCompletions(textDocument.uri, position);
     }
 
-    export function provideSignatureHelp(uri:string, position:lsp.Position){
-        return signatureHelpProvider.provideSignatureHelp(uri, position);
+    export function provideSignatureHelp(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position) {
+        flushParseDebounce(textDocument.uri);
+        return signatureHelpProvider.provideSignatureHelp(textDocument.uri, position);
     }
 
     export function discover(textDocument: lsp.TextDocumentItem) {
@@ -167,6 +158,13 @@ export namespace Intelephense {
 
     export function numberSymbolsKnown() {
         return symbolStore.symbolCount;
+    }
+
+    function flushParseDebounce(uri: string) {
+        let parsedDocument = documentStore.find(uri);
+        if (parsedDocument) {
+            parsedDocument.flush();
+        }
     }
 
 }

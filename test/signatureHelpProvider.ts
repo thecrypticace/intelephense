@@ -4,6 +4,7 @@ import { ParsedDocumentStore, ParsedDocument } from '../src/parsedDocument';
 import { assert } from 'chai';
 import 'mocha';
 
+/*
 let constructorHelpSrc =
 `<?php
     class MyClass {
@@ -13,6 +14,30 @@ let constructorHelpSrc =
     }
     $var = new MyClass();
 `;
+
+*/
+let constructorHelpSrc =
+`<?php
+
+    class AnotherClass {
+        
+    }
+
+    class MyClass {
+
+        function __construct($arg1, $arg2){
+            
+        }
+
+        public static $myProperty = 1;
+
+        public function myFunc(){
+
+        }
+    }
+
+    $myVar = new MyClass()
+    `;
 
 function setup(src: string) {
 
@@ -32,7 +57,7 @@ describe('SignatureHelpProvider', function () {
         it('constructor completion', function () {
 
             let provider = setup(constructorHelpSrc);
-            let help = provider.provideSignatureHelp('test', {line: 6, character:23});
+            let help = provider.provideSignatureHelp('test', {line: 19, character:25});
             console.log(JSON.stringify(help, null, 4)); 
 
         })
