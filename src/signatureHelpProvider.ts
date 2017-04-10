@@ -98,7 +98,8 @@ export class SignatureHelpProvider {
 
         return <lsp.SignatureInformation>{
             label: label,
-            documentation:fn.description
+            documentation:fn.description,
+            parameters:paramInfoArray
         }
 
     }
