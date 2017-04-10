@@ -12,7 +12,7 @@ import { DiagnosticsProvider } from './diagnosticsProvider';
 import { Debounce, Unsubscribe } from './types';
 import { SignatureHelpProvider } from './signatureHelpProvider';
 import * as lsp from 'vscode-languageserver-types';
-import * as builtInSymbols from 'json!./builtInSymbols.json';
+import * as builtInSymbols from './builtInSymbols.json';
 
 export namespace Intelephense {
 
