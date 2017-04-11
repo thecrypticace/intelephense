@@ -779,6 +779,8 @@ foreach ($dir as $fileinfo) {
             }
             $symbol['children'][$paramSymbol['name']] = $paramSymbol;
         }
+
+        $symbol['children'] = array_values($symbol['children']);
 if($class && isset($symbols[$class])){
                 $symbols[$class]['children'][$symbol['name']] = $symbol;
             } else {
