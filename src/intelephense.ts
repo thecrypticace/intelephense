@@ -12,7 +12,7 @@ import { DiagnosticsProvider } from './diagnosticsProvider';
 import { Debounce, Unsubscribe } from './types';
 import { SignatureHelpProvider } from './signatureHelpProvider';
 import * as lsp from 'vscode-languageserver-types';
-import * as builtInSymbols from './builtInSymbols';
+import * as builtInSymbols from './builtInSymbols.json';
 
 export namespace Intelephense {
 
@@ -46,7 +46,6 @@ export namespace Intelephense {
     export var onDiagnosticsEnd: (uri: string, diagnostics: lsp.Diagnostic[]) => void = null;
 
     export function initialise() {
-
         let table = new SymbolTable('\\', { kind: 0, name: '', children: <any>builtInSymbols });
         symbolStore.add(table);
 
