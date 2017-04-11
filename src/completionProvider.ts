@@ -615,8 +615,7 @@ class ObjectAccessCompletion implements CompletionStrategy {
         }
 
         return ParsedDocument.isToken(traverser.node, [TokenType.Name]) &&
-            ParsedDocument.isPhrase(traverser.parent(),
-                [PhraseType.PropertyAccessExpression, PhraseType.MethodCallExpression]);
+            ParsedDocument.isPhrase(traverser.parent(), [PhraseType.MemberName]);
 
     }
 
