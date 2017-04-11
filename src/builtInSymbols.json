@@ -1,4 +1,4 @@
-export default JSON.parse(`[
+[
     {
         "kind": 1,
         "name": "SplFileInfo",
@@ -86429,7 +86429,7 @@ export default JSON.parse(`[
                 "name": "$charlist",
                 "type": "string",
                 "modifiers": 0,
-                "description": "A list of characters to be escaped. If charlist contains characters \\n, \\r etc., they are converted in C-like style, while other non-alphanumeric characters with ASCII codes lower than 32 and higher than 126 converted to octal representation. When you define a sequence of characters in the charlist argument make sure that you know what characters come between the characters that you set as the start and end of the range.
+                "description": "A list of characters to be escaped. If charlist contains characters \\n, \\r etc., they are converted in C-like style, while other non-alphanumeric characters with ASCII codes lower than 32 and higher than 126 converted to octal representation. When you define a sequence of characters in the charlist argument make sure that you know what characters come between the characters that you set as the start and end of the range. <?phpecho\u00a0addcslashes('foo[\u00a0]',\u00a0'A..z');\/\/\u00a0output:\u00a0\u00a0\\f\\o\\o\\[\u00a0\\]\/\/\u00a0All\u00a0upper\u00a0and\u00a0lower-case\u00a0letters\u00a0will\u00a0be\u00a0escaped\/\/\u00a0...\u00a0but\u00a0so\u00a0will\u00a0the\u00a0[\\]^_`?> Also, if the first character in a range has a higher ASCII value than the second character in the range, no range will be constructed. Only the start, end and period characters will be escaped. Use the ord() function to find the ASCII value for a character. <?phpecho\u00a0addcslashes(\"zoo['.']\",\u00a0'z..A');\/\/\u00a0output:\u00a0\u00a0\\zoo['\\.']?> Be careful if you choose to escape characters 0, a, b, f, n, r, t and v. They will be converted to \\0, \\a, \\b, \\f, \\n, \\r, \\t and \\v, all of which are predefined escape sequences in C. Many of these sequences are also defined in other C-derived languages, including PHP, meaning that you may not get the desired result if you use the output of addcslashes() to generate code in those languages with these characters defined in charlist."
             }
         ]
     },
@@ -96583,4 +96583,4 @@ export default JSON.parse(`[
         "name": "PASSWORD_DEFAULT",
         "description": "The default algorithm to use for hashing if no algorithm is provided. This may change in newer PHP releases when newer, stronger hashing algorithms are supported."
     }
-]`);
+]

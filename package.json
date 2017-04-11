@@ -6,7 +6,7 @@
   "types": "./lib/intelephense.d.ts",
   "scripts": {
     "test": "mocha",
-    "build": "rm -f ./lib/* && tsc"
+    "build": "rm -f ./lib/* && tsc && cp ./src/builtInSymbols.json ./lib/"
   },
   "author": "Ben Mewburn",
   "license": "MIT",
