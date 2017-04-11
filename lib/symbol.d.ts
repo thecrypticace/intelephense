@@ -131,6 +131,8 @@ export declare class SymbolReader implements TreeVisitor<Phrase | Token> {
     parsedDocument: ParsedDocument;
     nameResolver: NameResolver;
     spine: PhpSymbol[];
+    private static _varAncestors;
+    private static _globalVars;
     lastPhpDoc: PhpDoc;
     lastPhpDocLocation: Location;
     namespaceUseDeclarationKind: SymbolKind;
@@ -140,6 +142,7 @@ export declare class SymbolReader implements TreeVisitor<Phrase | Token> {
     constructor(parsedDocument: ParsedDocument, nameResolver: NameResolver, spine: PhpSymbol[]);
     preOrder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
     postOrder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
+    private _shouldReadVar(spine);
     private _top();
     private _variableExists(name);
     private _token(t);

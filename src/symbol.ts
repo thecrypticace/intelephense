@@ -118,86 +118,17 @@ export namespace PhpSymbol {
         }
 
         let sig = `(${paramStrings.join('')})`;
-        if(s.type && !s.type.isEmpty()){
+        if (s.type && !s.type.isEmpty()) {
             sig += `: ${s.type}`;
         }
         return sig;
 
     }
 
-    export function hasParameters(s:PhpSymbol){
+    export function hasParameters(s: PhpSymbol) {
         return s.children && s.children.find(isParameter) !== undefined;
     }
 
-    /*
-        export function acronym(s: PhpSymbol) {
-    
-            let text = s.name.slice(s.name.lastIndexOf('\\') + 1);
-    
-            if (!text) {
-                return '';
-            }
-    
-            let lcText = text.toLowerCase();
-            let n = 0;
-            let l = text.length;
-            let c: string;
-            let acronym = lcText[0] !== '_' && lcText[0] !== '$' ? lcText[0] : '';
-    
-            while (n < l) {
-    
-                c = text[n];
-    
-                if ((c === '$' || c === '_') && n + 1 < l && text[n + 1] !== '_') {
-                    ++n;
-                    acronym += lcText[n];
-                } else if (n > 0 && c !== lcText[n] && text[n - 1] === lcText[n - 1]) {
-                    //uppercase
-                    acronym += lcText[n];
-                }
-    
-                ++n;
-    
-            }
-    
-            return acronym;
-        }
-    
-        /**
-         * Get suffixes after $, namespace separator, underscore and on lowercase uppercase boundary
-         *
-        export function suffixArray(s: PhpSymbol) {
-            if (!s.name) {
-                return [];
-            }
-    
-            let text = s.name;
-            let lcText = text.toLowerCase();
-            let suffixes = [lcText];
-            let n = 0;
-            let c: string;
-            let l = text.length;
-    
-            while (n < l) {
-    
-                c = text[n];
-    
-                if ((c === '$' || c === '\\' || c === '_') && n + 1 < l && text[n + 1] !== '_') {
-                    ++n;
-                    suffixes.push(lcText.slice(n));
-                } else if (n > 0 && c !== lcText[n] && text[n - 1] === lcText[n - 1]) {
-                    //uppercase
-                    suffixes.push(lcText.slice(n));
-                }
-    
-                ++n;
-    
-            }
-    
-            return suffixes;
-        }
-        
-    */
 }
 
 export class NameResolver {
@@ -730,6 +661,30 @@ export class SymbolStore {
 
 export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
+    private static _varAncestors = [
+        PhraseType.ListIntrinsic, PhraseType.ForeachKey, PhraseType.ForeachValue,
+        PhraseType.ByRefAssignmentExpression, PhraseType.CompoundAssignmentExpression,
+        PhraseType.SimpleAssignmentExpression
+    ];
+
+    private static _globalVars = [
+        '$GLOBALS',
+        '$_SERVER',
+        '$_GET',
+        '$_POST',
+        '$_FILES',
+        '$_REQUEST',
+        '$_SESSION',
+        '$_ENV',
+        '$_COOKIE',
+        '$php_errormsg',
+        '$HTTP_RAW_POST_DATA',
+        '$http_response_header',
+        '$argc',
+        '$argv',
+        '$this'
+    ];
+
     lastPhpDoc: PhpDoc;
     lastPhpDocLocation: Location;
     namespaceUseDeclarationKind: SymbolKind;
@@ -941,8 +896,13 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 return false;
 
             case PhraseType.SimpleVariable:
+
+                if (!this._shouldReadVar(spine)) {
+                    return false;
+                }
+
                 s = this.simpleVariable(<SimpleVariable>node);
-                if (s && !this._variableExists(s.name)) {
+                if (s && SymbolReader._globalVars.indexOf(s.name) < 0 && !this._variableExists(s.name)) {
                     this._addSymbol(s, false);
                 }
                 return false;
@@ -998,6 +958,21 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             default:
                 break;
         }
+
+    }
+
+    private _shouldReadVar(spine: (Phrase | Token)[]) {
+
+        for (let n = spine.length - 1, c = 0; n >= 0; --n, ++c) {
+            if (SymbolReader._varAncestors.indexOf((<Phrase>spine[n]).phraseType)) {
+                return true;
+            } else if (c > 3) {
+                //should have found a valid ancestor at this point
+                break;
+            }
+        }
+
+        return false;
 
     }
 
