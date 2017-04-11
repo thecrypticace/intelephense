@@ -30,6 +30,7 @@ import {
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam } from './phpDoc';
 import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
 import * as util from './util';
+import * as builtInSymbols from './builtInSymbols.json';
 
 export const enum SymbolKind {
     None = 0,
@@ -73,7 +74,7 @@ export interface PhpSymbol {
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
     scope?: string;
-    value?:string;
+    value?: string;
 }
 
 /*
@@ -491,6 +492,17 @@ export class SymbolTable {
 
     }
 
+    static createBuiltIn() {
+
+        builtInSymbolTypeStrings(<any>builtInSymbols);
+        return new SymbolTable('\\', {
+            kind: SymbolKind.None,
+            name: '',
+            children: <any>builtInSymbols
+        });
+
+    }
+
 }
 
 export interface MemberQuery {
@@ -547,12 +559,15 @@ export class SymbolStore {
     }
 
     /**
-     * As per match but returns first item in result
+     * As per match but returns first item in result that matches text exactly
      * @param text 
      * @param kindMask 
      */
     find(text: string, filter?: Predicate<PhpSymbol>) {
-        return this.match(text, filter).shift();
+        let exactMatchFn = (x: PhpSymbol) => {
+            return (!filter || filter(x)) && x.name === text;
+        };
+        return this.match(text, exactMatchFn).shift();
     }
 
     /**
@@ -589,7 +604,7 @@ export class SymbolStore {
     }
 
     lookupTypeMembers(query: MemberQuery) {
-        let type = this.match(query.typeName, this._classOrInterfaceFilter).shift();
+        let type = this.find(query.typeName, this._classOrInterfaceFilter);
         return this._lookupTypeMembers(type, query.memberPredicate);
     }
 
@@ -634,9 +649,9 @@ export class SymbolStore {
 
         for (let n = 0, l = associated.length; n < l; ++n) {
             baseSymbol = associated[n];
-            baseSymbol = this.match(baseSymbol.name, (x) => {
+            baseSymbol = this.find(baseSymbol.name, (x) => {
                 return x.kind === baseSymbol.kind;
-            }).shift();
+            });
             if (baseSymbol) {
                 Array.prototype.push.apply(members, this._lookupTypeMembers(baseSymbol, basePredicate));
             }
@@ -2343,6 +2358,21 @@ export class VariableTable {
 
     private _top() {
         return this._typeVariableSetStack[this._typeVariableSetStack.length - 1];
+    }
+
+}
+
+function builtInSymbolTypeStrings(symbols: any[]) {
+    let s: any;
+    for (let n = 0, l = symbols.length; n < l; ++n) {
+        s = symbols[n];
+        if (s.type) {
+            s.type = new TypeString(s.type);
+        }
+
+        if (s.children) {
+            builtInSymbolTypeStrings(s.children);
+        }
     }
 
 }
