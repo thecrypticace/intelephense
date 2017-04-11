@@ -5,14 +5,10 @@ import * as lsp from 'vscode-languageserver-types';
 import { assert } from 'chai';
 import 'mocha';
 
-var symbolStore:SymbolStore;
-var parsedDocumentStore:ParsedDocumentStore;
-var completionProvider:CompletionProvider;
 var noCompletions: lsp.CompletionList = {
     items: [],
     isIncomplete: false
 };
-var doc:ParsedDocument;
 
 
 var objectCreationSrc =
@@ -47,23 +43,39 @@ var variableSrc =
     $
 `;
 
+var nameSrc = 
+`<?php
+    a
+`;
+
 function setup(src:string){
-    symbolStore = new SymbolStore();
-    parsedDocumentStore = new ParsedDocumentStore();
-    completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore, 100);
-    doc = new ParsedDocument('test', src);
+    let symbolStore = new SymbolStore();
+    let parsedDocumentStore = new ParsedDocumentStore();
+    let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore, 100);
+    let doc = new ParsedDocument('test', src);
     parsedDocumentStore.add(doc);
     symbolStore.add(SymbolTable.create(doc));
+    return completionProvider;
 }
 
-
+function inbuiltSetup(src:string){
+    let symbolStore = new SymbolStore();
+    let parsedDocumentStore = new ParsedDocumentStore();
+    let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore, 100);
+    let doc = new ParsedDocument('test', src);
+    parsedDocumentStore.add(doc);
+    symbolStore.add(SymbolTable.create(doc));
+    symbolStore.add(SymbolTable.createBuiltIn());
+    return completionProvider;
+}
 
 describe('CompletionProvider', () => {
 
     describe('object creation completions', () => {
 
+        let completionProvider:CompletionProvider;
         before(function(){
-            setup(objectCreationSrc);
+            completionProvider = setup(objectCreationSrc);
         });
 
         it('Should return empty CompletionList on no matches', function () {
@@ -74,7 +86,7 @@ describe('CompletionProvider', () => {
         it('Should suggest completions', function () {
 
             var completions = completionProvider.provideCompletions('test', { line: 7, character: 18 });
-            console.log(JSON.stringify(completions, null, 4));
+            //console.log(JSON.stringify(completions, null, 4));
             assert.equal(completions.items[0].label, 'MyClass');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Constructor);
             
@@ -84,8 +96,10 @@ describe('CompletionProvider', () => {
 
     describe('scoped completions', () => {
 
+        let completionProvider:CompletionProvider;
+
         before(function(){
-            setup(scopedSrc);
+            completionProvider = setup(scopedSrc);
             //console.log(JSON.stringify(symbolStore, null, 4));
         });
 
@@ -117,14 +131,31 @@ describe('CompletionProvider', () => {
     });
 
     describe('variable completions', function(){
+        
+        let completionProvider:CompletionProvider;
         before(function(){
-            setup(variableSrc);
+            completionProvider = setup(variableSrc);
         });
 
         it('variable completions from correct scope', function(){
             var completions = completionProvider.provideCompletions('test', { line: 8, character: 5 });
+            //console.log(JSON.stringify(completions, null, 4));
+        });
+    });
+
+
+    describe('name completions', function(){
+
+        let completionProvider:CompletionProvider;
+        before(function(){
+            completionProvider = inbuiltSetup(nameSrc);
+        });
+
+        it('name completions', function(){
+            var completions = completionProvider.provideCompletions('test', { line: 1, character: 5 });
             console.log(JSON.stringify(completions, null, 4));
         });
-    })
+
+    });
 
 });
