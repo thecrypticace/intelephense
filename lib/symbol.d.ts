@@ -45,6 +45,10 @@ export interface PhpSymbol {
     scope?: string;
     value?: string;
 }
+export declare namespace PhpSymbol {
+    function signatureString(s: PhpSymbol): string;
+    function hasParameters(s: PhpSymbol): boolean;
+}
 export declare class NameResolver {
     document: ParsedDocument;
     importedSymbols: PhpSymbol[];
