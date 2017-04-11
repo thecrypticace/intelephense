@@ -87,6 +87,7 @@ export declare class SymbolTable {
     find(predicate: Predicate<PhpSymbol>): PhpSymbol;
     symbolAtPosition(position: Position): PhpSymbol;
     static create(parsedDocument: ParsedDocument): SymbolTable;
+    static createBuiltIn(): SymbolTable;
 }
 export interface MemberQuery {
     typeName: string;
@@ -104,7 +105,7 @@ export declare class SymbolStore {
     add(symbolTable: SymbolTable): void;
     remove(uri: string): void;
     /**
-     * As per match but returns first item in result
+     * As per match but returns first item in result that matches text exactly
      * @param text
      * @param kindMask
      */

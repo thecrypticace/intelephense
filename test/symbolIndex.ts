@@ -29,12 +29,14 @@ let symbols: PhpSymbol[] = [
     }
 ];
 
-let index = new SymbolIndex();
-index.addMany(symbols);
+
 
 describe('SymbolIndex', () => {
 
     describe('#match()', () => {
+
+        let index = new SymbolIndex();
+        index.addMany(symbols);
 
         it('Should return single element array of matching item when given a unique string that exists', () => {
             let match = index.match('Foo\\MyFoo');
@@ -56,6 +58,10 @@ describe('SymbolIndex', () => {
             assert.lengthOf(match, 0);
         });
 
+        
+
     });
+
+
     
 });

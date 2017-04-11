@@ -43,7 +43,7 @@ export class SignatureHelpProvider {
             return ParsedDocument.isPhrase(x, [PhraseType.ArgumentExpressionList]);
         }), context);
 
-        return this._createSignatureHelp(symbol, argNumber);
+        return symbol ? this._createSignatureHelp(symbol, argNumber) : null;
 
     }
 
@@ -216,7 +216,6 @@ export class SignatureHelpProvider {
     private _objectCreationExpressionSymbol(phrase: ObjectCreationExpression, context: Context) {
 
         let typeName = context.resolveExpressionType(phrase.type).atomicClassArray().shift();
-        let memberName = '__construct';
 
         if (!typeName) {
             return null;

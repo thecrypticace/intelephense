@@ -1,10 +1,10 @@
 import { SignatureHelpProvider } from '../src/signatureHelpProvider';
-import { SymbolStore, SymbolTable } from '../src/symbol';
+import { SymbolStore, SymbolTable, SymbolKind } from '../src/symbol';
 import { ParsedDocumentStore, ParsedDocument } from '../src/parsedDocument';
 import { assert } from 'chai';
 import 'mocha';
 
-/*
+
 let constructorHelpSrc =
 `<?php
     class MyClass {
@@ -15,29 +15,11 @@ let constructorHelpSrc =
     $var = new MyClass();
 `;
 
-*/
-let constructorHelpSrc =
+let inbuiltConstructorHelpSrc = 
 `<?php
+    $pdo = new PDO()
+`;
 
-    class AnotherClass {
-        
-    }
-
-    class MyClass {
-
-        function __construct($arg1, $arg2){
-            
-        }
-
-        public static $myProperty = 1;
-
-        public function myFunc(){
-
-        }
-    }
-
-    $myVar = new MyClass()
-    `;
 
 function setup(src: string) {
 
@@ -49,18 +31,34 @@ function setup(src: string) {
     return new SignatureHelpProvider(symbolStore, docStore);
 }
 
+function setupInbuilt(src:string){
+    let docStore = new ParsedDocumentStore();
+    let symbolStore = new SymbolStore();
+    let doc = new ParsedDocument('test', src);
+    docStore.add(doc);
+    symbolStore.add(SymbolTable.create(doc));
+    symbolStore.add(SymbolTable.createBuiltIn());
+    return new SignatureHelpProvider(symbolStore, docStore);
+}
+
 
 describe('SignatureHelpProvider', function () {
 
     describe('#provideSignatureHelp', function () {
 
-        it('constructor completion', function () {
+        it('constructor help', function () {
 
             let provider = setup(constructorHelpSrc);
-            let help = provider.provideSignatureHelp('test', {line: 19, character:25});
-            console.log(JSON.stringify(help, null, 4)); 
+            let help = provider.provideSignatureHelp('test', {line: 6, character:23});
+            //console.log(JSON.stringify(help, null, 4)); 
 
-        })
+        });
+
+        it('inbuilt symbol constructor help', function(){
+            let provider = setupInbuilt(inbuiltConstructorHelpSrc);
+            let help = provider.provideSignatureHelp('test', {line: 1, character:19});
+            console.log(JSON.stringify(help, null, 4)); 
+        });
 
     });
 
