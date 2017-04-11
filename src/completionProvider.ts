@@ -369,6 +369,7 @@ class NameCompletion implements CompletionStrategy {
     canSuggest(context: Context) {
         let traverser = context.createTraverser();
         return ParsedDocument.isToken(traverser.node, [TokenType.Backslash, TokenType.Name]) &&
+            ParsedDocument.isPhrase(traverser.parent(), [PhraseType.NamespaceName]) &&
             ParsedDocument.isPhrase(traverser.parent(),
                 [PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName]);
     }
@@ -380,8 +381,7 @@ class NameCompletion implements CompletionStrategy {
         let nsNameNode = traverser.parent() as NamespaceName;
         let qNameNode = traverser.parent() as Phrase;
         let qNameParent = traverser.parent() as Phrase;
-        let nameResolver = context.createNameResolver();
-        let text = nameResolver.namespaceNamePhraseText(nsNameNode, context.offset);
+        let text = context.word;
 
         if (!text) {
             return noCompletionResponse;
@@ -395,7 +395,7 @@ class NameCompletion implements CompletionStrategy {
         }
 
         if (qNameNode.phraseType === PhraseType.RelativeQualifiedName) {
-            text = nameResolver.resolveRelative(text);
+            text = context.resolveFqn(qNameNode, SymbolKind.Class);
         }
 
         let matches = context.symbolStore.match(text, this._symbolFilter);
@@ -403,7 +403,7 @@ class NameCompletion implements CompletionStrategy {
         let isIncomplete = matches.length > this.maxSuggestions - items.length;
 
         for (let n = 0; n < limit; ++n) {
-            items.push(toNameCompletionItem(matches[n], nameResolver.namespaceName, qNameNode.phraseType));
+            items.push(toNameCompletionItem(matches[n], context.namespaceName, qNameNode.phraseType));
         }
 
         return <lsp.CompletionList>{
@@ -636,7 +636,7 @@ class ObjectAccessCompletion implements CompletionStrategy {
 
     private _toCompletionItem(s: PhpSymbol) {
 
-        switch(s.kind){
+        switch (s.kind) {
             case SymbolKind.Method:
                 return toMethodCompletionItem(s);
             case SymbolKind.Property:
