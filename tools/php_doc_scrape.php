@@ -392,7 +392,8 @@ foreach ($dir as $fileinfo) {
     var_dump(count($symbols), (microtime(true) - $start));
     
     function write($symbols, $file){
-        
+ 
+
         file_put_contents($file, json_encode(array_values($symbols)));
         return;
 
@@ -504,6 +505,8 @@ foreach ($dir as $fileinfo) {
             $flags |= M_Final;
         }
         
+        
+        $hasBase = stripos($classString, 'extends') !== false;
         $classString = trim(preg_replace('~\s+,\s+|\s+(?:extends|implements|abstract|final)\s+|\s+~', ' ',$classString), " \t\n\r\0\x0B{");
         $classExplode = explode(' ', $classString);
         
@@ -541,12 +544,24 @@ foreach ($dir as $fileinfo) {
             }
         }
         
+
+        $associatedSymbols = [];
+        if($hasBase){
+            $baseClass = array_shift($classExplode);
+            if($baseClass){
+                $associatedSymbols[] = ['kind'=>S_Class, 'name'=>$baseClass];
+            }
+        }
+        while($implementsInterface = array_shift($classExplode)){
+            $associatedSymbols[] = ['kind'=>S_Interface, 'name'=>$implementsInterface];
+        }
+
         
         $classSymbol = array(
           'kind'=>$type,
           'name'=>$className,
           'modifiers'=>$flags,
-          'associated'=>$classExplode,
+          'associated'=>$associatedSymbols,
           'description'=>$description,
           'children'=>array()
         );
@@ -795,4 +810,19 @@ if($class && isset($symbols[$class])){
         });
 
         return $symbols;
+    }
+
+    function childrenToNumericalArray($array){
+
+        if(isset($array['children'])){
+            $nonAssociative = [];
+            foreach($array['children'] as $key => $child){
+                $nonAssociative[] = childrenToNumericalArray($child);
+            }
+            $array['children'] = $nonAssociative;
+
+        }
+
+        return $array;
+
     }
