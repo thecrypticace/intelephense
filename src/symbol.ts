@@ -77,78 +77,128 @@ export interface PhpSymbol {
     value?: string;
 }
 
-/*
+
 export namespace PhpSymbol {
 
-    export function acronym(s: PhpSymbol) {
+    function isParameter(s: PhpSymbol) {
+        return s.kind === SymbolKind.Parameter;
+    }
 
-        let text = s.name.slice(s.name.lastIndexOf('\\') + 1);
+    export function signatureString(s: PhpSymbol) {
 
-        if (!text) {
+        if (!s || !(s.kind & (SymbolKind.Function | SymbolKind.Method))) {
             return '';
         }
 
-        let lcText = text.toLowerCase();
-        let n = 0;
-        let l = text.length;
-        let c: string;
-        let acronym = lcText[0] !== '_' && lcText[0] !== '$' ? lcText[0] : '';
+        let params = s.children ? s.children.filter(isParameter) : [];
+        let paramStrings: String[] = [];
+        let param: PhpSymbol;
+        let parts: string[];
 
-        while (n < l) {
+        for (let n = 0, l = params.length; n < l; ++n) {
+            param = params[n];
+            parts = [];
 
-            c = text[n];
-
-            if ((c === '$' || c === '_') && n + 1 < l && text[n + 1] !== '_') {
-                ++n;
-                acronym += lcText[n];
-            } else if (n > 0 && c !== lcText[n] && text[n - 1] === lcText[n - 1]) {
-                //uppercase
-                acronym += lcText[n];
+            if (n) {
+                parts.push(',');
             }
 
-            ++n;
-
-        }
-
-        return acronym;
-    }
-
-    /**
-     * Get suffixes after $, namespace separator, underscore and on lowercase uppercase boundary
-     *
-    export function suffixArray(s: PhpSymbol) {
-        if (!s.name) {
-            return [];
-        }
-
-        let text = s.name;
-        let lcText = text.toLowerCase();
-        let suffixes = [lcText];
-        let n = 0;
-        let c: string;
-        let l = text.length;
-
-        while (n < l) {
-
-            c = text[n];
-
-            if ((c === '$' || c === '\\' || c === '_') && n + 1 < l && text[n + 1] !== '_') {
-                ++n;
-                suffixes.push(lcText.slice(n));
-            } else if (n > 0 && c !== lcText[n] && text[n - 1] === lcText[n - 1]) {
-                //uppercase
-                suffixes.push(lcText.slice(n));
+            if (param.type && !param.type.isEmpty()) {
+                parts.push(param.type.toString());
             }
 
-            ++n;
+            parts.push(param.name);
+
+            if (param.value) {
+                paramStrings.push(`[${parts.join(' ')}]`);
+            } else {
+                paramStrings.push(parts.join(' '));
+            }
 
         }
 
-        return suffixes;
+        let sig = `(${paramStrings.join('')})`;
+        if(s.type && !s.type.isEmpty()){
+            sig += `: ${s.type}`;
+        }
+        return sig;
+
     }
+
+    export function hasParameters(s:PhpSymbol){
+        return s.children && s.children.find(isParameter) !== undefined;
+    }
+
+    /*
+        export function acronym(s: PhpSymbol) {
     
-
-}*/
+            let text = s.name.slice(s.name.lastIndexOf('\\') + 1);
+    
+            if (!text) {
+                return '';
+            }
+    
+            let lcText = text.toLowerCase();
+            let n = 0;
+            let l = text.length;
+            let c: string;
+            let acronym = lcText[0] !== '_' && lcText[0] !== '$' ? lcText[0] : '';
+    
+            while (n < l) {
+    
+                c = text[n];
+    
+                if ((c === '$' || c === '_') && n + 1 < l && text[n + 1] !== '_') {
+                    ++n;
+                    acronym += lcText[n];
+                } else if (n > 0 && c !== lcText[n] && text[n - 1] === lcText[n - 1]) {
+                    //uppercase
+                    acronym += lcText[n];
+                }
+    
+                ++n;
+    
+            }
+    
+            return acronym;
+        }
+    
+        /**
+         * Get suffixes after $, namespace separator, underscore and on lowercase uppercase boundary
+         *
+        export function suffixArray(s: PhpSymbol) {
+            if (!s.name) {
+                return [];
+            }
+    
+            let text = s.name;
+            let lcText = text.toLowerCase();
+            let suffixes = [lcText];
+            let n = 0;
+            let c: string;
+            let l = text.length;
+    
+            while (n < l) {
+    
+                c = text[n];
+    
+                if ((c === '$' || c === '\\' || c === '_') && n + 1 < l && text[n + 1] !== '_') {
+                    ++n;
+                    suffixes.push(lcText.slice(n));
+                } else if (n > 0 && c !== lcText[n] && text[n - 1] === lcText[n - 1]) {
+                    //uppercase
+                    suffixes.push(lcText.slice(n));
+                }
+    
+                ++n;
+    
+            }
+    
+            return suffixes;
+        }
+        
+    */
+}
 
 export class NameResolver {
 
