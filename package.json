@@ -8,7 +8,7 @@
     "test": "mocha",
     "build": "rm -f ./lib/* && tsc && cp ./src/builtInSymbols.json ./lib/"
   },
-  "author": "Ben Mewburn",
+  "author": "Ben Mewburn <ben@mewburn.id.au>",
   "license": "ISC",
   "dependencies": {
     "php7parser": "git+ssh://gituser@s1.funclab.net:/var/git/php7parser.git",
