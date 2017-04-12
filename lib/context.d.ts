@@ -32,6 +32,7 @@ export declare class Context {
     readonly scopePhrase: Phrase;
     readonly scopeSymbol: PhpSymbol;
     readonly variableTable: VariableTable;
+    tokenText(t: Token): string;
     nodeText(node: Phrase | Token, ignore?: TokenType[]): string;
     resolveFqn(phrase: Phrase, kind: SymbolKind): string;
     resolveExpressionType(expr: Phrase): TypeString;

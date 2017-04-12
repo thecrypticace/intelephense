@@ -35,6 +35,7 @@ export declare class TreeTraverser<T extends TreeLike> {
     nextSibling(): T;
     ancestor(predicate: Predicate<T>): T;
     parent(): T;
+    clone(): TreeTraverser<T>;
     private _traverse(treeNode, visitor, spine);
 }
 export interface TreeVisitor<T extends TreeLike> {

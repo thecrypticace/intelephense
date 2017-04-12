@@ -603,6 +603,10 @@ export class SymbolStore {
         return symbols;
     }
 
+    lookupMemberOnTypes(queries:MemberQuery[]){
+        return this.lookupMembersOnTypes(queries).shift();
+    }
+
     private _lookupTypeMembers(type: PhpSymbol, predicate: Predicate<PhpSymbol>) {
 
         if (!type) {

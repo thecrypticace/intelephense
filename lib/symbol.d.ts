@@ -123,6 +123,7 @@ export declare class SymbolStore {
     lookupTypeMembers(query: MemberQuery): PhpSymbol[];
     lookupTypeMember(query: MemberQuery): PhpSymbol;
     lookupMembersOnTypes(queries: MemberQuery[]): PhpSymbol[];
+    lookupMemberOnTypes(queries: MemberQuery[]): PhpSymbol;
     private _lookupTypeMembers(type, predicate);
     private _indexSymbols(root);
     private _indexFilter(s);
