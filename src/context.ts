@@ -245,6 +245,10 @@ export class Context {
 
     }
 
+    tokenText(t:Token){
+        return this.document.tokenText(t);
+    }
+
     nodeText(node: Phrase | Token, ignore?: TokenType[]) {
         return this.document.nodeText(node, ignore);
     }

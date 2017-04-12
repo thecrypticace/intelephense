@@ -12,6 +12,7 @@ export declare namespace Intelephense {
     function workspaceSymbols(query: string): lsp.SymbolInformation[];
     function provideCompletions(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): lsp.CompletionList;
     function provideSignatureHelp(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): lsp.SignatureHelp;
+    function provideDefinition(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): lsp.Location;
     function discover(textDocument: lsp.TextDocumentItem): number;
     function forget(uri: string): number;
     function numberDocumentsOpen(): number;

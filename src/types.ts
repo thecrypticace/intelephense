@@ -174,6 +174,10 @@ export class TreeTraverser<T extends TreeLike> {
         return null;
     }
 
+    clone(){
+        return new TreeTraverser(this._spine);
+    }
+
     private _traverse(treeNode: T, visitor: TreeVisitor<T>, spine: T[]) {
 
         if (visitor.haltTraverse) {
