@@ -1,5 +1,5 @@
-/* Copyright (c) Ben Mewburn ben@mewburn.id.au
- * Licensed under the MIT Licence.
+/* Copyright (c) Ben Robert Mewburn
+ * Licensed under the ISC Licence.
  */
 
 'use strict';
@@ -145,16 +145,16 @@ export class ParsedDocument {
         return ParsedDocument.isToken(t) ? this._textDocument.textAtOffset(t.offset, t.length) : '';
     }
 
-    nodeText(node:Phrase|Token, ignore?:TokenType[]){
+    nodeText(node: Phrase | Token, ignore?: TokenType[]) {
 
-        if(!node){
+        if (!node) {
             return '';
         }
 
         let visitor = new ToStringVisitor(this, ignore);
         let traverser = new TreeTraverser([node]);
         traverser.traverse(visitor);
-        return visitor.text; 
+        return visitor.text;
     }
 
     createAnonymousName(node: Phrase) {
@@ -217,6 +217,19 @@ export namespace ParsedDocument {
                 ParsedDocument.isPhrase(phrase.name, [PhraseType.Identifier]));
     }
 
+    const nodeKeys = [
+        'tokenType', 'offset', 'length', 'modeStack',
+        'phraseType', 'children', 'errors'
+    ];
+
+    function isNumeric(n) {
+        return !isNaN(parseFloat(n)) && isFinite(n);
+    }
+
+    export function stringyfyReplacer(k, v) {
+        return k && !isNumeric(k) && nodeKeys.indexOf(k) < 0 ? undefined : v;
+    }
+
 }
 
 export class ParsedDocumentStore {
@@ -273,24 +286,24 @@ export class ParsedDocumentStore {
 
 }
 
-class ToStringVisitor implements TreeVisitor<Phrase|Token> {
+class ToStringVisitor implements TreeVisitor<Phrase | Token> {
 
-    private _text:string;
-    private _doc:ParsedDocument;
-    private _ignore:TokenType[];
+    private _text: string;
+    private _doc: ParsedDocument;
+    private _ignore: TokenType[];
 
-    constructor(doc:ParsedDocument, ignore?:TokenType[]){
+    constructor(doc: ParsedDocument, ignore?: TokenType[]) {
         this._text = '';
         this._doc = doc;
     }
 
-    get text(){
+    get text() {
         return this._text;
     }
 
-    postOrder(node:Phrase|Token, spine:(Phrase|Token)[]){
+    postOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
-        if(ParsedDocument.isToken(node) && (!this._ignore || this._ignore.indexOf((<Token>node).tokenType) < 0)){
+        if (ParsedDocument.isToken(node) && (!this._ignore || this._ignore.indexOf((<Token>node).tokenType) < 0)) {
             this._text += this._doc.tokenText(<Token>node);
         }
 

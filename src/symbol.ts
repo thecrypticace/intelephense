@@ -1,5 +1,5 @@
-/* Copyright © Ben Mewburn ben@mewburn.id.au
- * Licensed under the MIT Licence.
+/* Copyright (c) Ben Robert Mewburn
+ * Licensed under the ISC Licence.
  */
 
 'use strict';
@@ -755,7 +755,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.TypeDeclaration:
                 s = this.spine[this.spine.length - 1];
                 let typeDeclarationValue = this.typeDeclaration(<TypeDeclaration>node);
-                s.type = s.type ? s.type.merge(typeDeclarationValue) : new TypeString(typeDeclarationValue);
+                s.type = new TypeString(typeDeclarationValue); //type hints trump phpdoc
                 return false;
 
             case PhraseType.ClassDeclaration:
