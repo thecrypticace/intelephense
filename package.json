@@ -1,6 +1,6 @@
 {
   "name": "intelephense",
-  "version": "0.9.0",
+  "version": "0.6.0",
   "description": "PHP Static Code Analysis",
   "main": "./lib/intelephense.js",
   "types": "./lib/intelephense.d.ts",
@@ -9,7 +9,7 @@
     "build": "rm -f ./lib/* && tsc && cp ./src/builtInSymbols.json ./lib/"
   },
   "author": "Ben Mewburn",
-  "license": "MIT",
+  "license": "ISC",
   "dependencies": {
     "php7parser": "git+ssh://gituser@s1.funclab.net:/var/git/php7parser.git",
     "vscode-languageserver-types": "^3.2.0"
@@ -21,6 +21,5 @@
     "mocha": "^3.2.0",
     "typescript": "^2.2.1",
     "ts-node":"^3.0.2"
-  },
-  "private":true
+  }
 }
