@@ -165,7 +165,7 @@ export class NameResolver {
         let pos = notFqName.indexOf('\\');
         return pos < 0 ?
             this._resolveUnqualified(notFqName, kind) :
-            this._resolveQualified(name, pos);
+            this._resolveQualified(notFqName, pos);
     }
 
     createAnonymousName(node: Phrase) {
