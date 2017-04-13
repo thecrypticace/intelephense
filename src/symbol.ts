@@ -613,7 +613,7 @@ export class SymbolStore {
             return [];
         }
 
-        let members = type.children.filter(predicate);
+        let members = type.children ? type.children.filter(predicate) : [];
         let associated: PhpSymbol[] = [];
         let associatedKindMask = SymbolKind.Class ? SymbolKind.Class | SymbolKind.Trait : SymbolKind.Interface;
         let baseSymbol: PhpSymbol;
