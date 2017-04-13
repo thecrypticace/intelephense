@@ -417,7 +417,7 @@ class NameCompletion implements CompletionStrategy {
 
         //<?p is considered short tag open and then p name
         if (context.textBefore(3) === '<?p' &&
-            ParsedDocument.isToken(context.createTraverser().prevSibling(), [TokenType.Text])) {
+            ParsedDocument.isToken(context.createTraverser().prevSibling(), [TokenType.OpenTag])) {
             return this._openTagCompletion(context);
         }
 
