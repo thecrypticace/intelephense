@@ -967,12 +967,9 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     private _shouldReadVar(spine: (Phrase | Token)[]) {
 
-        for (let n = spine.length - 1, c = 0; n >= 0; --n, ++c) {
-            if (SymbolReader._varAncestors.indexOf((<Phrase>spine[n]).phraseType)) {
+        for (let n = spine.length - 1; n >= 0; --n) {
+            if (SymbolReader._varAncestors.indexOf((<Phrase>spine[n]).phraseType) > -1) {
                 return true;
-            } else if (c > 3) {
-                //should have found a valid ancestor at this point
-                break;
             }
         }
 
