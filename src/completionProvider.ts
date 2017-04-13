@@ -85,7 +85,7 @@ function symbolKindToLspSymbolKind(kind: SymbolKind) {
     }
 }
 
-function toClassCompletionItem(s:PhpSymbol, label?:string){
+function toClassCompletionItem(s: PhpSymbol, label?: string) {
     return <lsp.CompletionItem>{
         kind: lsp.CompletionItemKind.Class,
         label: label ? label : s.name,
@@ -169,7 +169,6 @@ export class CompletionProvider {
         public maxSuggestions: number) {
 
         this._strategies = [
-            new TextCompletion(),
             new ClassTypeDesignatorCompletion(maxSuggestions),
             new ScopedAccessCompletion(this.symbolStore, maxSuggestions),
             new ObjectAccessCompletion(this.symbolStore, this.maxSuggestions),
@@ -416,6 +415,12 @@ class NameCompletion implements CompletionStrategy {
 
     completions(context: Context) {
 
+        //<?p is considered short tag open and then p name
+        if (context.textBefore(3) === '<?p' &&
+            ParsedDocument.isToken(context.createTraverser().prevSibling(), [TokenType.Text])) {
+            return this._openTagCompletion(context);
+        }
+
         let items: lsp.CompletionItem[] = [];
         let traverser = context.createTraverser();
         let nsNameNode = traverser.parent() as NamespaceName;
@@ -451,6 +456,23 @@ class NameCompletion implements CompletionStrategy {
             isIncomplete: isIncomplete
         }
 
+    }
+
+    private _openTagCompletion(context: Context) {
+        let start = lsp.Position.create(context.position.line, context.position.character - 2);
+        let range = lsp.Range.create(start, context.position);
+        return <lsp.CompletionList>{
+            items: [
+                {
+                    kind: lsp.CompletionItemKind.Keyword,
+                    label: '<?php',
+                    textEdit: {
+                        range: range,
+                        newText: '<?php'
+                    }
+                }
+            ]
+        };
     }
 
     private _symbolFilter(s: PhpSymbol) {
@@ -720,36 +742,6 @@ class ObjectAccessCompletion implements CompletionStrategy {
             default:
                 return false;
         }
-    }
-
-}
-
-class TextCompletion implements CompletionStrategy {
-
-
-    canSuggest(context:Context){
-        return ParsedDocument.isToken(context.token, [TokenType.Text]);
-    }
-
-    completions(context:Context){
-
-        if(context.textBefore(3) === '<?p'){
-            let start = lsp.Position.create(context.position.line, context.position.character - 2);
-            let range = lsp.Range.create(start, context.position);
-            return <lsp.CompletionList>{
-                items:[
-                    {
-                        kind:lsp.CompletionItemKind.Keyword,
-                        label:'<?php',
-                        textEdit:{
-                            range:range,
-                            newText:'<?php'
-                        }
-                    }
-                ]
-            }
-        }
-
     }
 
 }

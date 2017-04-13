@@ -48,6 +48,10 @@ var nameSrc =
     a
 `;
 
+var openTagSrc = 
+`<?p
+`;
+
 function setup(src:string){
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -153,7 +157,21 @@ describe('CompletionProvider', () => {
 
         it('name completions', function(){
             var completions = completionProvider.provideCompletions('test', { line: 1, character: 5 });
-            console.log(JSON.stringify(completions, null, 4));
+            //console.log(JSON.stringify(completions, null, 4));
+        });
+
+    });
+
+    describe('text completions', function(){
+
+        let completionProvider:CompletionProvider;
+        before(function(){
+            completionProvider = inbuiltSetup(openTagSrc);
+        });
+
+        it('open tag', function(){
+            var completions = completionProvider.provideCompletions('test', { line: 0, character: 3 });
+            //console.log(JSON.stringify(completions, null, 4));
         });
 
     });
