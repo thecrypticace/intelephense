@@ -106,12 +106,20 @@ function toFunctionCompletionItem(s: PhpSymbol, label?: string) {
 }
 
 function toMethodCompletionItem(s: PhpSymbol) {
-    return <lsp.CompletionItem>{
+
+    let item = <lsp.CompletionItem>{
         kind: lsp.CompletionItemKind.Method,
         label: s.name,
         documentation: s.description,
         detail: PhpSymbol.signatureString(s)
+    };
+
+    if(s.name.slice(0, 2) === '__'){
+        //sort magic methods last
+        item.sortText = 'z';
     }
+
+    return item;
 }
 
 function toClassConstantCompletionItem(s: PhpSymbol) {
