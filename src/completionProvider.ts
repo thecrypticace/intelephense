@@ -169,6 +169,7 @@ export class CompletionProvider {
         public maxSuggestions: number) {
 
         this._strategies = [
+            new TextCompletion(),
             new ClassTypeDesignatorCompletion(maxSuggestions),
             new ScopedAccessCompletion(this.symbolStore, maxSuggestions),
             new ObjectAccessCompletion(this.symbolStore, this.maxSuggestions),
@@ -719,6 +720,36 @@ class ObjectAccessCompletion implements CompletionStrategy {
             default:
                 return false;
         }
+    }
+
+}
+
+class TextCompletion implements CompletionStrategy {
+
+
+    canSuggest(context:Context){
+        return ParsedDocument.isToken(context.token, [TokenType.Text]);
+    }
+
+    completions(context:Context){
+
+        if(context.textBefore(3) === '<?p'){
+            let start = lsp.Position.create(context.position.line, context.position.character - 2);
+            let range = lsp.Range.create(start, context.position);
+            return <lsp.CompletionList>{
+                items:[
+                    {
+                        kind:lsp.CompletionItemKind.Keyword,
+                        label:'<?php',
+                        textEdit:{
+                            range:range,
+                            newText:'<?php'
+                        }
+                    }
+                ]
+            }
+        }
+
     }
 
 }

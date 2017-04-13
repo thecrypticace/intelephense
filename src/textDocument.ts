@@ -36,6 +36,11 @@ export class TextDocument {
         return this._lineOffsets;
     }
 
+    textBeforeOffset(offset:number, length:number){
+        let start = Math.min(offset - (length - 1), 0);
+        return this._text.slice(start, offset + 1);
+    }
+
     lineText(line:number){
         let endOffset = line + 1 < this._lineOffsets.length ? 
             this._lineOffsets[line + 1] : this._text.length;

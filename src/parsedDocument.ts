@@ -53,6 +53,10 @@ export class ParsedDocument {
         return this._changeEvent;
     }
 
+    textBeforeOffset(offset:number, length:number){
+        return this._textDocument.textBeforeOffset(offset, length);
+    }
+
     wordAtOffset(offset: number) {
         let lineText = this._textDocument.lineSubstring(offset);
         let match = lineText.match(ParsedDocument._wordRegex);
