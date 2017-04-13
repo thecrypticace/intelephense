@@ -114,7 +114,7 @@ function toMethodCompletionItem(s: PhpSymbol) {
         detail: PhpSymbol.signatureString(s)
     };
 
-    if(s.name.slice(0, 2) === '__'){
+    if (s.name.slice(0, 2) === '__') {
         //sort magic methods last
         item.sortText = 'z';
     }
@@ -165,6 +165,21 @@ function toVariableCompletionItem(s: PhpSymbol) {
         documentation: s.description
     }
 
+}
+
+function uniqueSymbolNames(symbols: PhpSymbol[]) {
+
+    let set = new Set<string>();
+    let s: PhpSymbol;
+    let unique: PhpSymbol[] = [];
+    for (let n = 0, l = symbols.length; n < l; ++n) {
+        s = symbols[n];
+        if (!set.has(s.name)) {
+            unique.push(s);
+            set.add(s.name);
+        }
+    }
+    return unique;
 }
 
 export class CompletionProvider {
@@ -425,7 +440,7 @@ class NameCompletion implements CompletionStrategy {
 
         //<?php (no trailing space) is considered short tag open and then name token
         //dont suggest in this context
-        if (context.textBefore(3) === '<?p' || 
+        if (context.textBefore(3) === '<?p' ||
             context.textBefore(4) === '<?ph' ||
             context.textBefore(5) === '<?php') {
             return noCompletionResponse;
@@ -545,7 +560,7 @@ class ScopedAccessCompletion implements CompletionStrategy {
             });
         }
 
-        let symbols = this.symbolStore.lookupMembersOnTypes(memberQueries);
+        let symbols = uniqueSymbolNames(this.symbolStore.lookupMembersOnTypes(memberQueries));
         let isIncomplete = symbols.length > this.maxSuggestions;
         let limit = Math.min(symbols.length, this.maxSuggestions);
         let items: lsp.CompletionItem[] = [];
@@ -671,7 +686,7 @@ class ObjectAccessCompletion implements CompletionStrategy {
             });
         }
 
-        let symbols = this.symbolStore.lookupMembersOnTypes(memberQueries);
+        let symbols = uniqueSymbolNames(this.symbolStore.lookupMembersOnTypes(memberQueries));
         let isIncomplete = symbols.length > this.maxSuggestions;
         let limit = Math.min(symbols.length, this.maxSuggestions);
         let items: lsp.CompletionItem[] = [];
