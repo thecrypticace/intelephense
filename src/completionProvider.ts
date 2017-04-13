@@ -415,8 +415,11 @@ class NameCompletion implements CompletionStrategy {
 
     completions(context: Context) {
 
-        //<?p[h] is considered short tag open and then p[h] name token
-        if (context.textBefore(3) === '<?p' || context.textBefore(3) === '<?ph') {
+        //<?php (no trailing space) is considered short tag open and then name token
+        //dont suggest in this context
+        if (context.textBefore(3) === '<?p' || 
+            context.textBefore(4) === '<?ph' ||
+            context.textBefore(5) === '<?php') {
             return noCompletionResponse;
         }
 
