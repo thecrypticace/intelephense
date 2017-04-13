@@ -219,7 +219,8 @@ export namespace ParsedDocument {
 
     const nodeKeys = [
         'tokenType', 'offset', 'length', 'modeStack',
-        'phraseType', 'children', 'errors'
+        'phraseType', 'children', 'errors', 'unexpected',
+        'numberSkipped'
     ];
 
     function isNumeric(n) {
