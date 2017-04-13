@@ -162,18 +162,5 @@ describe('CompletionProvider', () => {
 
     });
 
-    describe('text completions', function(){
-
-        let completionProvider:CompletionProvider;
-        before(function(){
-            completionProvider = inbuiltSetup(openTagSrc);
-        });
-
-        it('open tag', function(){
-            var completions = completionProvider.provideCompletions('test', { line: 0, character: 3 });
-            console.log(JSON.stringify(completions, null, 4));
-        });
-
-    });
 
 });
