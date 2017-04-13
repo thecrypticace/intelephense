@@ -245,6 +245,10 @@ export class Context {
 
     }
 
+    textBefore(length:number){
+        return this.document.textBeforeOffset(this._offset, length);
+    }
+
     tokenText(t:Token){
         return this.document.tokenText(t);
     }

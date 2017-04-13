@@ -7,6 +7,7 @@ export declare class TextDocument {
     readonly uri: string;
     text: string;
     readonly lineOffsets: number[];
+    textBeforeOffset(offset: number, length: number): string;
     lineText(line: number): string;
     lineAtOffset(offset: number): number;
     lineSubstring(offset: number): string;

@@ -15,6 +15,7 @@ export declare class ParsedDocument {
     readonly tree: Phrase;
     readonly uri: string;
     readonly changeEvent: Event<ParsedDocumentChangeEventArgs>;
+    textBeforeOffset(offset: number, length: number): string;
     wordAtOffset(offset: number): string;
     flush(): void;
     traverse(visitor: TreeVisitor<Phrase | Token>): void;
