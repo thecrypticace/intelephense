@@ -171,7 +171,7 @@ describe('CompletionProvider', () => {
 
         it('open tag', function(){
             var completions = completionProvider.provideCompletions('test', { line: 0, character: 3 });
-            //console.log(JSON.stringify(completions, null, 4));
+            console.log(JSON.stringify(completions, null, 4));
         });
 
     });
