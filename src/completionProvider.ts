@@ -416,7 +416,7 @@ class NameCompletion implements CompletionStrategy {
     completions(context: Context) {
 
         //<?p is considered short tag open and then p name token
-        if (context.textBefore(3) === '<?p' &&
+        if (context.textBefore(3) === '<?p' && 
             ParsedDocument.isToken(context.token, [TokenType.Name])) {
             return this._openTagCompletion(context);
         }
@@ -459,12 +459,18 @@ class NameCompletion implements CompletionStrategy {
     }
 
     private _openTagCompletion(context: Context) {
+        let start = lsp.Position.create(context.position.line, context.position.character - 2);
+        let range = lsp.Range.create(start, context.position);
         return <lsp.CompletionList>{
+            isIncomplete:false,
             items: [
                 {
                     kind: lsp.CompletionItemKind.Keyword,
                     label: '<?php',
-                    insertText: 'php'
+                    textEdit: {
+                        range: range,
+                        newText: '<?php'
+                    }
                 }
             ]
         };
