@@ -1,10 +1,13 @@
+import { PublishDiagnosticsEventArgs } from './diagnosticsProvider';
 import * as lsp from 'vscode-languageserver-types';
 export declare namespace Intelephense {
-    var maxCompletions: number;
-    var diagnosticsDebounceWait: number;
-    var onDiagnosticsStart: (uri: string) => void;
-    var onDiagnosticsEnd: (uri: string, diagnostics: lsp.Diagnostic[]) => void;
+    function onDiagnosticsStart(fn: (uri: string) => void): void;
+    function onDiagnosticsEnd(fn: (uri: string) => void): void;
+    function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void): void;
     function initialise(): void;
+    function setDiagnosticsProviderDebounce(value: number): void;
+    function setDiagnosticsProviderMaxItems(value: number): void;
+    function setCompletionProviderMaxItems(value: number): void;
     function openDocument(textDocument: lsp.TextDocumentItem): void;
     function closeDocument(textDocument: lsp.TextDocumentIdentifier): void;
     function editDocument(textDocument: lsp.VersionedTextDocumentIdentifier, contentChanges: lsp.TextDocumentContentChangeEvent[]): void;
