@@ -44,10 +44,10 @@ export interface TreeVisitor<T extends TreeLike> {
     postOrder?(node: T, spine: T[]): void;
 }
 export declare class Debounce<T> {
+    wait: number;
     private _handler;
     private _lastEvent;
     private _timer;
-    private _wait;
     constructor(handler: (e: T) => void, wait: number);
     clear: () => void;
     handle(event: T): void;

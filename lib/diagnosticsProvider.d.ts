@@ -1,6 +1,30 @@
 import { ParsedDocument } from './parsedDocument';
+import { Event } from './types';
 import * as lsp from 'vscode-languageserver-types';
+export interface PublishDiagnosticsEventArgs {
+    diagnostics: lsp.Diagnostic[];
+}
 export declare class DiagnosticsProvider {
-    diagnose(doc: ParsedDocument): lsp.Diagnostic[];
+    maxItems: number;
+    private _docs;
+    private _debounceWaitTime;
+    private _publish;
+    private _startDiagnostics;
+    private _endDiagnostics;
+    private _debounceMap;
+    private _unsubscribeMap;
+    private _diagnosticsMap;
+    private _maxItems;
+    private _onParsedDocumentChanged;
+    constructor();
+    readonly startDiagnosticsEvent: Event<string>;
+    readonly endDiagnosticsEvent: Event<string>;
+    readonly publishDiagnosticsEvent: Event<PublishDiagnosticsEventArgs>;
+    add(doc: ParsedDocument): void;
+    remove(uri: string): void;
+    has(uri: string): boolean;
+    debounceWait: number;
+    private _diagnose(uri);
+    private _find(uri);
     private _parseErrorToDiagnostic(err, doc);
 }
