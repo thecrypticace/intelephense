@@ -280,11 +280,10 @@ export class Debounce<T> {
     private _handler: (e: T) => void;
     private _lastEvent: T;
     private _timer: number;
-    private _wait: number;
 
-    constructor(handler: (e: T) => void, wait: number) {
+    constructor(handler: (e: T) => void, public wait: number) {
         this._handler = handler;
-        this._wait = wait;
+        this.wait = wait;
     }
 
     clear = () => {
@@ -303,7 +302,7 @@ export class Debounce<T> {
             handler.apply(that, [event]);
             clear();
         };
-        this._timer = setTimeout(later, this._wait);
+        this._timer = setTimeout(later, this.wait);
     }
 
     flush() {

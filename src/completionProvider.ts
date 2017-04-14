@@ -184,23 +184,30 @@ function uniqueSymbolNames(symbols: PhpSymbol[]) {
 
 export class CompletionProvider {
 
+    private _maxItems:number;
     private _strategies: CompletionStrategy[];
 
     constructor(
         public symbolStore: SymbolStore,
-        public documentStore: ParsedDocumentStore,
-        public maxSuggestions: number) {
-
+        public documentStore: ParsedDocumentStore) {
+            
+        this._maxItems = 100;
         this._strategies = [
-            new ClassTypeDesignatorCompletion(maxSuggestions),
-            new ScopedAccessCompletion(this.symbolStore, maxSuggestions),
-            new ObjectAccessCompletion(this.symbolStore, this.maxSuggestions),
-            new SimpleVariableCompletion(maxSuggestions),
-            new NameCompletion(this.maxSuggestions)
+            new ClassTypeDesignatorCompletion(this._maxItems),
+            new ScopedAccessCompletion(this.symbolStore, this._maxItems),
+            new ObjectAccessCompletion(this.symbolStore, this._maxItems),
+            new SimpleVariableCompletion(this._maxItems),
+            new NameCompletion(this._maxItems)
         ];
 
     }
 
+    set maxItems(value:number){
+        this._maxItems = value;
+        for(let n = 0, l = this._strategies.length; n < l;++n){
+            this._strategies[n].maxItems = value;
+        }
+    }
 
     provideCompletions(uri: string, position: lsp.Position) {
 
@@ -236,7 +243,7 @@ export class CompletionProvider {
 }
 
 interface CompletionStrategy {
-
+    maxItems:number;
     canSuggest(context: Context): boolean;
     completions(context: Context): lsp.CompletionList;
 
@@ -248,7 +255,7 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
         'class', 'static', 'namespace'
     ];
 
-    constructor(public maxSuggestions: number) {
+    constructor(public maxItems: number) {
 
     }
 
@@ -286,8 +293,8 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
 
         let matches = context.symbolStore.match(text, this._symbolFilter);
 
-        let limit = Math.min(matches.length, this.maxSuggestions - items.length);
-        let isIncomplete = matches.length > this.maxSuggestions - items.length;
+        let limit = Math.min(matches.length, this.maxItems - items.length);
+        let isIncomplete = matches.length > this.maxItems - items.length;
 
         for (let n = 0; n < limit; ++n) {
             items.push(toConstructorCompletionItem(matches[n], nameLabel(matches[n], context.namespaceName, qNameNode.phraseType)));
@@ -310,7 +317,7 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
 
 class SimpleVariableCompletion implements CompletionStrategy {
 
-    constructor(public maxSuggestions) {
+    constructor(public maxItems) {
 
     }
 
@@ -337,8 +344,8 @@ class SimpleVariableCompletion implements CompletionStrategy {
         //also suggest built in globals vars
         Array.prototype.push.apply(varSymbols, context.symbolStore.match(text, this._isBuiltInGlobalVar));
 
-        let limit = Math.min(varSymbols.length, this.maxSuggestions);
-        let isIncomplete = varSymbols.length > this.maxSuggestions;
+        let limit = Math.min(varSymbols.length, this.maxItems);
+        let isIncomplete = varSymbols.length > this.maxItems;
 
         let items: lsp.CompletionItem[] = [];
 
@@ -424,7 +431,7 @@ class NameCompletion implements CompletionStrategy {
         'yield'
     ];
 
-    constructor(public maxSuggestions: number) {
+    constructor(public maxItems: number) {
 
     }
 
@@ -469,8 +476,8 @@ class NameCompletion implements CompletionStrategy {
         }
 
         let matches = context.symbolStore.match(text, this._symbolFilter);
-        let limit = Math.min(matches.length, this.maxSuggestions - items.length);
-        let isIncomplete = matches.length > this.maxSuggestions - items.length;
+        let limit = Math.min(matches.length, this.maxItems - items.length);
+        let isIncomplete = matches.length > this.maxItems - items.length;
 
         for (let n = 0; n < limit; ++n) {
             items.push(toNameCompletionItem(matches[n], context.namespaceName, qNameNode.phraseType));
@@ -492,7 +499,7 @@ class NameCompletion implements CompletionStrategy {
 
 class ScopedAccessCompletion implements CompletionStrategy {
 
-    constructor(public symbolStore: SymbolStore, public maxSuggestions: number) {
+    constructor(public symbolStore: SymbolStore, public maxItems: number) {
 
     }
 
@@ -561,8 +568,8 @@ class ScopedAccessCompletion implements CompletionStrategy {
         }
 
         let symbols = uniqueSymbolNames(this.symbolStore.lookupMembersOnTypes(memberQueries));
-        let isIncomplete = symbols.length > this.maxSuggestions;
-        let limit = Math.min(symbols.length, this.maxSuggestions);
+        let isIncomplete = symbols.length > this.maxItems;
+        let limit = Math.min(symbols.length, this.maxItems);
         let items: lsp.CompletionItem[] = [];
 
         for (let n = 0; n < limit; ++n) {
@@ -635,7 +642,7 @@ class ScopedAccessCompletion implements CompletionStrategy {
 
 class ObjectAccessCompletion implements CompletionStrategy {
 
-    constructor(public symbolStore: SymbolStore, public maxSuggestions: number) { }
+    constructor(public symbolStore: SymbolStore, public maxItems: number) { }
 
     canSuggest(context: Context) {
         let traverser = context.createTraverser();
@@ -687,8 +694,8 @@ class ObjectAccessCompletion implements CompletionStrategy {
         }
 
         let symbols = uniqueSymbolNames(this.symbolStore.lookupMembersOnTypes(memberQueries));
-        let isIncomplete = symbols.length > this.maxSuggestions;
-        let limit = Math.min(symbols.length, this.maxSuggestions);
+        let isIncomplete = symbols.length > this.maxItems;
+        let limit = Math.min(symbols.length, this.maxItems);
         let items: lsp.CompletionItem[] = [];
 
         for (let n = 0; n < limit; ++n) {
