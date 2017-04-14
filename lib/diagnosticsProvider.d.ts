@@ -2,6 +2,7 @@ import { ParsedDocument } from './parsedDocument';
 import { Event } from './types';
 import * as lsp from 'vscode-languageserver-types';
 export interface PublishDiagnosticsEventArgs {
+    uri: string;
     diagnostics: lsp.Diagnostic[];
 }
 export declare class DiagnosticsProvider {
