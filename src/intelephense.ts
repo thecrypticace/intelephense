@@ -8,7 +8,7 @@ import { ParsedDocument, ParsedDocumentStore, ParsedDocumentChangeEventArgs } fr
 import { SymbolStore, SymbolTable } from './symbol';
 import { SymbolProvider } from './symbolProvider';
 import { CompletionProvider } from './completionProvider';
-import { DiagnosticsProvider } from './diagnosticsProvider';
+import { DiagnosticsProvider, PublishDiagnosticsEventArgs } from './diagnosticsProvider';
 import { Debounce, Unsubscribe } from './types';
 import { SignatureHelpProvider } from './signatureHelpProvider';
 import { DefinitionProvider } from './definitionProvider';
@@ -17,37 +17,77 @@ import * as lsp from 'vscode-languageserver-types';
 export namespace Intelephense {
 
     const phpLanguageId = 'php';
-    export var maxCompletions = 100;
-    export var diagnosticsDebounceWait = 1000;
 
-    let documentStore = new ParsedDocumentStore();
-    let symbolStore = new SymbolStore();
-    let symbolProvider = new SymbolProvider(symbolStore);
-    let completionProvider = new CompletionProvider(symbolStore, documentStore, maxCompletions);
-    let diagnosticsProvider = new DiagnosticsProvider();
-    let signatureHelpProvider = new SignatureHelpProvider(symbolStore, documentStore);
-    let definitionProvider = new DefinitionProvider(symbolStore, documentStore);
+    let documentStore: ParsedDocumentStore;
+    let symbolStore: SymbolStore;
+    let symbolProvider: SymbolProvider;
+    let completionProvider: CompletionProvider;
+    let diagnosticsProvider: DiagnosticsProvider;
+    let signatureHelpProvider: SignatureHelpProvider;
+    let definitionProvider: DefinitionProvider;
+    let unsubscribeMap: { [index: string]: Unsubscribe };
 
-    let unsubscribes: Unsubscribe[] = [];
-    unsubscribes.push(documentStore.parsedDocumentChangeEvent.subscribe(symbolStore.onParsedDocumentChange));
-
-    let diagnosticsDebounceMap: { [uri: string]: Debounce<DiagnosticsEventArgs> } = {};
-    unsubscribes.push(documentStore.parsedDocumentChangeEvent.subscribe((args) => {
-        let debounce = diagnosticsDebounceMap[args.parsedDocument.uri];
-        if (debounce) {
-            debounce.handle(args);
+    function unsubscribe(key: string) {
+        if (typeof unsubscribeMap[key] === 'function') {
+            unsubscribe[key]();
+            delete unsubscribeMap[key];
         }
-    }));
-
-    interface DiagnosticsEventArgs {
-        parsedDocument: ParsedDocument;
     }
 
-    export var onDiagnosticsStart: (uri: string) => void = null
-    export var onDiagnosticsEnd: (uri: string, diagnostics: lsp.Diagnostic[]) => void = null;
+    export function onDiagnosticsStart(fn: (uri: string) => void) {
+        const key = 'diagnosticsStart';
+        unsubscribe(key);
+
+        if (fn) {
+            unsubscribeMap[key] = diagnosticsProvider.startDiagnosticsEvent.subscribe(fn);
+        }
+    }
+
+    export function onDiagnosticsEnd(fn: (uri: string) => void) {
+
+        const key = 'diagnosticsEnd';
+        unsubscribe(key);
+
+        if (fn) {
+            unsubscribeMap[key] = diagnosticsProvider.endDiagnosticsEvent.subscribe(fn);
+        }
+
+    }
+
+    export function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void) {
+        const key = 'publishDiagnostics';
+        unsubscribe(key);
+
+        if (fn) {
+            unsubscribeMap[key] = diagnosticsProvider.publishDiagnosticsEvent.subscribe(fn);
+        }
+    }
 
     export function initialise() {
+
+        unsubscribeMap = {};
+        documentStore = new ParsedDocumentStore();
+        symbolStore = new SymbolStore();
+        symbolProvider = new SymbolProvider(symbolStore);
+        completionProvider = new CompletionProvider(symbolStore, documentStore);
+        diagnosticsProvider = new DiagnosticsProvider();
+        signatureHelpProvider = new SignatureHelpProvider(symbolStore, documentStore);
+        definitionProvider = new DefinitionProvider(symbolStore, documentStore);
+        unsubscribeMap['documentChange'] = documentStore.parsedDocumentChangeEvent.subscribe(symbolStore.onParsedDocumentChange);
         symbolStore.add(SymbolTable.createBuiltIn());
+
+    }
+
+    export function setDiagnosticsProviderDebounce(value:number){
+        diagnosticsProvider.debounceWait = value;
+    }
+
+    export function setDiagnosticsProviderMaxItems(value:number){
+        diagnosticsProvider.maxItems = value;
+    }
+
+    export function setCompletionProviderMaxItems(value:number){
+        completionProvider.maxItems = value;
     }
 
     export function openDocument(textDocument: lsp.TextDocumentItem) {
@@ -62,35 +102,13 @@ export namespace Intelephense {
         //must remove before adding as entry may exist already from workspace discovery
         symbolStore.remove(symbolTable.uri);
         symbolStore.add(symbolTable);
+        diagnosticsProvider.add(parsedDocument);
 
-        //diagnostics
-        let dd = diagnosticsDebounceMap[textDocument.uri] = new Debounce<DiagnosticsEventArgs>(
-            onDiagnosticsRequest,
-            diagnosticsDebounceWait
-        );
-        dd.handle({ parsedDocument: parsedDocument });
-
-    }
-
-    function onDiagnosticsRequest(args: DiagnosticsEventArgs) {
-
-        if (typeof onDiagnosticsStart === 'function') {
-            onDiagnosticsStart(args.parsedDocument.uri);
-        }
-
-        if (typeof onDiagnosticsEnd === 'function') {
-            onDiagnosticsEnd(args.parsedDocument.uri, diagnosticsProvider.diagnose(args.parsedDocument));
-        }
     }
 
     export function closeDocument(textDocument: lsp.TextDocumentIdentifier) {
         documentStore.remove(textDocument.uri);
-        //diagnostics
-        let dd = diagnosticsDebounceMap[textDocument.uri];
-        if (dd) {
-            dd.clear();
-            delete diagnosticsDebounceMap[textDocument.uri];
-        }
+        diagnosticsProvider.remove(textDocument.uri);
     }
 
     export function editDocument(
@@ -179,3 +197,4 @@ export namespace Intelephense {
     }
 
 }
+
