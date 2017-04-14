@@ -10,13 +10,13 @@ import { Phrase, Token, ParseError, tokenTypeToString } from 'php7parser';
 import * as lsp from 'vscode-languageserver-types';
 
 export interface PublishDiagnosticsEventArgs {
-
+    uri: string;
     diagnostics: lsp.Diagnostic[];
 }
 
 export class DiagnosticsProvider {
 
-    maxItems:number;
+    maxItems: number;
 
     private _docs: ParsedDocument[];
     private _debounceWaitTime: number;
@@ -31,7 +31,7 @@ export class DiagnosticsProvider {
     private _onParsedDocumentChanged = (args: ParsedDocumentChangeEventArgs) => {
         this._startDiagnostics.trigger(args.parsedDocument.uri);
         let diagnostics = this._diagnose(args.parsedDocument.uri);
-        this._publish.trigger({ diagnostics: diagnostics });
+        this._publish.trigger({ uri: args.parsedDocument.uri, diagnostics: diagnostics });
         this._endDiagnostics.trigger(args.parsedDocument.uri);
     };
 
@@ -45,15 +45,15 @@ export class DiagnosticsProvider {
         this.maxItems = 100;
     }
 
-    get startDiagnosticsEvent(){
+    get startDiagnosticsEvent() {
         return this._startDiagnostics;
     }
 
-    get endDiagnosticsEvent(){
+    get endDiagnosticsEvent() {
         return this._endDiagnostics;
     }
 
-    get publishDiagnosticsEvent(){
+    get publishDiagnosticsEvent() {
         return this._publish;
     }
 
