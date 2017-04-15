@@ -233,7 +233,6 @@ export class CompletionProvider {
             new TypeDeclarationCompletion(),
             new MethodDeclarationHeaderCompletion(),
             new DeclarationBodyCompletion(),
-            new ClassInterfaceDeclarationHeaderCompletion(),
             new NameCompletion()
         ];
 
@@ -475,7 +474,10 @@ class NameCompletion extends AbstractNameCompletion {
         'try',
         'unset',
         'use',
-        'while'
+        'while',
+        //needed for suggestions during class declaration parse errors
+        'implements', 
+        'extends'
     ];
 
     private static _expressionKeywords = [
@@ -1007,7 +1009,7 @@ class DeclarationBodyCompletion implements CompletionStrategy {
     ];
 
     private static _keywords = [
-        'var', 'public', 'private', 'protected', 'final', 'function', 'abstract'
+        'var', 'public', 'private', 'protected', 'final', 'function', 'abstract', 'implements', 'extends'
     ];
 
     canSuggest(context: Context) {
@@ -1020,30 +1022,6 @@ class DeclarationBodyCompletion implements CompletionStrategy {
         return <lsp.CompletionList>{
             items: keywordCompletionItems(DeclarationBodyCompletion._keywords, text)
         }
-    }
-
-}
-
-class ClassInterfaceDeclarationHeaderCompletion implements CompletionStrategy {
-
-    canSuggest(context: Context) {
-
-        return ParsedDocument.isToken(context.token, [TokenType.Name]) &&
-            this._isClassOrInterfaceDeclarationHeader(context.createTraverser().parent());
-
-    }
-
-    completions(context: Context, maxItems: number) {
-
-        return <lsp.CompletionList>{
-            items: keywordCompletionItems(['extends','implements'], context.word)
-        }
-
-    }
-
-    private _isClassOrInterfaceDeclarationHeader(node:Phrase|Token){
-        return (<Phrase>node).phraseType === PhraseType.ClassDeclarationHeader ||
-            (<Phrase>node).phraseType === PhraseType.InterfaceDeclarationHeader;
     }
 
 }
