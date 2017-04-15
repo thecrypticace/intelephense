@@ -820,15 +820,6 @@ class ClassBaseClauseCompletion extends AbstractNameCompletion {
             context.createTraverser().ancestor(this._isClassBaseClause) !== null;
     }
 
-    completions(context: Context, maxItems: number) {
-
-        if (!this._hasExtends(context)) {
-            return <lsp.CompletionList>{ items: keywordCompletionItems(['extends'], context.word) };
-        }
-
-        return super.completions(context, maxItems);
-    }
-
     protected _getKeywords(context: Context) {
         return [];
     }
@@ -841,13 +832,7 @@ class ClassBaseClauseCompletion extends AbstractNameCompletion {
     protected _toCompletionItem(s: PhpSymbol, label: string) {
         return toClassCompletionItem(s, label);
     }
-
-    private _hasExtends(context: Context) {
-        return !!(<ClassBaseClause>context.createTraverser().ancestor(this._isClassBaseClause)).children.find((x) => {
-            return (<Token>x).tokenType === TokenType.Extends;
-        });
-    }
-
+    
     private _isClassBaseClause(node: Phrase | Token) {
         return (<Phrase>node).phraseType === PhraseType.ClassBaseClause;
     }
@@ -856,22 +841,10 @@ class ClassBaseClauseCompletion extends AbstractNameCompletion {
 
 class InterfaceClauseCompletion extends AbstractNameCompletion {
 
-    private static _keywords = ['extends', 'implements'];
-
     canSuggest(context: Context) {
 
         return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash]) &&
             context.createTraverser().ancestor(this._isInterfaceClause) !== null;
-
-    }
-
-    completions(context: Context, maxItems: number) {
-
-        if (!this._hasKeyword(context)) {
-            return <lsp.CompletionList>{ items: keywordCompletionItems(InterfaceClauseCompletion._keywords, context.word) };
-        }
-
-        return super.completions(context, maxItems);
 
     }
 
@@ -891,13 +864,6 @@ class InterfaceClauseCompletion extends AbstractNameCompletion {
         return (<Phrase>node).phraseType === PhraseType.ClassInterfaceClause ||
             (<Phrase>node).phraseType === PhraseType.InterfaceBaseClause;
     }
-
-    private _hasKeyword(context: Context) {
-        return !!(<Phrase>context.createTraverser().ancestor(this._isInterfaceClause)).children.find((x) => {
-            return (<Token>x).tokenType === TokenType.Extends || (<Token>x).tokenType === TokenType.Implements;
-        });
-    }
-
 
 }
 
