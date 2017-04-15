@@ -1099,8 +1099,8 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
             paramStrings.push(this._parameterToString(params[n]));
         }
 
-        let label = `${s.name}(${paramStrings.join(', ')}) { }`;
-        let insertText = `${s.name}(${paramStrings.join(', ')}) { $0 }`;
+        let label = `${s.name}(${paramStrings.join(', ')}) {}`;
+        let insertText = `${s.name}(${paramStrings.join(', ')}) {$0}`;
 
         let item: lsp.CompletionItem = {
             kind: lsp.CompletionItemKind.Method,
@@ -1129,7 +1129,7 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
 
         parts.push(s.name);
         if (s.value) {
-            parts.push(`= ${s.value}`);
+            parts.push(`= \\${s.value}`);
         }
 
         return parts.join(' ');
