@@ -233,7 +233,7 @@ export class CompletionProvider {
             new TypeDeclarationCompletion(),
             new MethodDeclarationHeaderCompletion(),
             new DeclarationBodyCompletion(),
-            new ClassInterfaceDeclarationCompletion(),
+            new ClassInterfaceDeclarationHeaderCompletion(),
             new NameCompletion()
         ];
 
@@ -1024,12 +1024,12 @@ class DeclarationBodyCompletion implements CompletionStrategy {
 
 }
 
-class ClassInterfaceDeclarationCompletion implements CompletionStrategy {
+class ClassInterfaceDeclarationHeaderCompletion implements CompletionStrategy {
 
     canSuggest(context: Context) {
 
         return ParsedDocument.isToken(context.token, [TokenType.Name]) &&
-            this._isClassOrInterfaceDeclaration(context.createTraverser().parent());
+            this._isClassOrInterfaceDeclarationHeader(context.createTraverser().parent());
 
     }
 
@@ -1041,9 +1041,9 @@ class ClassInterfaceDeclarationCompletion implements CompletionStrategy {
 
     }
 
-    private _isClassOrInterfaceDeclaration(node:Phrase|Token){
-        return (<Phrase>node).phraseType === PhraseType.ClassDeclaration ||
-            (<Phrase>node).phraseType === PhraseType.InterfaceDeclaration;
+    private _isClassOrInterfaceDeclarationHeader(node:Phrase|Token){
+        return (<Phrase>node).phraseType === PhraseType.ClassDeclarationHeader ||
+            (<Phrase>node).phraseType === PhraseType.InterfaceDeclarationHeader;
     }
 
 }
