@@ -233,7 +233,7 @@ export class CompletionProvider {
             new TypeDeclarationCompletion(),
             new MethodDeclarationHeaderCompletion(),
             new DeclarationBodyCompletion(),
-            new ExtendsImplementsKeywordCompletion(),
+            new ClassInterfaceDeclarationCompletion(),
             new NameCompletion()
         ];
 
@@ -1024,34 +1024,26 @@ class DeclarationBodyCompletion implements CompletionStrategy {
 
 }
 
-class ExtendsImplementsKeywordCompletion implements CompletionStrategy {
-
-    private static _isClassHeaderRegex = /class\s+\w+\s+.$/;
-    private static _isInterfaceHeaderRegex = /interface\s+\w+\s+.$/;
+class ClassInterfaceDeclarationCompletion implements CompletionStrategy {
 
     canSuggest(context: Context) {
 
-        let text = context.textBefore(100);
-        return this._isClassHeader(text) || this._isInterfaceHeader(text);
+        return ParsedDocument.isToken(context.token, [TokenType.Name]) &&
+            this._isClassOrInterfaceDeclaration(context.createTraverser().parent());
 
     }
 
     completions(context: Context, maxItems: number) {
 
-        let text = context.textBefore(100);
-        let keywords = this._isClassHeader(text) ? ['extends', 'implements'] : ['extends'];
         return <lsp.CompletionList>{
-            items: keywordCompletionItems(keywords, context.word)
+            items: keywordCompletionItems(['extends','implements'], context.word)
         }
 
     }
 
-    private _isInterfaceHeader(text: string) {
-        return !!text.match(ExtendsImplementsKeywordCompletion._isInterfaceHeaderRegex);
-    }
-
-    private _isClassHeader(text: string) {
-        return !!text.match(ExtendsImplementsKeywordCompletion._isClassHeaderRegex);
+    private _isClassOrInterfaceDeclaration(node:Phrase|Token){
+        return (<Phrase>node).phraseType === PhraseType.ClassDeclaration ||
+            (<Phrase>node).phraseType === PhraseType.InterfaceDeclaration;
     }
 
 }
