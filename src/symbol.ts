@@ -75,7 +75,7 @@ export interface PhpSymbol {
     children?: PhpSymbol[];
     scope?: string;
     value?: string;
-    typeSource?:TypeSource;
+    typeSource?: TypeSource;
 }
 
 
@@ -339,7 +339,7 @@ export class TypeString {
 
         let replacer = (match, offset, text) => {
 
-            if(match[0] === 'self' || match[0] === '$this' || match[0] === 'static'){
+            if (match[0] === 'self' || match[0] === '$this' || match[0] === 'static') {
                 return nameResolver.thisName;
             } else if (TypeString._keywords.indexOf(match[0]) >= 0) {
                 return match[0];
@@ -460,7 +460,7 @@ export class SymbolTable {
         return this.filter(pred).pop();
     }
 
-    static create(parsedDocument: ParsedDocument, ignorePhraseTypes?:PhraseType[]) {
+    static create(parsedDocument: ParsedDocument, ignorePhraseTypes?: PhraseType[]) {
 
         let symbolReader = new SymbolReader(
             parsedDocument,
@@ -607,7 +607,7 @@ export class SymbolStore {
         return symbols;
     }
 
-    lookupMemberOnTypes(queries:MemberQuery[]){
+    lookupMemberOnTypes(queries: MemberQuery[]) {
         return this.lookupMembersOnTypes(queries).shift();
     }
 
@@ -704,19 +704,19 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     namespaceUseDeclarationPrefix: string;
     classConstDeclarationModifier: SymbolModifier;
     propertyDeclarationModifier: SymbolModifier;
-    ignore:PhraseType[];
+    ignore: PhraseType[];
 
     constructor(
         public parsedDocument: ParsedDocument,
         public nameResolver: NameResolver,
         public spine: PhpSymbol[]
-    ) { 
+    ) {
 
     }
 
     preOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
-        if(this.ignore && ParsedDocument.isPhrase(node, this.ignore)){
+        if (this.ignore && ParsedDocument.isPhrase(node, this.ignore)) {
             return false;
         }
 
@@ -931,12 +931,12 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.CatchClause:
 
                 s = {
-                    kind:SymbolKind.Variable,
+                    kind: SymbolKind.Variable,
                     name: this.parsedDocument.tokenText((<CatchClause>node).variable),
                     location: this.tokenLocation((<CatchClause>node).variable)
                 }
 
-                if(!this._variableExists(s.name)){
+                if (!this._variableExists(s.name)) {
                     this._addSymbol(s, false);
                 }
                 return true;
@@ -957,7 +957,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     postOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
-        if(this.ignore && ParsedDocument.isPhrase(node, this.ignore)){
+        if (this.ignore && ParsedDocument.isPhrase(node, this.ignore)) {
             return;
         }
 
@@ -1108,13 +1108,13 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
         }
     }
 
-    tokenLocation(t:Token){
-        if(!t){
+    tokenLocation(t: Token) {
+        if (!t) {
             return null;
         }
 
         let range = this.parsedDocument.tokenRange(t);
-        if(!range){
+        if (!range) {
             return null;
         }
         return <Location>{
@@ -1165,6 +1165,10 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 let type = new TypeString(tag.typeString).nameResolve(this.nameResolver);
                 s.type = s.type ? s.type.merge(type) : type;
             }
+        }
+
+        if (node.value) {
+            s.value = this.parsedDocument.nodeText(node.value);
         }
 
         return s;
@@ -2159,18 +2163,18 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
     }
 
-    private _qualifiedNameList(node:QualifiedNameList){
+    private _qualifiedNameList(node: QualifiedNameList) {
 
-        let fqns:string[] = [];
+        let fqns: string[] = [];
 
-        for(let n = 0, l = node.elements.length; n < l; ++n){
+        for (let n = 0, l = node.elements.length; n < l; ++n) {
             fqns.push(this.nameResolver.namePhraseToFqn(node.elements[n], SymbolKind.Class));
         }
 
         return new TypeString(fqns.join('|'));
     }
 
-    private _catchClause(node:CatchClause){
+    private _catchClause(node: CatchClause) {
         this.variableTable.setType(this.nameResolver.tokenText(node.variable), this._qualifiedNameList(node.nameList));
     }
 
