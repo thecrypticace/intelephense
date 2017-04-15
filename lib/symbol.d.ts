@@ -1,6 +1,6 @@
 import { Position, Location } from 'vscode-languageserver-types';
 import { Predicate, TreeVisitor } from './types';
-import { Phrase, Token, NamespaceName, FunctionDeclarationHeader, TypeDeclaration, QualifiedName, ParameterDeclaration, ConstElement, FunctionDeclaration, ClassDeclaration, ClassDeclarationHeader, ClassBaseClause, ClassInterfaceClause, QualifiedNameList, InterfaceDeclaration, InterfaceDeclarationHeader, InterfaceBaseClause, TraitDeclaration, TraitDeclarationHeader, ClassConstDeclaration, ClassConstElement, Identifier, MethodDeclaration, MethodDeclarationHeader, PropertyDeclaration, PropertyElement, MemberModifierList, NamespaceDefinition, NamespaceUseDeclaration, NamespaceUseClause, AnonymousClassDeclaration, AnonymousFunctionCreationExpression, AnonymousFunctionUseVariable, TraitUseClause, SimpleVariable, ObjectCreationExpression, SubscriptExpression, FunctionCallExpression, MemberName, PropertyAccessExpression, ClassTypeDesignator, ScopedCallExpression, ScopedMemberName, ScopedPropertyAccessExpression, TernaryExpression } from 'php7parser';
+import { Phrase, PhraseType, Token, NamespaceName, FunctionDeclarationHeader, TypeDeclaration, QualifiedName, ParameterDeclaration, ConstElement, FunctionDeclaration, ClassDeclaration, ClassDeclarationHeader, ClassBaseClause, ClassInterfaceClause, QualifiedNameList, InterfaceDeclaration, InterfaceDeclarationHeader, InterfaceBaseClause, TraitDeclaration, TraitDeclarationHeader, ClassConstDeclaration, ClassConstElement, Identifier, MethodDeclaration, MethodDeclarationHeader, PropertyDeclaration, PropertyElement, MemberModifierList, NamespaceDefinition, NamespaceUseDeclaration, NamespaceUseClause, AnonymousClassDeclaration, AnonymousFunctionCreationExpression, AnonymousFunctionUseVariable, TraitUseClause, SimpleVariable, ObjectCreationExpression, SubscriptExpression, FunctionCallExpression, MemberName, PropertyAccessExpression, ClassTypeDesignator, ScopedCallExpression, ScopedMemberName, ScopedPropertyAccessExpression, TernaryExpression } from 'php7parser';
 import { PhpDoc, Tag, MethodTagParam } from './phpDoc';
 import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
 export declare const enum SymbolKind {
@@ -90,7 +90,7 @@ export declare class SymbolTable {
     filter(predicate: Predicate<PhpSymbol>): PhpSymbol[];
     find(predicate: Predicate<PhpSymbol>): PhpSymbol;
     symbolAtPosition(position: Position): PhpSymbol;
-    static create(parsedDocument: ParsedDocument): SymbolTable;
+    static create(parsedDocument: ParsedDocument, ignorePhraseTypes?: PhraseType[]): SymbolTable;
     static createBuiltIn(): SymbolTable;
 }
 export interface MemberQuery {
@@ -140,6 +140,7 @@ export declare class SymbolReader implements TreeVisitor<Phrase | Token> {
     namespaceUseDeclarationPrefix: string;
     classConstDeclarationModifier: SymbolModifier;
     propertyDeclarationModifier: SymbolModifier;
+    ignore: PhraseType[];
     constructor(parsedDocument: ParsedDocument, nameResolver: NameResolver, spine: PhpSymbol[]);
     preOrder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
     postOrder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
