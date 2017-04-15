@@ -96,7 +96,7 @@ export class DiagnosticsProvider {
         this._debounceWaitTime = value;
         let keys = Object.keys(this._debounceMap);
         for (let n = 0, l = keys.length; n < l; ++n) {
-            this._debounceMap[n].wait = this._debounceWaitTime;
+            this._debounceMap[keys[n]].wait = this._debounceWaitTime;
         }
     }
 
