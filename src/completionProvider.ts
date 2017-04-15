@@ -166,6 +166,13 @@ function toVariableCompletionItem(s: PhpSymbol) {
 
 }
 
+function toNamespaceCompletionItem(s:PhpSymbol){
+     return <lsp.CompletionItem>{
+        label: s.name,
+        kind: lsp.SymbolKind.Namespace
+    }
+}
+
 function uniqueSymbolNames(symbols: PhpSymbol[]) {
 
     let set = new Set<string>();
@@ -197,6 +204,9 @@ export class CompletionProvider {
             new ObjectAccessCompletion(this._maxItems),
             new SimpleVariableCompletion(this._maxItems),
             new TypeDeclarationCompletion(this.maxItems),
+            new ClassBaseClauseCompletion(this.maxItems),
+            new InterfaceClauseCompletion(this.maxItems),
+            new NamespaceDefinitionCompletion(this.maxItems),
             new NameCompletion(this._maxItems)
         ];
 
@@ -275,7 +285,7 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
             };
         }
 
-        let matches = context.symbolStore.match(text, pred);
+        let matches = context.symbolStore.match(text, pred, true);
         let limit = Math.min(matches.length, this.maxItems - items.length);
         let isIncomplete = matches.length > this.maxItems - items.length;
         let toCompletionItem
@@ -825,12 +835,86 @@ class ClassBaseClauseCompletion extends AbstractNameCompletion {
             !(s.modifiers & SymbolModifier.Final);
     }
 
-    protected _toCompletionItem(s:PhpSymbol, label:string){
+    protected _toCompletionItem(s: PhpSymbol, label: string) {
         return toClassCompletionItem(s, label);
     }
 
     private _isClassBaseClause(node: Phrase | Token) {
         return (<Phrase>node).phraseType === PhraseType.ClassBaseClause;
     }
+
+}
+
+class InterfaceClauseCompletion extends AbstractNameCompletion {
+
+    constructor(public maxItems: number) {
+        super(maxItems);
+    }
+
+    canSuggest(context: Context) {
+
+        return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash]) &&
+            context.createTraverser().ancestor(this._isInterfaceClause) !== null;
+
+    }
+
+    protected _getKeywords() {
+        return [];
+    }
+
+    protected _symbolFilter(s: PhpSymbol) {
+        return s.kind === SymbolKind.Interface;
+    }
+
+    protected _toCompletionItem(s: PhpSymbol, label: string) {
+        return toClassCompletionItem(s, label);
+    }
+
+    private _isInterfaceClause(node: Phrase | Token) {
+        return (<Phrase>node).phraseType === PhraseType.ClassInterfaceClause ||
+            (<Phrase>node).phraseType === PhraseType.InterfaceBaseClause;
+    }
+
+
+}
+
+class NamespaceDefinitionCompletion implements CompletionStrategy {
+
+    constructor(public maxItems: number) { }
+
+    canSuggest(context: Context) {
+
+        return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash]) &&
+            context.createTraverser().ancestor(this._isNamespaceDefinition) !== null;
+
+    }
+
+    completions(context: Context) {
+        let items: lsp.CompletionItem[] = [];
+        let text = context.word;
+
+        let matches = uniqueSymbolNames(context.symbolStore.match(text, this._symbolFilter, true));
+        let limit = Math.min(matches.length, this.maxItems - items.length);
+        let isIncomplete = matches.length > this.maxItems - items.length;
+
+        for (let n = 0; n < limit; ++n) {
+            items.push(toNamespaceCompletionItem(matches[n]));
+        }
+
+        return <lsp.CompletionList>{
+            items: items,
+            isIncomplete: isIncomplete
+        }
+
+    }
+
+    private _symbolFilter(s: PhpSymbol) {
+        return s.kind === SymbolKind.Namespace;
+    }
+
+    private _isNamespaceDefinition(node: Phrase | Token) {
+        return (<Phrase>node).phraseType === PhraseType.NamespaceDefinition;
+    }
+
 
 }
