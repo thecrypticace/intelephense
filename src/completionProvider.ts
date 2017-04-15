@@ -199,24 +199,21 @@ export class CompletionProvider {
 
         this._maxItems = 100;
         this._strategies = [
-            new ClassTypeDesignatorCompletion(this._maxItems),
-            new ScopedAccessCompletion(this._maxItems),
-            new ObjectAccessCompletion(this._maxItems),
-            new SimpleVariableCompletion(this._maxItems),
-            new TypeDeclarationCompletion(this.maxItems),
-            new ClassBaseClauseCompletion(this.maxItems),
-            new InterfaceClauseCompletion(this.maxItems),
-            new NamespaceDefinitionCompletion(this.maxItems),
-            new NameCompletion(this._maxItems)
+            new ClassTypeDesignatorCompletion(),
+            new ScopedAccessCompletion(),
+            new ObjectAccessCompletion(),
+            new SimpleVariableCompletion(),
+            new TypeDeclarationCompletion(),
+            new ClassBaseClauseCompletion(),
+            new InterfaceClauseCompletion(),
+            new NamespaceDefinitionCompletion(),
+            new NameCompletion()
         ];
 
     }
 
     set maxItems(value: number) {
         this._maxItems = value;
-        for (let n = 0, l = this._strategies.length; n < l; ++n) {
-            this._strategies[n].maxItems = value;
-        }
     }
 
     provideCompletions(uri: string, position: lsp.Position) {
@@ -237,7 +234,7 @@ export class CompletionProvider {
             }
         }
 
-        return strategy ? strategy.completions(context) : noCompletionResponse;
+        return strategy ? strategy.completions(context, this._maxItems) : noCompletionResponse;
 
     }
 
@@ -253,19 +250,16 @@ export class CompletionProvider {
 }
 
 interface CompletionStrategy {
-    maxItems: number;
     canSuggest(context: Context): boolean;
-    completions(context: Context): lsp.CompletionList;
+    completions(context: Context, maxItems:number): lsp.CompletionList;
 
 }
 
 abstract class AbstractNameCompletion implements CompletionStrategy {
 
-    constructor(public maxItems: number) { }
-
     abstract canSuggest(context: Context): boolean;
 
-    completions(context: Context) {
+    completions(context: Context, maxItems:number) {
 
         let items: lsp.CompletionItem[] = [];
         let namePhrase = this._getNamePhrase(context);
@@ -286,8 +280,8 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         }
 
         let matches = context.symbolStore.match(text, pred, true);
-        let limit = Math.min(matches.length, this.maxItems - items.length);
-        let isIncomplete = matches.length > this.maxItems - items.length;
+        let limit = Math.min(matches.length, maxItems - items.length);
+        let isIncomplete = matches.length > maxItems - items.length;
         let toCompletionItem
 
         for (let n = 0; n < limit; ++n) {
@@ -329,10 +323,6 @@ class ClassTypeDesignatorCompletion extends AbstractNameCompletion {
         'class', 'static', 'namespace'
     ];
 
-    constructor(public maxItems: number) {
-        super(maxItems);
-    }
-
     canSuggest(context: Context) {
 
         let traverser = context.createTraverser();
@@ -370,17 +360,13 @@ class ClassTypeDesignatorCompletion extends AbstractNameCompletion {
 
 class SimpleVariableCompletion implements CompletionStrategy {
 
-    constructor(public maxItems) {
-
-    }
-
     canSuggest(context: Context) {
         let traverser = context.createTraverser();
         return ParsedDocument.isToken(traverser.node, [TokenType.Dollar, TokenType.VariableName]) &&
             ParsedDocument.isPhrase(traverser.parent(), [PhraseType.SimpleVariable]);
     }
 
-    completions(context: Context) {
+    completions(context: Context, maxItems:number) {
 
         let nameResolver = context.createNameResolver();
         let text = context.word;
@@ -397,8 +383,8 @@ class SimpleVariableCompletion implements CompletionStrategy {
         //also suggest built in globals vars
         Array.prototype.push.apply(varSymbols, context.symbolStore.match(text, this._isBuiltInGlobalVar));
 
-        let limit = Math.min(varSymbols.length, this.maxItems);
-        let isIncomplete = varSymbols.length > this.maxItems;
+        let limit = Math.min(varSymbols.length, maxItems);
+        let isIncomplete = varSymbols.length > maxItems;
 
         let items: lsp.CompletionItem[] = [];
 
@@ -484,10 +470,6 @@ class NameCompletion extends AbstractNameCompletion {
         'yield'
     ];
 
-    constructor(public maxItems: number) {
-        super(maxItems);
-    }
-
     canSuggest(context: Context) {
 
         //<?php (no trailing space) is considered short tag open and then name token
@@ -522,10 +504,6 @@ class NameCompletion extends AbstractNameCompletion {
 
 class ScopedAccessCompletion implements CompletionStrategy {
 
-    constructor(public maxItems: number) {
-
-    }
-
     canSuggest(context: Context) {
         let traverser = context.createTraverser();
         let scopedAccessPhrases = [
@@ -552,7 +530,7 @@ class ScopedAccessCompletion implements CompletionStrategy {
             ParsedDocument.isPhrase(traverser.parent(), [PhraseType.ScopedMemberName]);
     }
 
-    completions(context: Context) {
+    completions(context: Context, maxItems:number) {
 
         let traverser = context.createTraverser();
         let scopedAccessExpr = traverser.ancestor(this._isScopedAccessExpr) as ScopedExpression;
@@ -591,8 +569,8 @@ class ScopedAccessCompletion implements CompletionStrategy {
         }
 
         let symbols = uniqueSymbolNames(context.symbolStore.lookupMembersOnTypes(memberQueries));
-        let isIncomplete = symbols.length > this.maxItems;
-        let limit = Math.min(symbols.length, this.maxItems);
+        let isIncomplete = symbols.length > maxItems;
+        let limit = Math.min(symbols.length, maxItems);
         let items: lsp.CompletionItem[] = [];
 
         for (let n = 0; n < limit; ++n) {
@@ -665,8 +643,6 @@ class ScopedAccessCompletion implements CompletionStrategy {
 
 class ObjectAccessCompletion implements CompletionStrategy {
 
-    constructor(public maxItems: number) { }
-
     canSuggest(context: Context) {
         let traverser = context.createTraverser();
 
@@ -680,7 +656,7 @@ class ObjectAccessCompletion implements CompletionStrategy {
 
     }
 
-    completions(context: Context) {
+    completions(context: Context, maxItems:number) {
 
         let traverser = context.createTraverser();
         let objAccessExpr = traverser.ancestor(this._isMemberAccessExpr) as ObjectAccessExpression;
@@ -717,8 +693,8 @@ class ObjectAccessCompletion implements CompletionStrategy {
         }
 
         let symbols = uniqueSymbolNames(context.symbolStore.lookupMembersOnTypes(memberQueries));
-        let isIncomplete = symbols.length > this.maxItems;
-        let limit = Math.min(symbols.length, this.maxItems);
+        let isIncomplete = symbols.length > maxItems;
+        let limit = Math.min(symbols.length, maxItems);
         let items: lsp.CompletionItem[] = [];
 
         for (let n = 0; n < limit; ++n) {
@@ -790,10 +766,6 @@ class TypeDeclarationCompletion extends AbstractNameCompletion {
         'self', 'array', 'callable', 'bool', 'float', 'int', 'string'
     ];
 
-    constructor(public maxItems: number) {
-        super(maxItems);
-    }
-
     canSuggest(context: Context) {
         return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash, TokenType.Array, TokenType.Callable]) &&
             context.createTraverser().ancestor((x) => {
@@ -816,10 +788,6 @@ class TypeDeclarationCompletion extends AbstractNameCompletion {
 }
 
 class ClassBaseClauseCompletion extends AbstractNameCompletion {
-
-    constructor(public maxItems: number) {
-        super(maxItems);
-    }
 
     canSuggest(context: Context) {
         return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash]) &&
@@ -846,10 +814,6 @@ class ClassBaseClauseCompletion extends AbstractNameCompletion {
 }
 
 class InterfaceClauseCompletion extends AbstractNameCompletion {
-
-    constructor(public maxItems: number) {
-        super(maxItems);
-    }
 
     canSuggest(context: Context) {
 
@@ -880,8 +844,6 @@ class InterfaceClauseCompletion extends AbstractNameCompletion {
 
 class NamespaceDefinitionCompletion implements CompletionStrategy {
 
-    constructor(public maxItems: number) { }
-
     canSuggest(context: Context) {
 
         return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash]) &&
@@ -889,13 +851,13 @@ class NamespaceDefinitionCompletion implements CompletionStrategy {
 
     }
 
-    completions(context: Context) {
+    completions(context: Context, maxItems:number) {
         let items: lsp.CompletionItem[] = [];
         let text = context.word;
 
         let matches = uniqueSymbolNames(context.symbolStore.match(text, this._symbolFilter, true));
-        let limit = Math.min(matches.length, this.maxItems - items.length);
-        let isIncomplete = matches.length > this.maxItems - items.length;
+        let limit = Math.min(matches.length, maxItems - items.length);
+        let isIncomplete = matches.length > maxItems - items.length;
 
         for (let n = 0; n < limit; ++n) {
             items.push(toNamespaceCompletionItem(matches[n]));
@@ -918,3 +880,5 @@ class NamespaceDefinitionCompletion implements CompletionStrategy {
 
 
 }
+
+
