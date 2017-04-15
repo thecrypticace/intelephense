@@ -2103,6 +2103,9 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
             case PhraseType.ForeachStatement:
                 this._foreachStatement(<ForeachStatement>node);
                 return true;
+            case PhraseType.CatchClause:
+                this._catchClause(<CatchClause>node);
+                return true;
             case undefined:
                 this._token(<Token>node);
                 return false;
@@ -2143,6 +2146,21 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
                 break;
         }
 
+    }
+
+    private _qualifiedNameList(node:QualifiedNameList){
+
+        let fqns:string[] = [];
+
+        for(let n = 0, l = node.elements.length; n < l; ++n){
+            fqns.push(this.nameResolver.namePhraseToFqn(node.elements[n], SymbolKind.Class));
+        }
+
+        return new TypeString(fqns.join('|'));
+    }
+
+    private _catchClause(node:CatchClause){
+        this.variableTable.setType(this.nameResolver.tokenText(node.variable), this._qualifiedNameList(node.nameList));
     }
 
     private _listIntrinsic(node: ListIntrinsic) {
