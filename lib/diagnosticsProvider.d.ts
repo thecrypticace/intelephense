@@ -11,7 +11,6 @@ export declare class DiagnosticsProvider {
     private _debounceWaitTime;
     private _publish;
     private _startDiagnostics;
-    private _endDiagnostics;
     private _debounceMap;
     private _unsubscribeMap;
     private _diagnosticsMap;
@@ -19,7 +18,6 @@ export declare class DiagnosticsProvider {
     private _onParsedDocumentChanged;
     constructor();
     readonly startDiagnosticsEvent: Event<string>;
-    readonly endDiagnosticsEvent: Event<string>;
     readonly publishDiagnosticsEvent: Event<PublishDiagnosticsEventArgs>;
     add(doc: ParsedDocument): void;
     remove(uri: string): void;

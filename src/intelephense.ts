@@ -43,17 +43,6 @@ export namespace Intelephense {
         }
     }
 
-    export function onDiagnosticsEnd(fn: (uri: string) => void) {
-
-        const key = 'diagnosticsEnd';
-        unsubscribe(key);
-
-        if (fn) {
-            unsubscribeMap[key] = diagnosticsProvider.endDiagnosticsEvent.subscribe(fn);
-        }
-
-    }
-
     export function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void) {
         const key = 'publishDiagnostics';
         unsubscribe(key);

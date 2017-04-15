@@ -2,7 +2,6 @@ import { PublishDiagnosticsEventArgs } from './diagnosticsProvider';
 import * as lsp from 'vscode-languageserver-types';
 export declare namespace Intelephense {
     function onDiagnosticsStart(fn: (uri: string) => void): void;
-    function onDiagnosticsEnd(fn: (uri: string) => void): void;
     function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void): void;
     function initialise(): void;
     function setDiagnosticsProviderDebounce(value: number): void;
