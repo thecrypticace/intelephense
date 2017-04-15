@@ -25,7 +25,7 @@ import {
     MemberName, PropertyAccessExpression, ClassTypeDesignator, ScopedCallExpression,
     ScopedMemberName, ScopedPropertyAccessExpression, BinaryExpression, TernaryExpression,
     RelativeScope, ListIntrinsic, IfStatement, InstanceOfExpression, InstanceofTypeDesignator,
-    ArrayInitialiserList, ArrayElement, ForeachStatement
+    ArrayInitialiserList, ArrayElement, ForeachStatement, CatchClause
 } from 'php7parser';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam } from './phpDoc';
 import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
@@ -911,6 +911,19 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 }
                 return false;
 
+            case PhraseType.CatchClause:
+
+                s = {
+                    kind:SymbolKind.Variable,
+                    name: this.parsedDocument.tokenText((<CatchClause>node).variable),
+                    location: this.tokenLocation((<CatchClause>node).variable)
+                }
+
+                if(!this._variableExists(s.name)){
+                    this._addSymbol(s, false);
+                }
+                return true;
+
             case undefined:
                 this._token(<Token>node);
                 return false;
@@ -1068,6 +1081,22 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             uri: this.parsedDocument.uri,
             range: range
         }
+    }
+
+    tokenLocation(t:Token){
+        if(!t){
+            return null;
+        }
+
+        let range = this.parsedDocument.tokenRange(t);
+        if(!range){
+            return null;
+        }
+        return <Location>{
+            uri: this.parsedDocument.uri,
+            range: range
+        }
+
     }
 
     functionDeclaration(node: FunctionDeclaration, phpDoc: PhpDoc) {

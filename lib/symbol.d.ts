@@ -150,6 +150,7 @@ export declare class SymbolReader implements TreeVisitor<Phrase | Token> {
     private _addSymbol(symbol, pushToSpine);
     nameTokenToFqn(t: Token): string;
     phraseLocation(p: Phrase): Location;
+    tokenLocation(t: Token): Location;
     functionDeclaration(node: FunctionDeclaration, phpDoc: PhpDoc): PhpSymbol;
     functionDeclarationHeader(s: PhpSymbol, node: FunctionDeclarationHeader): PhpSymbol;
     parameterDeclaration(node: ParameterDeclaration, phpDoc: PhpDoc): PhpSymbol;
