@@ -771,8 +771,10 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.TypeDeclaration:
                 s = this.spine[this.spine.length - 1];
                 let typeDeclarationValue = this.typeDeclaration(<TypeDeclaration>node);
-                s.type = new TypeString(typeDeclarationValue); //type hints trump phpdoc
-                s.typeSource = TypeSource.TypeDeclaration;
+                if(typeDeclarationValue){
+                    s.type = new TypeString(typeDeclarationValue); //type hints trump phpdoc
+                    s.typeSource = TypeSource.TypeDeclaration;
+                }
                 return false;
 
             case PhraseType.ClassDeclaration:
@@ -1175,6 +1177,10 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     }
 
     typeDeclaration(node: TypeDeclaration) {
+
+        if(!node.name){
+            return '';
+        }
 
         return (<Phrase>node.name).phraseType ?
             this.qualifiedName(<QualifiedName>node.name, SymbolKind.Class) :
