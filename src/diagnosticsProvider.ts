@@ -22,7 +22,6 @@ export class DiagnosticsProvider {
     private _debounceWaitTime: number;
     private _publish: Event<PublishDiagnosticsEventArgs>;
     private _startDiagnostics: Event<string>;
-    private _endDiagnostics: Event<string>;
     private _debounceMap: { [index: string]: Debounce<ParsedDocumentChangeEventArgs> };
     private _unsubscribeMap: { [index: string]: Unsubscribe };
     private _diagnosticsMap: { [index: string]: lsp.Diagnostic[] };
@@ -32,13 +31,13 @@ export class DiagnosticsProvider {
         this._startDiagnostics.trigger(args.parsedDocument.uri);
         let diagnostics = this._diagnose(args.parsedDocument.uri);
         this._publish.trigger({ uri: args.parsedDocument.uri, diagnostics: diagnostics });
-        this._endDiagnostics.trigger(args.parsedDocument.uri);
     };
 
     constructor() {
         this._debounceWaitTime = 1000;
         this._docs = [];
         this._publish = new Event<PublishDiagnosticsEventArgs>();
+        this._startDiagnostics = new Event<string>();
         this._debounceMap = {};
         this._unsubscribeMap = {};
         this._diagnosticsMap = {};
@@ -47,10 +46,6 @@ export class DiagnosticsProvider {
 
     get startDiagnosticsEvent() {
         return this._startDiagnostics;
-    }
-
-    get endDiagnosticsEvent() {
-        return this._endDiagnostics;
     }
 
     get publishDiagnosticsEvent() {
