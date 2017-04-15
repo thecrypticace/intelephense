@@ -54,12 +54,11 @@ function nameLabel(s: PhpSymbol, nsName: string, namePhraseType: PhraseType) {
     return label;
 }
 
-function toNameCompletionItem(s: PhpSymbol, namespace: string, namePhraseType: PhraseType) {
-
-    let label = nameLabel(s, namespace, namePhraseType);
+function toNameCompletionItem(s: PhpSymbol, label?: string) {
 
     switch (s.kind) {
         case SymbolKind.Class:
+        case SymbolKind.Interface:
             return toClassCompletionItem(s, label);
         case SymbolKind.Function:
             return toFunctionCompletionItem(s, label);
@@ -194,10 +193,10 @@ export class CompletionProvider {
         this._maxItems = 100;
         this._strategies = [
             new ClassTypeDesignatorCompletion(this._maxItems),
-            new ScopedAccessCompletion(this.symbolStore, this._maxItems),
-            new ObjectAccessCompletion(this.symbolStore, this._maxItems),
+            new ScopedAccessCompletion(this._maxItems),
+            new ObjectAccessCompletion(this._maxItems),
             new SimpleVariableCompletion(this._maxItems),
-            new TypeDeclarationCompletion(this.symbolStore, this.maxItems),
+            new TypeDeclarationCompletion(this.maxItems),
             new NameCompletion(this._maxItems)
         ];
 
@@ -250,14 +249,78 @@ interface CompletionStrategy {
 
 }
 
-class ClassTypeDesignatorCompletion implements CompletionStrategy {
+abstract class AbstractNameCompletion implements CompletionStrategy {
+
+    constructor(public maxItems: number) { }
+
+    abstract canSuggest(context: Context): boolean;
+
+    completions(context: Context) {
+
+        let items: lsp.CompletionItem[] = [];
+        let namePhrase = this._getNamePhrase(context);
+        let text = context.word;
+
+        if (!text) {
+            return noCompletionResponse;
+        }
+
+        Array.prototype.push.apply(items, keywordCompletionItems(this._getKeywords(context), text));
+
+        let pred = this._symbolFilter;
+        if (namePhrase && namePhrase.phraseType === PhraseType.RelativeQualifiedName) {
+            let ns = context.namespaceName;
+            pred = (x) => {
+                return this._symbolFilter && x.name.indexOf(ns) === 0;
+            };
+        }
+
+        let matches = context.symbolStore.match(text, pred);
+        let limit = Math.min(matches.length, this.maxItems - items.length);
+        let isIncomplete = matches.length > this.maxItems - items.length;
+        let toCompletionItem
+
+        for (let n = 0; n < limit; ++n) {
+            items.push(this._toCompletionItem(matches[n], nameLabel(matches[n], context.namespaceName, namePhrase ? namePhrase.phraseType : 0)));
+        }
+
+        return <lsp.CompletionList>{
+            items: items,
+            isIncomplete: isIncomplete
+        }
+
+    }
+
+    protected abstract _getKeywords(context: Context): string[];
+    protected abstract _toCompletionItem(s: PhpSymbol, label: string): lsp.CompletionItem;
+
+    protected _getNamePhrase(context: Context) {
+        return context.createTraverser().ancestor(this._isNamePhrase) as Phrase;
+    }
+
+    private _isNamePhrase(node: Phrase | Token) {
+        switch ((<Phrase>node).phraseType) {
+            case PhraseType.QualifiedName:
+            case PhraseType.FullyQualifiedName:
+            case PhraseType.RelativeQualifiedName:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    protected abstract _symbolFilter(s: PhpSymbol): boolean;
+
+}
+
+class ClassTypeDesignatorCompletion extends AbstractNameCompletion {
 
     private static _keywords = [
         'class', 'static', 'namespace'
     ];
 
     constructor(public maxItems: number) {
-
+        super(maxItems);
     }
 
     canSuggest(context: Context) {
@@ -272,51 +335,26 @@ class ClassTypeDesignatorCompletion implements CompletionStrategy {
 
     }
 
-    completions(context: Context) {
-
-        let items: lsp.CompletionItem[] = [];
-        let traverser = context.createTraverser();
-        let nsNameNode = traverser.parent() as NamespaceName;
-        let namePhrase = traverser.parent() as Phrase;
-        let text = context.word;
-        if (!text) {
-            return noCompletionResponse;
-        }
-
-        if (namePhrase.phraseType === PhraseType.QualifiedName) {
-            Array.prototype.push.apply(items, keywordCompletionItems(ClassTypeDesignatorCompletion._keywords, text));
-
-        }
-
-        let pred = this._symbolFilter;
-        if(namePhrase && namePhrase.phraseType === PhraseType.RelativeQualifiedName){
-            let ns = context.namespaceName;
-            pred = (x)=>{
-                return this._symbolFilter && x.name.indexOf(ns) === 0;
-            };
-        }
-
-        let matches = context.symbolStore.match(text, this._symbolFilter);
-
-        let limit = Math.min(matches.length, this.maxItems - items.length);
-        let isIncomplete = matches.length > this.maxItems - items.length;
-
-        for (let n = 0; n < limit; ++n) {
-            items.push(toConstructorCompletionItem(matches[n], nameLabel(matches[n], context.namespaceName, namePhrase.phraseType)));
-        }
-
-        return <lsp.CompletionList>{
-            items: items,
-            isIncomplete: isIncomplete
-        }
-    }
-
-    private _symbolFilter(s: PhpSymbol) {
+    protected _symbolFilter(s: PhpSymbol) {
         return s.kind === SymbolKind.Class &&
             !(s.modifiers & (SymbolModifier.Anonymous | SymbolModifier.Abstract));
     }
 
+    protected _getKeywords(context: Context) {
 
+        if (context.createTraverser().ancestor(this._isQualifiedName)) {
+            return ClassTypeDesignatorCompletion._keywords;
+        }
+        return [];
+    }
+
+    protected _toCompletionItem(s: PhpSymbol, label: string) {
+        return toConstructorCompletionItem(s, label);
+    }
+
+    private _isQualifiedName(node: Phrase | Token) {
+        return (<Phrase>node).phraseType === PhraseType.QualifiedName;
+    }
 
 }
 
@@ -373,7 +411,7 @@ class SimpleVariableCompletion implements CompletionStrategy {
 
 }
 
-class NameCompletion implements CompletionStrategy {
+class NameCompletion extends AbstractNameCompletion {
 
     private static _statementKeywords = [
         '__halt_compiler',
@@ -437,10 +475,19 @@ class NameCompletion implements CompletionStrategy {
     ];
 
     constructor(public maxItems: number) {
-
+        super(maxItems);
     }
 
     canSuggest(context: Context) {
+
+        //<?php (no trailing space) is considered short tag open and then name token
+        //dont suggest in this context
+        if (context.textBefore(3) === '<?p' ||
+            context.textBefore(4) === '<?ph' ||
+            context.textBefore(5) === '<?php') {
+            return false;
+        }
+
         let traverser = context.createTraverser();
         return ParsedDocument.isToken(traverser.node, [TokenType.Backslash, TokenType.Name]) &&
             ParsedDocument.isPhrase(traverser.parent(), [PhraseType.NamespaceName]) &&
@@ -448,58 +495,15 @@ class NameCompletion implements CompletionStrategy {
                 [PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName]);
     }
 
-    completions(context: Context) {
-
-        //<?php (no trailing space) is considered short tag open and then name token
-        //dont suggest in this context
-        if (context.textBefore(3) === '<?p' ||
-            context.textBefore(4) === '<?ph' ||
-            context.textBefore(5) === '<?php') {
-            return noCompletionResponse;
-        }
-
-        let items: lsp.CompletionItem[] = [];
-        let traverser = context.createTraverser();
-        let nsNameNode = traverser.parent() as NamespaceName;
-        let namePhrase = traverser.parent() as Phrase;
-        let qNameParent = traverser.parent() as Phrase;
-        let text = context.word;
-
-        if (!text) {
-            return noCompletionResponse;
-        }
-
-        if (namePhrase.phraseType === PhraseType.QualifiedName) {
-            Array.prototype.push.apply(items, keywordCompletionItems(NameCompletion._expressionKeywords, text));
-            if (qNameParent.phraseType === PhraseType.StatementList) {
-                Array.prototype.push.apply(items, keywordCompletionItems(NameCompletion._statementKeywords, text));
-            }
-        }
-
-        let pred = this._symbolFilter;
-        if(namePhrase && namePhrase.phraseType === PhraseType.RelativeQualifiedName){
-            let ns = context.namespaceName;
-            pred = (x)=>{
-                return this._symbolFilter && x.name.indexOf(ns) === 0;
-            };
-        }
-
-        let matches = context.symbolStore.match(text, this._symbolFilter);
-        let limit = Math.min(matches.length, this.maxItems - items.length);
-        let isIncomplete = matches.length > this.maxItems - items.length;
-
-        for (let n = 0; n < limit; ++n) {
-            items.push(toNameCompletionItem(matches[n], context.namespaceName, namePhrase.phraseType));
-        }
-
-        return <lsp.CompletionList>{
-            items: items,
-            isIncomplete: isIncomplete
-        }
-
+    protected _toCompletionItem(s: PhpSymbol, label: string) {
+        return toNameCompletionItem(s, label);
     }
 
-    private _symbolFilter(s: PhpSymbol) {
+    protected _getKeywords(context: Context) {
+        return [...NameCompletion._expressionKeywords, ...NameCompletion._statementKeywords];
+    }
+
+    protected _symbolFilter(s: PhpSymbol) {
         return (s.kind & (SymbolKind.Class | SymbolKind.Function | SymbolKind.Constant)) > 0 &&
             !(s.modifiers & SymbolModifier.Anonymous);
     }
@@ -508,7 +512,7 @@ class NameCompletion implements CompletionStrategy {
 
 class ScopedAccessCompletion implements CompletionStrategy {
 
-    constructor(public symbolStore: SymbolStore, public maxItems: number) {
+    constructor(public maxItems: number) {
 
     }
 
@@ -576,7 +580,7 @@ class ScopedAccessCompletion implements CompletionStrategy {
             });
         }
 
-        let symbols = uniqueSymbolNames(this.symbolStore.lookupMembersOnTypes(memberQueries));
+        let symbols = uniqueSymbolNames(context.symbolStore.lookupMembersOnTypes(memberQueries));
         let isIncomplete = symbols.length > this.maxItems;
         let limit = Math.min(symbols.length, this.maxItems);
         let items: lsp.CompletionItem[] = [];
@@ -651,7 +655,7 @@ class ScopedAccessCompletion implements CompletionStrategy {
 
 class ObjectAccessCompletion implements CompletionStrategy {
 
-    constructor(public symbolStore: SymbolStore, public maxItems: number) { }
+    constructor(public maxItems: number) { }
 
     canSuggest(context: Context) {
         let traverser = context.createTraverser();
@@ -702,7 +706,7 @@ class ObjectAccessCompletion implements CompletionStrategy {
             });
         }
 
-        let symbols = uniqueSymbolNames(this.symbolStore.lookupMembersOnTypes(memberQueries));
+        let symbols = uniqueSymbolNames(context.symbolStore.lookupMembersOnTypes(memberQueries));
         let isIncomplete = symbols.length > this.maxItems;
         let limit = Math.min(symbols.length, this.maxItems);
         let items: lsp.CompletionItem[] = [];
@@ -770,14 +774,14 @@ class ObjectAccessCompletion implements CompletionStrategy {
 
 }
 
-class TypeDeclarationCompletion implements CompletionStrategy {
+class TypeDeclarationCompletion extends AbstractNameCompletion {
 
     private static _keywords = [
         'self', 'array', 'callable', 'bool', 'float', 'int', 'string'
     ];
 
-    constructor(public symbolStore: SymbolStore, public maxItems: number) {
-
+    constructor(public maxItems: number) {
+        super(maxItems);
     }
 
     canSuggest(context: Context) {
@@ -787,47 +791,46 @@ class TypeDeclarationCompletion implements CompletionStrategy {
             }) !== null;
     }
 
-    completions(context: Context) {
-
-        let text = context.word;
-        let items: lsp.CompletionItem[] = [];
-
-        if (!text) {
-            return noCompletionResponse;
-        }
-
-        Array.prototype.push.apply(items, keywordCompletionItems(TypeDeclarationCompletion._keywords, text));
-
-        let namePhrase = context.createTraverser().ancestor((x) => {
-            return ParsedDocument.isPhrase(x, [PhraseType.QualifiedName, PhraseType.FullyQualifiedName, PhraseType.RelativeQualifiedName]);
-        }) as Phrase;
-
-        let pred = this._symbolFilter;
-        if(namePhrase && namePhrase.phraseType === PhraseType.RelativeQualifiedName){
-            let ns = context.namespaceName;
-            pred = (x)=>{
-                return this._symbolFilter && x.name.indexOf(ns) === 0;
-            };
-        }
-
-        let matches = this.symbolStore.match(text, pred);
-
-        let limit = Math.min(matches.length, this.maxItems - items.length);
-        let isIncomplete = matches.length > this.maxItems - items.length;
-
-        for (let n = 0; n < limit; ++n) {
-            items.push(toClassCompletionItem(matches[n], nameLabel(matches[n], context.namespaceName, namePhrase ? namePhrase.phraseType : 0)));
-        }
-
-        return <lsp.CompletionList>{
-            items: items,
-            isIncomplete: isIncomplete
-        }
-
+    protected _toCompletionItem(s: PhpSymbol, label: string) {
+        return toClassCompletionItem(s, label);
     }
 
-    private _symbolFilter(s: PhpSymbol) {
+    protected _getKeywords(context: Context) {
+        return TypeDeclarationCompletion._keywords;
+    }
+
+    protected _symbolFilter(s: PhpSymbol) {
         return (s.kind & (SymbolKind.Class | SymbolKind.Interface)) > 0;
+    }
+
+}
+
+class ClassBaseClauseCompletion extends AbstractNameCompletion {
+
+    constructor(public maxItems: number) {
+        super(maxItems);
+    }
+
+    canSuggest(context: Context) {
+        return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash]) &&
+            context.createTraverser().ancestor(this._isClassBaseClause) !== null;
+    }
+
+    protected _getKeywords(context: Context) {
+        return [];
+    }
+
+    protected _symbolFilter(s: PhpSymbol) {
+        return s.kind === SymbolKind.Class &&
+            !(s.modifiers & SymbolModifier.Final);
+    }
+
+    protected _toCompletionItem(s:PhpSymbol, label:string){
+        return toClassCompletionItem(s, label);
+    }
+
+    private _isClassBaseClause(node: Phrase | Token) {
+        return (<Phrase>node).phraseType === PhraseType.ClassBaseClause;
     }
 
 }
