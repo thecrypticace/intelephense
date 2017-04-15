@@ -138,7 +138,7 @@ export class DiagnosticsProvider {
 
         this._docs = shifted;
         if (found) {
-            this._docs.unshift(doc);
+            this._docs.unshift(found);
         }
 
         return found;
