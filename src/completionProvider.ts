@@ -231,9 +231,10 @@ export class CompletionProvider {
             new NamespaceUseClauseCompletion(),
             new NamespaceUseGroupClauseCompletion(),
             new TypeDeclarationCompletion(),
-            new NameCompletion(),
             new MethodDeclarationHeaderCompletion(),
-            new DeclarationBodyCompletion()
+            new DeclarationBodyCompletion(),
+            new ExtendsImplementsKeywordCompletion(),
+            new NameCompletion()
         ];
 
     }
@@ -832,7 +833,7 @@ class ClassBaseClauseCompletion extends AbstractNameCompletion {
     protected _toCompletionItem(s: PhpSymbol, label: string) {
         return toClassCompletionItem(s, label);
     }
-    
+
     private _isClassBaseClause(node: Phrase | Token) {
         return (<Phrase>node).phraseType === PhraseType.ClassBaseClause;
     }
@@ -1019,6 +1020,38 @@ class DeclarationBodyCompletion implements CompletionStrategy {
         return <lsp.CompletionList>{
             items: keywordCompletionItems(DeclarationBodyCompletion._keywords, text)
         }
+    }
+
+}
+
+class ExtendsImplementsKeywordCompletion implements CompletionStrategy {
+
+    private static _isClassHeaderRegex = /class\s+\w+\s+.$/;
+    private static _isInterfaceHeaderRegex = /interface\s+\w+\s+.$/;
+
+    canSuggest(context: Context) {
+
+        let text = context.textBefore(100);
+        return this._isClassHeader(text) || this._isInterfaceHeader(text);
+
+    }
+
+    completions(context: Context, maxItems: number) {
+
+        let text = context.textBefore(100);
+        let keywords = this._isClassHeader(text) ? ['extends', 'implements'] : ['extends'];
+        return <lsp.CompletionList>{
+            items: keywordCompletionItems(keywords, context.word)
+        }
+
+    }
+
+    private _isInterfaceHeader(text: string) {
+        return !!text.match(ExtendsImplementsKeywordCompletion._isInterfaceHeaderRegex);
+    }
+
+    private _isClassHeader(text: string) {
+        return !!text.match(ExtendsImplementsKeywordCompletion._isClassHeaderRegex);
     }
 
 }
