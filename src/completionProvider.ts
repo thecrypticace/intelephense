@@ -1094,19 +1094,21 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
             return x.kind === SymbolKind.Parameter;
         }) : [];
 
-        let paramStrings:string[] = [];
-        for(let n =0, l = params.length; n < l; ++n){
+        let paramStrings: string[] = [];
+        for (let n = 0, l = params.length; n < l; ++n) {
             paramStrings.push(this._parameterToString(params[n]));
         }
 
-        let label = `${s.name}(${paramStrings.join(', ')}) {}`;
-        let insertText = `${s.name}(${paramStrings.join(', ')}) {$0}`;
+        let paramString = paramStrings.join(', ');
+        let escapedParamString = snippetEscape(paramString);
+        let label = `${s.name}(${paramString}) {}`;
+        let insertText = `${s.name}(${escapedParamString}) {$0}`;
 
         let item: lsp.CompletionItem = {
             kind: lsp.CompletionItemKind.Method,
-            label:label,
-            insertText:insertText,
-            insertTextFormat:lsp.InsertTextFormat.Snippet
+            label: label,
+            insertText: insertText,
+            insertTextFormat: lsp.InsertTextFormat.Snippet
         };
 
         return item;
@@ -1129,7 +1131,7 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
 
         parts.push(s.name);
         if (s.value) {
-            parts.push(`= \\${s.value}`);
+            parts.push(`= ${s.value}`);
         }
 
         return parts.join(' ');
@@ -1138,4 +1140,12 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
 
 }
 
+const snippetEscapeRegex = /[${\\]/g;
 
+function snippetEscape(text: string) {
+    return text.replace(snippetEscapeRegex, snippetEscapeReplacer);
+}
+
+function snippetEscapeReplacer(match: string, offset: number, subject: string) {
+    return '\\' + match;
+}
