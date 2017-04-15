@@ -44,6 +44,7 @@ export interface PhpSymbol {
     children?: PhpSymbol[];
     scope?: string;
     value?: string;
+    typeSource?: TypeSource;
 }
 export declare namespace PhpSymbol {
     function signatureString(s: PhpSymbol): string;
@@ -128,6 +129,10 @@ export declare class SymbolStore {
     private _indexSymbols(root);
     private _indexFilter(s);
 }
+export declare const enum TypeSource {
+    None = 0,
+    TypeDeclaration = 1,
+}
 export declare class SymbolReader implements TreeVisitor<Phrase | Token> {
     parsedDocument: ParsedDocument;
     nameResolver: NameResolver;
@@ -186,13 +191,15 @@ export declare class SymbolReader implements TreeVisitor<Phrase | Token> {
     anonymousFunctionUseVariable(node: AnonymousFunctionUseVariable): PhpSymbol;
     simpleVariable(node: SimpleVariable): PhpSymbol;
     qualifiedNameList(node: QualifiedNameList): string[];
-    modifierListElementsToSymbolModifier(tokens: Token[]): SymbolModifier;
-    modifierTokenToSymbolModifier(t: Token): SymbolModifier;
     concatNamespaceName(prefix: string, name: string): string;
     namespaceUseClause(node: NamespaceUseClause, kind: SymbolKind, prefix: string): PhpSymbol;
     tokenToSymbolKind(t: Token): SymbolKind;
     namespaceUseDeclaration(node: NamespaceUseDeclaration): [SymbolKind, string];
     namespaceDefinition(node: NamespaceDefinition): PhpSymbol;
+}
+export declare namespace SymbolReader {
+    function modifierListElementsToSymbolModifier(tokens: Token[]): SymbolModifier;
+    function modifierTokenToSymbolModifier(t: Token): SymbolModifier;
 }
 export declare class SymbolIndex {
     private _nodeArray;

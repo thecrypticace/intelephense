@@ -75,6 +75,7 @@ export interface PhpSymbol {
     children?: PhpSymbol[];
     scope?: string;
     value?: string;
+    typeSource?:TypeSource;
 }
 
 
@@ -253,7 +254,7 @@ export class TypeString {
     private static _keywords: string[] = [
         'string', 'integer', 'int', 'boolean', 'bool', 'float',
         'double', 'object', 'mixed', 'array', 'resource',
-        'void', 'null', 'callback', 'false', 'true', 'self',
+        'void', 'null', 'false', 'true', 'self', 'static',
         'callable'
     ];
 
@@ -338,7 +339,9 @@ export class TypeString {
 
         let replacer = (match, offset, text) => {
 
-            if (TypeString._keywords.indexOf(match[0]) >= 0) {
+            if(match[0] === 'self' || match[0] === '$this' || match[0] === 'static'){
+                return nameResolver.thisName;
+            } else if (TypeString._keywords.indexOf(match[0]) >= 0) {
                 return match[0];
             } else if (match[0] === '\\') {
                 return match.slice(1);
@@ -664,6 +667,11 @@ export class SymbolStore {
 
 }
 
+export const enum TypeSource {
+    None,
+    TypeDeclaration
+}
+
 export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     private static _varAncestors = [
@@ -764,6 +772,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 s = this.spine[this.spine.length - 1];
                 let typeDeclarationValue = this.typeDeclaration(<TypeDeclaration>node);
                 s.type = new TypeString(typeDeclarationValue); //type hints trump phpdoc
+                s.typeSource = TypeSource.TypeDeclaration;
                 return false;
 
             case PhraseType.ClassDeclaration:
@@ -1208,7 +1217,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     classConstantDeclaration(node: ClassConstDeclaration) {
         return node.modifierList ?
-            this.modifierListElementsToSymbolModifier(node.modifierList.elements) :
+            SymbolReader.modifierListElementsToSymbolModifier(node.modifierList.elements) :
             SymbolModifier.Public;
     }
 
@@ -1255,7 +1264,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     }
 
     memberModifierList(node: MemberModifierList) {
-        return this.modifierListElementsToSymbolModifier(node.elements);
+        return SymbolReader.modifierListElementsToSymbolModifier(node.elements);
     }
 
     methodDeclarationHeader(s: PhpSymbol, node: MethodDeclarationHeader) {
@@ -1269,7 +1278,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     propertyDeclaration(node: PropertyDeclaration) {
         return node.modifierList ?
-            this.modifierListElementsToSymbolModifier(node.modifierList.elements) :
+            SymbolReader.modifierListElementsToSymbolModifier(node.modifierList.elements) :
             SymbolModifier.None;
     }
 
@@ -1445,7 +1454,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     classDeclarationHeader(s: PhpSymbol, node: ClassDeclarationHeader) {
 
         if (node.modifier) {
-            s.modifiers = this.modifierTokenToSymbolModifier(node.modifier);
+            s.modifiers = SymbolReader.modifierTokenToSymbolModifier(node.modifier);
         }
 
         s.name = this.nameTokenToFqn(node.name);
@@ -1543,40 +1552,6 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     }
 
-    modifierListElementsToSymbolModifier(tokens: Token[]) {
-
-        let flag = SymbolModifier.None;
-        if (!tokens || tokens.length < 1) {
-            return flag;
-        }
-
-        for (let n = 0, l = tokens.length; n < l; ++n) {
-            flag |= this.modifierTokenToSymbolModifier(tokens[n]);
-        }
-
-        return flag;
-    }
-
-    modifierTokenToSymbolModifier(t: Token) {
-        switch (t.tokenType) {
-            case TokenType.Public:
-                return SymbolModifier.Public;
-            case TokenType.Protected:
-                return SymbolModifier.Protected;
-            case TokenType.Private:
-                return SymbolModifier.Private;
-            case TokenType.Abstract:
-                return SymbolModifier.Abstract;
-            case TokenType.Final:
-                return SymbolModifier.Final;
-            case TokenType.Static:
-                return SymbolModifier.Static;
-            default:
-                return SymbolModifier.None;
-        }
-
-    }
-
     concatNamespaceName(prefix: string, name: string) {
         if (!name) {
             return null;
@@ -1641,6 +1616,42 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     }
 
+}
+
+export namespace SymbolReader {
+    export function modifierListElementsToSymbolModifier(tokens: Token[]) {
+
+        let flag = SymbolModifier.None;
+        if (!tokens || tokens.length < 1) {
+            return flag;
+        }
+
+        for (let n = 0, l = tokens.length; n < l; ++n) {
+            flag |= this.modifierTokenToSymbolModifier(tokens[n]);
+        }
+
+        return flag;
+    }
+
+    export function modifierTokenToSymbolModifier(t: Token) {
+        switch (t.tokenType) {
+            case TokenType.Public:
+                return SymbolModifier.Public;
+            case TokenType.Protected:
+                return SymbolModifier.Protected;
+            case TokenType.Private:
+                return SymbolModifier.Private;
+            case TokenType.Abstract:
+                return SymbolModifier.Abstract;
+            case TokenType.Final:
+                return SymbolModifier.Final;
+            case TokenType.Static:
+                return SymbolModifier.Static;
+            default:
+                return SymbolModifier.None;
+        }
+
+    }
 }
 
 export class SymbolIndex {
