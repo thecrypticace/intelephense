@@ -12,6 +12,7 @@ import { DiagnosticsProvider, PublishDiagnosticsEventArgs } from './diagnosticsP
 import { Debounce, Unsubscribe } from './types';
 import { SignatureHelpProvider } from './signatureHelpProvider';
 import { DefinitionProvider } from './definitionProvider';
+import {PhraseType} from 'php7parser';
 import * as lsp from 'vscode-languageserver-types';
 
 export namespace Intelephense {
@@ -145,9 +146,13 @@ export namespace Intelephense {
             return symbolTable ? symbolTable.count : 0;
         }
 
+        //ignore method and function bodies because external api is only of interest
+        const ignore = [
+            PhraseType.MethodDeclarationBody, PhraseType.FunctionDeclarationBody
+        ];
         let text = textDocument.text;
         let parsedDocument = new ParsedDocument(uri, text);
-        let symbolTable = SymbolTable.create(parsedDocument);
+        let symbolTable = SymbolTable.create(parsedDocument, ignore);
         symbolStore.remove(uri);
         symbolStore.add(symbolTable);
         return symbolTable.count;

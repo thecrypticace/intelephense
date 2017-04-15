@@ -457,13 +457,14 @@ export class SymbolTable {
         return this.filter(pred).pop();
     }
 
-    static create(parsedDocument: ParsedDocument) {
+    static create(parsedDocument: ParsedDocument, ignorePhraseTypes?:PhraseType[]) {
 
         let symbolReader = new SymbolReader(
             parsedDocument,
             new NameResolver(parsedDocument, [], '', '', ''),
             [{ kind: SymbolKind.None, name: '', children: [] }]
         );
+        symbolReader.ignore = ignorePhraseTypes;
 
         parsedDocument.traverse(symbolReader);
         return new SymbolTable(
@@ -695,14 +696,21 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     namespaceUseDeclarationPrefix: string;
     classConstDeclarationModifier: SymbolModifier;
     propertyDeclarationModifier: SymbolModifier;
+    ignore:PhraseType[];
 
     constructor(
         public parsedDocument: ParsedDocument,
         public nameResolver: NameResolver,
         public spine: PhpSymbol[]
-    ) { }
+    ) { 
+
+    }
 
     preOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+
+        if(this.ignore && ParsedDocument.isPhrase(node, this.ignore)){
+            return false;
+        }
 
         let s: PhpSymbol;
 
@@ -924,6 +932,10 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 }
                 return true;
 
+            case PhraseType.CompoundStatement:
+
+
+
             case undefined:
                 this._token(<Token>node);
                 return false;
@@ -935,6 +947,10 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     }
 
     postOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+
+        if(this.ignore && ParsedDocument.isPhrase(node, this.ignore)){
+            return;
+        }
 
         switch ((<Phrase>node).phraseType) {
             case PhraseType.NamespaceDefinition:
