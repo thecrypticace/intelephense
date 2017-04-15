@@ -7,7 +7,7 @@
 import {
     Token, TokenType, Phrase, PhraseType,
     NamespaceName, ScopedExpression, ObjectAccessExpression,
-    NamespaceUseDeclaration
+    NamespaceUseDeclaration, NamespaceUseGroupClause
 } from 'php7parser';
 import {
     PhpSymbol, SymbolStore, SymbolTable, SymbolKind, SymbolModifier,
@@ -189,6 +189,25 @@ function uniqueSymbolNames(symbols: PhpSymbol[]) {
     return unique;
 }
 
+function tokenToSymbolKind(t: Token) {
+
+    if (!t) {
+        return 0;
+    }
+
+    switch (t.tokenType) {
+        case TokenType.Class:
+            return SymbolKind.Class;
+        case TokenType.Function:
+            return SymbolKind.Function;
+        case TokenType.Const:
+            return SymbolKind.Constant;
+        default:
+            return 0;
+    }
+
+}
+
 export class CompletionProvider {
 
     private _maxItems: number;
@@ -209,6 +228,7 @@ export class CompletionProvider {
             new InterfaceClauseCompletion(),
             new NamespaceDefinitionCompletion(),
             new NamespaceUseClauseCompletion(),
+            new NamespaceUseGroupClauseCompletion(),
             new NameCompletion()
         ];
 
@@ -895,31 +915,24 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
 
         let items: lsp.CompletionItem[] = [];
         let text = context.word;
-        let kind = SymbolKind.Class;
         let namespaceUseDecl = context.createTraverser().ancestor(this._isNamespaceUseDeclaration) as NamespaceUseDeclaration;
 
         if (!text) {
             return noCompletionResponse;
         }
 
-        if (ParsedDocument.isToken(namespaceUseDecl.kind, [TokenType.Const])) {
-            kind = SymbolKind.Constant
-        } else if (ParsedDocument.isToken(namespaceUseDecl.kind, [TokenType.Function])) {
-            kind = SymbolKind.Function;
-        }
-
+        let kind = tokenToSymbolKind(namespaceUseDecl.kind) || (SymbolKind.Class | SymbolKind.Namespace);
         let pred = (x: PhpSymbol) => {
             return x.kind === kind && !(x.modifiers & SymbolModifier.Use);
         }
 
         let matches = context.symbolStore.match(text, pred, true).slice(0, maxItems);
-        let isIncomplete = matches.length === maxItems;
         for (let n = 0, l = matches.length; n < l; ++n) {
             items.push(toNameCompletionItem(matches[n]));
         }
 
         return <lsp.CompletionList>{
-            isIncomplete: isIncomplete,
+            isIncomplete: matches.length === maxItems,
             items: items
         }
 
@@ -931,6 +944,53 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
 
     private _isNamespaceUseClause(node: Phrase | Token) {
         return (<Phrase>node).phraseType === PhraseType.NamespaceUseClause;
+    }
+
+}
+
+class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
+
+    canSuggest(context: Context) {
+        return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash]) &&
+            context.createTraverser().ancestor(this._isNamespaceUseGroupClause) !== null;
+    }
+
+    completions(context: Context, maxItems: number) {
+
+        let items: lsp.CompletionItem[] = [];
+        let text = context.word;
+        if (!text) {
+            return noCompletionResponse;
+        }
+
+        let traverser = context.createTraverser();
+        let nsUseGroupClause = traverser.ancestor(this._isNamespaceUseGroupClause) as NamespaceUseGroupClause;
+        let nsUseDecl = traverser.ancestor(this._isNamespaceUseDeclaration) as NamespaceUseDeclaration;
+        let kind = tokenToSymbolKind(nsUseGroupClause.kind || nsUseDecl.kind) || (SymbolKind.Class | SymbolKind.Namespace);
+        let prefix = context.nodeText(nsUseDecl.prefix);
+
+        let pred = (x)=>{
+            return (x.kind & kind) > 0 && !(x.modifiers & SymbolModifier.Use) && (!prefix || x.name.indexOf(prefix) === 0);
+        };
+
+        let matches = context.symbolStore.match(text, pred, true).slice(maxItems);
+        for(let n = 0, l = matches.length; n < l; ++n){
+            items.push(toNameCompletionItem(matches[n], matches[n].name.slice(prefix.length)));
+        }
+
+        return <lsp.CompletionList>{
+            isIncomplete: matches.length === maxItems,
+            items:items
+        }
+
+    }
+
+    private _isNamespaceUseGroupClause(node: Phrase | Token) {
+        return (<Phrase>node).phraseType === PhraseType.NamespaceUseGroupClause;
+    }
+
+    private _isNamespaceUseDeclaration(node: Phrase | Token) {
+        return (<Phrase>node).phraseType === PhraseType.NamespaceUseDeclaration;
     }
 
 }
