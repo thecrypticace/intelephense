@@ -1,11 +1,11 @@
 # Intelephense
 
-A PHP static code analysis library implemented in typescript.
+A PHP static code analysis library implemented in Typescript.
 
 ## Design Goals
 
-* High peformance for real-time analysis of source code within an IDE.
-* Developed for use in VSCode and other IDEs that are compatible with the Language Server Protocol.
+* Support features defined by the Language Server Protocol.
+* High performance for real-time analysis of source code within an IDE.
 * Modern browser and nodejs compatibility.
 
 ## Interface
