@@ -8,8 +8,10 @@ export declare class DefinitionProvider {
     provideDefinition(uri: string, position: lsp.Position): lsp.Location;
     private _lookupSymbol(traverser, context);
     private _hasLocation(s);
+    private _namespaceName(traverser, context);
     private _qualifiedName(traverser, context);
     private _scopedMemberName(traverser, context);
     private _memberName(traverser, context);
     private _simpleVariable(traverser, context);
+    private _isNamePhrase(node);
 }
