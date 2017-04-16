@@ -21,6 +21,25 @@ describe('SymbolReader', () => {
                         
                         function myFunction($myParam){}`;
         let output = symbolReaderOutput(src);
+        //console.log(JSON.stringify(output, null, 4));
+    });
+
+    it('Should assign phpdoc info', ()=>{
+
+        let src = `
+        <?php
+
+            /**
+             * Summary.
+             * Description.
+             * @param int $param description
+             * @return string
+             */
+            function fn($param){}
+        `;
+
+        let output = symbolReaderOutput(src);
         console.log(JSON.stringify(output, null, 4));
+
     });
 });
