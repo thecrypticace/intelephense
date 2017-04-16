@@ -1185,7 +1185,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             let text = this.qualifiedName(<QualifiedName>node.name, SymbolKind.Class);
             let notFqn = text.split('\\').pop();
-            if (SymbolReader._builtInTypes.indexOf(notFqn) > - 1) {
+            if (SymbolReader._builtInTypes.indexOf(notFqn) > -1) {
                 return notFqn;
             }
             return text;
