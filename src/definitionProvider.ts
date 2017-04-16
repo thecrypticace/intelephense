@@ -72,7 +72,7 @@ export class DefinitionProvider {
 
         let t2 = traverser.clone();
         if (this._isNamePhrase(t2.parent())) {
-            return this._qualifiedName(traverser, context);
+            return this._qualifiedName(t2, context);
         }
 
         //probably namespace use decl
