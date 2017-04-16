@@ -10,8 +10,11 @@
   },
   "author": "Ben Mewburn <ben@mewburn.id.au>",
   "license": "ISC",
+  "keywords": [
+    "php","php7","intellisense","completion","signature","diagnostics","definition","autocomplete","analysis"
+  ],
   "dependencies": {
-    "php7parser": "git+ssh://gituser@s1.funclab.net:/var/git/php7parser.git",
+    "php7parser": "^0.9.0",
     "vscode-languageserver-types": "^3.2.0"
   },
   "devDependencies": {
