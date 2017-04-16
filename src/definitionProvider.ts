@@ -55,8 +55,8 @@ export class DefinitionProvider {
                 return this._scopedMemberName(traverser, context);
             case PhraseType.MemberName:
                 return this._memberName(traverser, context);
-            case PhraseType.QualifiedName:
-                return this._qualifiedName(traverser, context);
+            case PhraseType.NamespaceName:
+                return this._namespaceName(traverser, context);
             default:
                 return null;
 
@@ -66,6 +66,19 @@ export class DefinitionProvider {
 
     private _hasLocation(s: PhpSymbol) {
         return s.location !== undefined && s.location !== null;
+    }
+
+    private _namespaceName(traverser: TreeTraverser<Phrase | Token>, context: Context) {
+
+        let t2 = traverser.clone();
+        if (this._isNamePhrase(t2.parent())) {
+            return this._qualifiedName(traverser, context);
+        }
+
+        //probably namespace use decl
+        return this.symbolStore.find(context.nodeText(traverser.node, [TokenType.Whitespace]), this._hasLocation);
+
+
     }
 
     private _qualifiedName(traverser: TreeTraverser<Phrase | Token>, context: Context) {
@@ -124,19 +137,36 @@ export class DefinitionProvider {
 
     }
 
-    private _simpleVariable(traverser:TreeTraverser<Phrase|Token>, context:Context){
+    private _simpleVariable(traverser: TreeTraverser<Phrase | Token>, context: Context) {
 
         let phrase = traverser.node as SimpleVariable;
-        if(!ParsedDocument.isToken(phrase.name, [TokenType.VariableName])){
+        if (!ParsedDocument.isToken(phrase.name, [TokenType.VariableName])) {
             return null;
         }
 
         let varName = context.tokenText(<Token>phrase.name);
         let scopeSymbol = context.scopeSymbol;
-        let pred = (x:PhpSymbol)=>{
+        let pred = (x: PhpSymbol) => {
             return x.name === varName;
         };
         return scopeSymbol.children.find(pred);
+
+    }
+
+    private _isNamePhrase(node: Phrase | Token) {
+
+        if (!node) {
+            return false;
+        }
+
+        switch ((<Phrase>node).phraseType) {
+            case PhraseType.QualifiedName:
+            case PhraseType.FullyQualifiedName:
+            case PhraseType.RelativeQualifiedName:
+                return true;
+            default:
+                return false;
+        }
 
     }
 
