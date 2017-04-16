@@ -495,7 +495,8 @@ class NameCompletion extends AbstractNameCompletion {
         'require',
         'require_once',
         'static',
-        'yield'
+        'yield',
+        'as'
     ];
 
     canSuggest(context: Context) {
@@ -519,7 +520,10 @@ class NameCompletion extends AbstractNameCompletion {
     }
 
     protected _getKeywords(context: Context) {
-        return [...NameCompletion._expressionKeywords, ...NameCompletion._statementKeywords];
+        let kw:string[] = [];
+        Array.prototype.push.apply(kw, NameCompletion._expressionKeywords);
+        Array.prototype.push.apply(kw, NameCompletion._statementKeywords);
+        return kw;
     }
 
     protected _symbolFilter(s: PhpSymbol) {
