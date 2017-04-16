@@ -7,7 +7,7 @@ export declare class DefinitionProvider {
     constructor(symbolStore: SymbolStore, documentStore: ParsedDocumentStore);
     provideDefinition(uri: string, position: lsp.Position): lsp.Location;
     private _lookupSymbol(traverser, context);
-    private _hasLocation(s);
+    private _isConstFuncClassTraitInterface(s);
     private _namespaceName(traverser, context);
     private _qualifiedName(traverser, context);
     private _scopedMemberName(traverser, context);
