@@ -13,6 +13,14 @@
   "keywords": [
     "php","php7","intellisense","completion","signature","diagnostics","definition","autocomplete","analysis"
   ],
+  "bugs": {
+    "url": "https://github.com/bmewburn/intelephense/issues"
+  },
+  "homepage": "https://github.com/bmewburn/intelephense",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bmewburn/intelephense.git"
+  },
   "dependencies": {
     "php7parser": "^0.9.0",
     "vscode-languageserver-types": "^3.2.0"
