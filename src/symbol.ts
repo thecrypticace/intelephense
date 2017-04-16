@@ -1602,7 +1602,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
         return [
             node.kind ? this.tokenToSymbolKind(node.kind) : SymbolKind.None,
-            node.prefix ? this.parsedDocument.nodeText(node.prefix, [TokenType.Whitespace]) : null
+            node.prefix ? this.parsedDocument.nodeText(node.prefix, [TokenType.Whitespace]) : ''
         ];
 
     }

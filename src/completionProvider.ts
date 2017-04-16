@@ -66,6 +66,8 @@ function toNameCompletionItem(s: PhpSymbol, label?: string) {
             return toFunctionCompletionItem(s, label);
         case SymbolKind.Constant:
             return toConstantCompletionItem(s, label);
+        case SymbolKind.Namespace:
+            return toNamespaceCompletionItem(s);
         default:
             throw new Error('Invalid Argument');
     }
