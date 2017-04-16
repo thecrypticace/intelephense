@@ -1569,23 +1569,20 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     namespaceUseClause(node: NamespaceUseClause, kind: SymbolKind, prefix: string) {
 
+        let fqn = this.concatNamespaceName(prefix, this.parsedDocument.nodeText(node.name, [TokenType.Whitespace]));
+        if(!fqn){
+            return null;
+        }
+
         let s: PhpSymbol = {
             kind: kind ? kind : SymbolKind.Class,
-            name: node.aliasingClause ? this.parsedDocument.tokenText(node.aliasingClause.alias) : null,
+            name: node.aliasingClause ? this.parsedDocument.tokenText(node.aliasingClause.alias) : fqn.split('\\').pop(),
             associated: [],
-            location: this.phraseLocation(node)
+            location: this.phraseLocation(node),
+            modifiers:SymbolModifier.Use
         };
 
-        let fqn = this.concatNamespaceName(prefix, this.parsedDocument.nodeText(node.name, [TokenType.Whitespace]));
-        if (!fqn) {
-            return s;
-        }
-
         s.associated.push({ kind: s.kind, name: fqn });
-        if (!node.aliasingClause) {
-            s.name = fqn.split('\\').pop();
-        }
-
         return s;
 
     }
