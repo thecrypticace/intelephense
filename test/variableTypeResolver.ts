@@ -1,11 +1,30 @@
 import { VariableTypeResolver, NameResolver, SymbolStore, VariableTable, SymbolTable } from '../src/symbol';
-import {TreeTraverser} from '../src/types';
-import {ParsedDocument} from '../src/parsedDocument';
+import { TreeTraverser } from '../src/types';
+import { ParsedDocument } from '../src/parsedDocument';
+import {Token, TokenType, Phrase} from 'php7parser';
 import { assert } from 'chai';
 import 'mocha';
 
-var src = 
-`<?php
+
+
+function setup(phpSrc: string): [ParsedDocument, VariableTypeResolver] {
+
+    let symbolStore = new SymbolStore();
+    let doc = new ParsedDocument('test', phpSrc);
+    let symbolTable = SymbolTable.create(doc);
+    symbolStore.add(symbolTable);
+    let variableTable = new VariableTable();
+    let variableTypeResolver = new VariableTypeResolver(variableTable, doc, new NameResolver(doc, [], '', '', ''), symbolStore);
+    return [doc, variableTypeResolver];
+
+}
+
+describe('VariableTypeResolver', function () {
+
+    it('Object creation simple assignment', function () {
+
+        let src =
+            `<?php
     class MyClass1 { }
     class MyClass2 { }
 
@@ -14,33 +33,48 @@ var src =
 
 `
 
-var symbolStore:SymbolStore;
-var doc:ParsedDocument;
-var variableTypeResolver:VariableTypeResolver;
-var symbolTable:SymbolTable;
-var variableTable:VariableTable;
+        let doc: ParsedDocument;
+        let varResolver: VariableTypeResolver;
 
-function setup(phpSrc:string){
-
-    symbolStore = new SymbolStore();
-    doc = new ParsedDocument('test', phpSrc);
-    symbolTable = SymbolTable.create(doc);
-    symbolStore.add(symbolTable);
-    variableTable = new VariableTable();
-    variableTypeResolver = new VariableTypeResolver(variableTable, doc, new NameResolver(doc, [], '','',''), symbolStore);
-
-}
-
-describe('VariableTypeResolver', function(){
-
-    it('Object creation simple assignment', function(){
-        setup(src);
+        [doc, varResolver] = setup(src);
 
         let traverser = new TreeTraverser([doc.tree]);
-        traverser.traverse(variableTypeResolver);
+        traverser.traverse(varResolver);
 
-        assert.equal(variableTable.getType('$myVar1', '').toString(), 'MyClass1');
-        assert.equal(variableTable.getType('$myVar2', '').toString(), 'MyClass1');
+        assert.equal(varResolver.variableTable.getType('$myVar1', '').toString(), 'MyClass1');
+        assert.equal(varResolver.variableTable.getType('$myVar2', '').toString(), 'MyClass1');
+
+    });
+
+    it('should resolve param types', function () {
+
+        let src = `
+        <?php
+
+            /**
+             * @param int $value
+             */
+            function fn($value){
+
+                $v
+
+            }
+        `;
+
+        let doc: ParsedDocument;
+        let resolver: VariableTypeResolver;
+        [doc, resolver] = setup(src);
+
+        let v = new TreeTraverser<Phrase|Token>([doc.tree]).find((x)=>{
+            return (<Token>x).tokenType === TokenType.VariableName && (<Token>x).length === 2;
+        });
+
+        resolver.haltAtNode = v;
+
+        let traverser = new TreeTraverser([doc.tree]);
+        traverser.traverse(resolver);
+
+        console.log(JSON.stringify(resolver.variableTable.getType('$value', ''), null, 4));
 
     });
 

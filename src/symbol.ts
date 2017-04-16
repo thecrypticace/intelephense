@@ -943,10 +943,6 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 }
                 return true;
 
-            case PhraseType.CompoundStatement:
-
-
-
             case undefined:
                 this._token(<Token>node);
                 return false;
@@ -1164,8 +1160,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             let tag = phpDoc.findParamTag(s.name);
             if (tag) {
                 s.description = tag.description;
-                let type = new TypeString(tag.typeString).nameResolve(this.nameResolver);
-                s.type = s.type ? s.type.merge(type) : type;
+                s.type = new TypeString(tag.typeString).nameResolve(this.nameResolver);
             }
         }
 
@@ -2058,7 +2053,6 @@ export class ExpressionTypeResolver {
 
 export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
-    private _haltAtNode: Phrase | Token;
     private _varName: string;
 
     haltTraverse: boolean;
@@ -2067,14 +2061,14 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
         public document: ParsedDocument,
         public nameResolver: NameResolver,
         public symbolStore: SymbolStore,
-        haltAtNode?: Phrase | Token) {
-        this._haltAtNode = haltAtNode;
+        public haltAtNode?: Phrase | Token) {
+        this.haltAtNode = haltAtNode;
         this.haltTraverse = false;
     }
 
     preOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
-        if (this._haltAtNode === node) {
+        if (this.haltAtNode === node) {
             this.haltTraverse = true;
             return false;
         }
