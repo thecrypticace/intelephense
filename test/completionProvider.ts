@@ -53,6 +53,13 @@ var openTagSrc =
 `;
 
 
+var nsUse = 
+`<?php
+    use F
+
+    class Foo {}
+`;
+
 function setup(src:string){
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -159,6 +166,20 @@ describe('CompletionProvider', () => {
         it('name completions', function(){
             var completions = completionProvider.provideCompletions('test', { line: 1, character: 5 });
             //console.log(JSON.stringify(completions, null, 4));
+        });
+
+    });
+
+    describe('use namespace completions', function(){
+
+        let completionProvider:CompletionProvider;
+        before(function(){
+            completionProvider = inbuiltSetup(nsUse);
+        });
+
+        it('use completions', function(){
+            var completions = completionProvider.provideCompletions('test', { line: 1, character: 9 });
+            console.log(JSON.stringify(completions, null, 4));
         });
 
     });
