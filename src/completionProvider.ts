@@ -48,8 +48,9 @@ function keywordCompletionItems(keywords: string[], text: string) {
 
 function nameLabel(s: PhpSymbol, nsName: string, namePhraseType: PhraseType) {
     let label = s.name;
+
     if (nsName && s.name.indexOf(nsName) === 0 && label.length > nsName.length + 1) {
-        label = label.slice(nsName.length + 1);
+        label = 'namespace\\' + label.slice(nsName.length + 1);
     } else if (nsName && namePhraseType !== PhraseType.FullyQualifiedName && !(s.modifiers & SymbolModifier.Use)) {
         label = '\\' + label;
     }
@@ -153,11 +154,13 @@ function toPropertyCompletionItem(s: PhpSymbol) {
 }
 
 function toConstructorCompletionItem(s: PhpSymbol, label?: string) {
-    return <lsp.CompletionItem>{
+    let item = <lsp.CompletionItem>{
         kind: lsp.CompletionItemKind.Constructor,
         label: label ? label : s.name,
         documentation: s.description
     }
+
+    return item;
 }
 
 function toVariableCompletionItem(s: PhpSymbol) {
@@ -297,10 +300,14 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
             return noCompletionResponse;
         }
 
+        //@todo use snippets/command to invoke sugnature help automatically for constructors
+        //let wordPos = lsp.Position.create(context.position.line, context.position.character - text.length);
+
         Array.prototype.push.apply(items, keywordCompletionItems(this._getKeywords(context), text));
 
         let pred = this._symbolFilter;
         if (namePhrase && namePhrase.phraseType === PhraseType.RelativeQualifiedName) {
+            text = text.slice(10); //namespace\
             let ns = context.namespaceName;
             pred = (x) => {
                 return this._symbolFilter && x.name.indexOf(ns) === 0;
