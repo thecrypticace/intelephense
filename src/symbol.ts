@@ -680,6 +680,10 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
         PhraseType.SimpleAssignmentExpression
     ];
 
+    private static _builtInTypes = [
+        'array', 'callable', 'int', 'string', 'bool', 'float'
+    ];
+
     private static _globalVars = [
         '$GLOBALS',
         '$_SERVER',
@@ -771,7 +775,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.TypeDeclaration:
                 s = this.spine[this.spine.length - 1];
                 let typeDeclarationValue = this.typeDeclaration(<TypeDeclaration>node);
-                if(typeDeclarationValue){
+                if (typeDeclarationValue) {
                     s.type = new TypeString(typeDeclarationValue); //type hints trump phpdoc
                     s.typeSource = TypeSource.TypeDeclaration;
                 }
@@ -1173,13 +1177,23 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     typeDeclaration(node: TypeDeclaration) {
 
-        if(!node.name){
+        if (!node.name) {
             return '';
         }
 
-        return (<Phrase>node.name).phraseType ?
-            this.qualifiedName(<QualifiedName>node.name, SymbolKind.Class) :
-            this.parsedDocument.tokenText(<Token>node.name);
+        if ((<Phrase>node.name).phraseType) {
+
+            let text = this.qualifiedName(<QualifiedName>node.name, SymbolKind.Class);
+            let notFqn = text.split('\\').pop();
+            if (SymbolReader._builtInTypes.indexOf(notFqn) > - 1) {
+                return notFqn;
+            }
+            return text;
+
+        } else {
+            return this.parsedDocument.tokenText(<Token>node.name);
+        }
+
 
     }
 
@@ -1570,7 +1584,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     namespaceUseClause(node: NamespaceUseClause, kind: SymbolKind, prefix: string) {
 
         let fqn = this.concatNamespaceName(prefix, this.parsedDocument.nodeText(node.name, [TokenType.Whitespace]));
-        if(!fqn){
+        if (!fqn) {
             return null;
         }
 
@@ -1579,7 +1593,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             name: node.aliasingClause ? this.parsedDocument.tokenText(node.aliasingClause.alias) : fqn.split('\\').pop(),
             associated: [],
             location: this.phraseLocation(node),
-            modifiers:SymbolModifier.Use
+            modifiers: SymbolModifier.Use
         };
 
         s.associated.push({ kind: s.kind, name: fqn });
