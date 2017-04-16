@@ -328,7 +328,7 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         return context.createTraverser().ancestor(this._isNamePhrase) as Phrase;
     }
 
-    private _isNamePhrase(node: Phrase | Token) {
+    protected _isNamePhrase(node: Phrase | Token) {
         switch ((<Phrase>node).phraseType) {
             case PhraseType.QualifiedName:
             case PhraseType.FullyQualifiedName:
@@ -509,8 +509,7 @@ class NameCompletion extends AbstractNameCompletion {
         let traverser = context.createTraverser();
         return ParsedDocument.isToken(traverser.node, [TokenType.Backslash, TokenType.Name]) &&
             ParsedDocument.isPhrase(traverser.parent(), [PhraseType.NamespaceName]) &&
-            ParsedDocument.isPhrase(traverser.parent(),
-                [PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName]);
+            traverser.ancestor(this._isNamePhrase) !== null;
     }
 
     protected _toCompletionItem(s: PhpSymbol, label: string) {
@@ -926,7 +925,7 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
 
         let kind = tokenToSymbolKind(namespaceUseDecl.kind) || (SymbolKind.Class | SymbolKind.Namespace);
         let pred = (x: PhpSymbol) => {
-            return x.kind === kind && !(x.modifiers & SymbolModifier.Use);
+            return (x.kind & kind) > 0 && !(x.modifiers & SymbolModifier.Use);
         }
 
         let matches = context.symbolStore.match(text, pred, true).slice(0, maxItems);
