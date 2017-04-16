@@ -64,8 +64,19 @@ export class DefinitionProvider {
 
     }
 
-    private _hasLocation(s: PhpSymbol) {
-        return s.location !== undefined && s.location !== null;
+    private _isConstFuncClassTraitInterface(s: PhpSymbol) {
+
+        switch (s.kind) {
+            case SymbolKind.Class:
+            case SymbolKind.Trait:
+            case SymbolKind.Interface:
+            case SymbolKind.Constant:
+            case SymbolKind.Function:
+                return s.location !== undefined && s.location !== null;
+            default:
+                return false;
+        }
+
     }
 
     private _namespaceName(traverser: TreeTraverser<Phrase | Token>, context: Context) {
@@ -76,7 +87,7 @@ export class DefinitionProvider {
         }
 
         //probably namespace use decl
-        return this.symbolStore.find(context.nodeText(traverser.node, [TokenType.Whitespace]), this._hasLocation);
+        return this.symbolStore.find(context.nodeText(traverser.node, [TokenType.Whitespace]), this._isConstFuncClassTraitInterface);
 
 
     }
@@ -94,7 +105,7 @@ export class DefinitionProvider {
         }
 
         let name = context.resolveFqn(phrase, kind);
-        return this.symbolStore.find(name, this._hasLocation);
+        return this.symbolStore.find(name, this._isConstFuncClassTraitInterface);
 
     }
 
@@ -109,7 +120,7 @@ export class DefinitionProvider {
         let memberName = context.nodeText(memberNamePhrase.name);
         let typeNames = context.resolveExpressionType(<Phrase>parent.scope).atomicClassArray();
         let pred = (x: PhpSymbol) => {
-            return memberName === x.name;
+            return memberName === x.name && !!x.location;
         };
         let queries = typeNames.map<MemberQuery>((x) => {
             return { typeName: x, memberPredicate: pred };
@@ -128,7 +139,7 @@ export class DefinitionProvider {
         let memberName = context.tokenText(<Token>memberNamePhrase.name);
         let typeNames = context.resolveExpressionType(<Phrase>parent.variable).atomicClassArray();
         let pred = (x: PhpSymbol) => {
-            return memberName === x.name;
+            return memberName === x.name && !!x.location;
         };
         let queries = typeNames.map<MemberQuery>((x) => {
             return { typeName: x, memberPredicate: pred };
