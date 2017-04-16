@@ -55,7 +55,8 @@ var openTagSrc =
 
 var nsUse = 
 `<?php
-    use F
+    namespace A;
+    use Z
 
     class Foo {}
 `;
@@ -178,7 +179,7 @@ describe('CompletionProvider', () => {
         });
 
         it('use completions', function(){
-            var completions = completionProvider.provideCompletions('test', { line: 1, character: 9 });
+            var completions = completionProvider.provideCompletions('test', { line: 2, character: 9 });
             console.log(JSON.stringify(completions, null, 4));
         });
 
