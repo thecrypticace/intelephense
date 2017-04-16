@@ -928,7 +928,7 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
             return (x.kind & kind) > 0 && !(x.modifiers & SymbolModifier.Use);
         }
 
-        let matches = context.symbolStore.match(text, pred, true).slice(0, maxItems);
+        let matches = uniqueSymbolNames(context.symbolStore.match(text, pred, true).slice(0, maxItems));
         for (let n = 0, l = matches.length; n < l; ++n) {
             items.push(toNameCompletionItem(matches[n]));
         }
