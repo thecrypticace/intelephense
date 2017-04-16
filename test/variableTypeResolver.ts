@@ -48,17 +48,25 @@ describe('VariableTypeResolver', function () {
 
     it('should resolve param types', function () {
 
-        let src = `
-        <?php
+        let src = `<?php
+        class Foo {
 
-            /**
-             * @param int $value
-             */
-            function fn($value){
+        public function fooFn(int $value = 1){
+            
+        }
 
-                $v
+    }
 
-            }
+    class Bar extends Foo {
+
+        /** 
+        * @param Foo $value 
+        * @return Baz 
+        */
+        function fn($value) {
+            $value->
+        }
+    }
         `;
 
         let doc: ParsedDocument;
@@ -66,7 +74,7 @@ describe('VariableTypeResolver', function () {
         [doc, resolver] = setup(src);
 
         let v = new TreeTraverser<Phrase|Token>([doc.tree]).find((x)=>{
-            return (<Token>x).tokenType === TokenType.VariableName && (<Token>x).length === 2;
+            return (<Token>x).tokenType === TokenType.Arrow;
         });
 
         resolver.haltAtNode = v;
@@ -74,7 +82,7 @@ describe('VariableTypeResolver', function () {
         let traverser = new TreeTraverser([doc.tree]);
         traverser.traverse(resolver);
 
-        console.log(JSON.stringify(resolver.variableTable.getType('$value', ''), null, 4));
+        console.log(JSON.stringify(resolver.variableTable.getType('$value', 'Foo'), null, 4));
 
     });
 

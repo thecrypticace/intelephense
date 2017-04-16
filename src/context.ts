@@ -302,7 +302,8 @@ export class Context {
     private _isScopeBody(p: Phrase | Token) {
 
         switch ((<Phrase>p).phraseType) {
-            case PhraseType.CompoundStatement:
+            case PhraseType.FunctionDeclarationBody:
+            case PhraseType.MethodDeclarationBody:
             case PhraseType.ClassMemberDeclarationList:
             case PhraseType.InterfaceMemberDeclarationList:
             case PhraseType.TraitMemberDeclarationList:

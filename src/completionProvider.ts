@@ -761,7 +761,7 @@ class ObjectAccessCompletion implements CompletionStrategy {
     private _createBaseMembersPredicate(text: string) {
         return (s: PhpSymbol) => {
             return (s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
-                !(s.modifiers & SymbolModifier.Private | SymbolModifier.Static) &&
+                !(s.modifiers & (SymbolModifier.Private | SymbolModifier.Static)) &&
                 util.fuzzyStringMatch(text, s.name);
         };
     }

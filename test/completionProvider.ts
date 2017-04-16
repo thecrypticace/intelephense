@@ -52,10 +52,11 @@ var openTagSrc =
 `<?p
 `;
 
+
 function setup(src:string){
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
-    let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore, 100);
+    let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore);
     let doc = new ParsedDocument('test', src);
     parsedDocumentStore.add(doc);
     symbolStore.add(SymbolTable.create(doc));
@@ -65,7 +66,7 @@ function setup(src:string){
 function inbuiltSetup(src:string){
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
-    let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore, 100);
+    let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore);
     let doc = new ParsedDocument('test', src);
     parsedDocumentStore.add(doc);
     symbolStore.add(SymbolTable.create(doc));
