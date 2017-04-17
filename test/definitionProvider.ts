@@ -41,6 +41,13 @@ let scopedAccessSrc =
     Test::baz();
 `;
 
+let nameSrc = 
+`<?php
+    namespace Foo;
+    function fn(){}
+    fn();
+`;
+
 describe('DefintionProvider', function(){
 
     describe('#provideDefinition', function(){
@@ -71,6 +78,76 @@ describe('DefintionProvider', function(){
                     uri:'test',
                     range:{
                         start:{line:2, character:15},
+                        end:{line:2, character:19}
+                    }
+                } 
+                assert.deepEqual(loc, expected);
+                //console.log(JSON.stringify(loc, null, 4));
+            });
+
+        });
+
+        describe('Scoped access expr', function(){
+
+            let provider:DefinitionProvider
+            before(function(){
+                provider = setup(scopedAccessSrc);
+            }); 
+
+            it('method location', function(){
+                let loc = provider.provideDefinition('test', {line:8, character:12});
+                let expected:lsp.Location = {
+                    uri:'test',
+                    range:{
+                        start:{line:4, character:8},
+                        end:{line:4, character:31}
+                    }
+                } 
+                assert.deepEqual(loc, expected);
+                //console.log(JSON.stringify(loc, null, 4));
+            });
+
+            it('property location', function(){
+                let loc = provider.provideDefinition('test', {line:7, character:12});
+                let expected:lsp.Location = {
+                    uri:'test',
+                    range:{
+                        start:{line:3, character:22},
+                        end:{line:3, character:26}
+                    }
+                } 
+                assert.deepEqual(loc, expected);
+                //console.log(JSON.stringify(loc, null, 4));
+            });
+
+            it('const location', function(){
+                let loc = provider.provideDefinition('test', {line:6, character:12});
+                let expected:lsp.Location = {
+                    uri:'test',
+                    range:{
+                        start:{line:2, character:14},
+                        end:{line:2, character:21}
+                    }
+                } 
+                assert.deepEqual(loc, expected);
+                //console.log(JSON.stringify(loc, null, 4));
+            });
+
+        });
+
+        describe('Name', function(){
+
+            let provider:DefinitionProvider
+            before(function(){
+                provider = setup(nameSrc);
+            }); 
+
+            it('function', function(){
+                let loc = provider.provideDefinition('test', {line:3, character:5});
+                let expected:lsp.Location = {
+                    uri:'test',
+                    range:{
+                        start:{line:2, character:4},
                         end:{line:2, character:19}
                     }
                 } 

@@ -4,7 +4,7 @@
 ### Added
 * Tests - DefintionProvider; SignatureHelpProvider; CompletionProvider
 ### Fixed
-* Completion provider fixes.
+* Completion provider fixes and tweaks.
 * Definition provider go to property fix.
 ### Dependencies
 * php7parser 0.9.1
