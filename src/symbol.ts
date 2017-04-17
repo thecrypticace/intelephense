@@ -2043,6 +2043,10 @@ export class ExpressionTypeResolver {
             return new TypeString('');
         }
 
+        if(kind === SymbolKind.Property){
+            memberName = '$' + memberName;
+        }
+
         let symbols = this.lookupMemberOnTypes(type.atomicClassArray(), kind, memberName, 0, SymbolModifier.Static);
         return this.mergeTypes(symbols);
 
