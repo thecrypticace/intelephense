@@ -1,8 +1,8 @@
 # Change Log
 
-## [unreleased]
+## [0.6.2] - 2017-04-18
 ### Added
-* Tests - DefintionProvider; SignatureHelpProvider; CompletionProvider
+* Tests - DefintionProvider; SignatureHelpProvider; CompletionProvider; TypeString
 ### Fixed
 * Completion provider fixes and tweaks.
 * Definition provider go to property fix.

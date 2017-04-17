@@ -1,6 +1,6 @@
 {
   "name": "intelephense",
-  "version": "0.6.0",
+  "version": "0.6.2",
   "description": "PHP Static Code Analysis",
   "main": "./lib/intelephense.js",
   "types": "./lib/intelephense.d.ts",
