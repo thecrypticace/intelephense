@@ -6,7 +6,7 @@ describe('intelephense', function(){
 
     describe('#initialise', function(){
 
-        it('built in symbols', function(){
+        it('Built in symbols', function(){
 
             Intelephense.initialise();
             assert.isAbove(Intelephense.numberSymbolsKnown(), 1);

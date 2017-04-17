@@ -167,7 +167,7 @@ function toVariableCompletionItem(s: PhpSymbol) {
 
     return <lsp.CompletionItem>{
         label: s.name,
-        kind: lsp.SymbolKind.Variable,
+        kind: lsp.CompletionItemKind.Variable,
         documentation: s.description
     }
 
@@ -527,7 +527,7 @@ class NameCompletion extends AbstractNameCompletion {
     }
 
     protected _getKeywords(context: Context) {
-        let kw:string[] = [];
+        let kw: string[] = [];
         Array.prototype.push.apply(kw, NameCompletion._expressionKeywords);
         Array.prototype.push.apply(kw, NameCompletion._statementKeywords);
         return kw;
@@ -582,9 +582,9 @@ class ScopedAccessCompletion implements CompletionStrategy {
             return noCompletionResponse;
         }
 
-        let memberPred = this._createMembersPredicate(text);
-        let baseMemberPred = this._createBaseMembersPredicate(text);
-        let ownMemberPred = this._createOwnMembersPredicate(text);
+        let memberPred = this._createSymbolPredicate(text, SymbolModifier.Private | SymbolModifier.Protected);
+        let baseMemberPred = this._createSymbolPredicate(text, SymbolModifier.Private);
+        let ownMemberPred = this._createSymbolPredicate(text, 0);
         let memberQueries: MemberQuery[] = [];
         let typeName: string;
         let pred: Predicate<PhpSymbol>;
@@ -635,35 +635,14 @@ class ScopedAccessCompletion implements CompletionStrategy {
         }
     }
 
-    private _createMembersPredicate(text: string) {
+    private _createSymbolPredicate(text: string, notVisibilityMask: SymbolModifier) {
         return (s: PhpSymbol) => {
-            return (((s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
-                (s.modifiers & SymbolModifier.Static) > 0) ||
-                s.kind === SymbolKind.ClassConstant) &&
-                !(s.modifiers & (SymbolModifier.Private | SymbolModifier.Protected)) &&
+            return (s.kind === SymbolKind.ClassConstant ||
+                    (s.modifiers & SymbolModifier.Static) > 0) &&
+                (!notVisibilityMask || !(s.modifiers & notVisibilityMask)) &&
                 util.fuzzyStringMatch(text, s.name);
         };
     }
-
-    private _createBaseMembersPredicate(text: string) {
-        return (s: PhpSymbol) => {
-            return (((s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
-                (s.modifiers & SymbolModifier.Static) > 0) ||
-                s.kind === SymbolKind.ClassConstant) &&
-                !(s.modifiers & SymbolModifier.Private) &&
-                util.fuzzyStringMatch(text, s.name);
-        };
-    }
-
-    private _createOwnMembersPredicate(text: string) {
-        return (s: PhpSymbol) => {
-            return (((s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
-                (s.modifiers & SymbolModifier.Static) > 0) ||
-                s.kind === SymbolKind.ClassConstant) &&
-                util.fuzzyStringMatch(text, s.name);
-        };
-    }
-
 
     private _isScopedAccessExpr(node: Phrase | Token) {
         switch ((<Phrase>node).phraseType) {
@@ -854,7 +833,6 @@ class ClassBaseClauseCompletion extends AbstractNameCompletion {
 class InterfaceClauseCompletion extends AbstractNameCompletion {
 
     canSuggest(context: Context) {
-
         return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash]) &&
             context.createTraverser().ancestor(this._isInterfaceClause) !== null;
 
@@ -981,16 +959,16 @@ class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
         let traverser = context.createTraverser();
         let nsUseGroupClause = traverser.ancestor(this._isNamespaceUseGroupClause) as NamespaceUseGroupClause;
         let nsUseDecl = traverser.ancestor(this._isNamespaceUseDeclaration) as NamespaceUseDeclaration;
-        let kind = tokenToSymbolKind(nsUseGroupClause.kind || nsUseDecl.kind) || (SymbolKind.Class | SymbolKind.Namespace);
+        let kind = tokenToSymbolKind(nsUseGroupClause.kind || nsUseDecl.kind) || SymbolKind.Class;
         let prefix = context.nodeText(nsUseDecl.prefix);
 
         let pred = (x) => {
             return (x.kind & kind) > 0 && !(x.modifiers & SymbolModifier.Use) && (!prefix || x.name.indexOf(prefix) === 0);
         };
 
-        let matches = context.symbolStore.match(text, pred, true).slice(maxItems);
+        let matches = context.symbolStore.match(text, pred, true).slice(0, maxItems);
         for (let n = 0, l = matches.length; n < l; ++n) {
-            items.push(toNameCompletionItem(matches[n], matches[n].name.slice(prefix.length)));
+            items.push(toNameCompletionItem(matches[n], matches[n].name.slice(prefix.length + 1))); //+1 for \
         }
 
         return <lsp.CompletionList>{
@@ -1023,7 +1001,7 @@ class DeclarationBodyCompletion implements CompletionStrategy {
 
     canSuggest(context: Context) {
         return ParsedDocument.isToken(context.token, [TokenType.Name]) &&
-            ParsedDocument.isPhrase(context.createTraverser().parent(), DeclarationBodyCompletion._phraseTypes) !== null;
+            ParsedDocument.isPhrase(context.createTraverser().parent(), DeclarationBodyCompletion._phraseTypes);
     }
 
     completions(context: Context, maxItems: number) {

@@ -10,58 +10,95 @@ var noCompletions: lsp.CompletionList = {
     isIncomplete: false
 };
 
-
 var objectCreationSrc =
-`<?php
-
-    /** I'm a class */
-    class MyClass {
-        
-    }
-    
-    $myVar = new M
+    `<?php
+    class Foo {}
+    $var = new F
 `;
 
-var scopedSrc = 
-`<?php
-    class MyClass {
-        public static $myProperty = 1;
+var scopedAccessSrc =
+    `<?php
+    class Test {
+        public const FOO = 1;
+        public static $bar = 1;
+        public static function baz(){}
+        private static $baz = 1;
     }
-
-    $myVar = MyClass::$m
+    $var = Test::FOO;
+    $var = Test::$bar;
+    $var = Test::baz();
 `;
 
-var variableSrc = 
-`<?php
-    class MyClass {
-        function myFn(){ 
-            $myFnVar = 1;
-        }
+var objectSrc =
+    `<?php
+    class Test {
+        public $foo;
+        public function bar(){}
+        private function baz(){}
+        static function foo(){}
     }
 
-    $myVar = new MyClass();
+    $var = new Test();
+    $var->b
+`;
+
+var variableSrc =
+    `<?php
+    function foo($foo){ 
+        $bar = $foo;
+    }
+    $baz = 2;
     $
 `;
 
-var nameSrc = 
-`<?php
-    a
+var nameSrc =
+    `<?php
+    class Foo {}
+    class Bar {}
+    b
 `;
 
-var openTagSrc = 
-`<?p
-`;
-
-
-var nsUse = 
-`<?php
-    namespace A;
-    use Z
+var nsUse =
+    `<?php
+    namespace Bar;
+    use F
 
     class Foo {}
+    class Baz {}
 `;
 
-function setup(src:string){
+var classBaseSrc =
+`<?php
+    class Foo {}
+    interface FooInterface {}
+    class Bar extends F
+`;
+
+var implementsSrc = 
+`<?php
+    class Foo {}
+    interface FooInterface {}
+    class Bar extends Foo implements F 
+`;
+
+var interfaceBaseSrc =
+`<?php
+    class Baz {}
+    interface Bar {}
+    interface Foo extends B
+`;
+
+var groupUseSrc = 
+`<?php
+    namespace Foo\\Bar
+    use Foo\\{
+        B
+    }
+
+    class Baz {}
+`;
+
+function setup(src: string) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
     let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore);
@@ -71,7 +108,7 @@ function setup(src:string){
     return completionProvider;
 }
 
-function inbuiltSetup(src:string){
+function inbuiltSetup(src: string) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
     let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore);
@@ -82,108 +119,245 @@ function inbuiltSetup(src:string){
     return completionProvider;
 }
 
+function isEqual(item: lsp.CompletionItem, label: string, kind: lsp.CompletionItemKind) {
+    return item.kind === kind && item.label === label;
+}
+
 describe('CompletionProvider', () => {
 
-    describe('object creation completions', () => {
+    describe('Object creation', () => {
 
-        let completionProvider:CompletionProvider;
-        before(function(){
+        let completionProvider: CompletionProvider;
+        before(function () {
             completionProvider = setup(objectCreationSrc);
         });
 
-        it('Should return empty CompletionList on no matches', function () {
-            var completions = completionProvider.provideCompletions('test', { line: 5, character: 0 });
-            assert.deepEqual(completions, noCompletions);
-        });
-
-        it('Should suggest completions', function () {
-
-            var completions = completionProvider.provideCompletions('test', { line: 7, character: 18 });
+        it('completions', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 2, character: 16 });
             //console.log(JSON.stringify(completions, null, 4));
-            assert.equal(completions.items[0].label, 'MyClass');
+            assert.equal(completions.items[0].label, 'Foo');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Constructor);
-            
         });
 
     });
 
-    describe('scoped completions', () => {
+    describe('Scoped access', () => {
 
-        let completionProvider:CompletionProvider;
+        let completionProvider: CompletionProvider;
 
-        before(function(){
-            completionProvider = setup(scopedSrc);
+        before(function () {
+            completionProvider = setup(scopedAccessSrc);
             //console.log(JSON.stringify(symbolStore, null, 4));
         });
 
+        it('::', function () {
+            let completions = completionProvider.provideCompletions('test', { line: 7, character: 17 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items.length, 3);
+            completions.items.forEach((x) => {
+                assert.isTrue(
+                    isEqual(x, '$bar', lsp.CompletionItemKind.Property) ||
+                    isEqual(x, 'FOO', lsp.CompletionItemKind.Value) ||
+                    isEqual(x, 'baz', lsp.CompletionItemKind.Method)
+                );
+            });
 
-        it('Should suggest completions on $', function () {
+        });
 
-            var completions = completionProvider.provideCompletions('test', { line: 5, character: 23 });
-            assert.equal(completions.items[0].label, '$myProperty');
+
+        it('$', function () {
+            let completions = completionProvider.provideCompletions('test', { line: 8, character: 18 });
+            assert.equal(completions.items[0].label, '$bar');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Property);
             //console.log(JSON.stringify(completions, null, 4));
         });
 
-        it('Should suggest completions on :', function () {
-
-            var completions = completionProvider.provideCompletions('test', { line: 5, character: 22 });
-            assert.equal(completions.items[0].label, '$myProperty');
-            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Property);
+        it('Identifier', function () {
+            let completions = completionProvider.provideCompletions('test', { line: 9, character: 18 });
+            assert.equal(completions.items.length, 2);
+            completions.items.forEach((x) => {
+                assert.isTrue(
+                    isEqual(x, '$bar', lsp.CompletionItemKind.Property) || //fuzzy search should also get properties
+                    isEqual(x, 'baz', lsp.CompletionItemKind.Method)
+                );
+            });
             //console.log(JSON.stringify(completions, null, 4));
         });
 
-        it('Should suggest completions on $m', function () {
 
-            var completions = completionProvider.provideCompletions('test', { line: 5, character: 24 });
-            assert.equal(completions.items[0].label, '$myProperty');
-            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Property);
+    });
+
+    describe('Object access', function () {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(objectSrc);
+        });
+
+        it('->', function () {
+            let completions = completionProvider.provideCompletions('test', { line: 9, character: 10 });
             //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items.length, 2);
+            completions.items.forEach((x) => {
+                assert.isTrue(
+                    isEqual(x, 'foo', lsp.CompletionItemKind.Property) ||
+                    isEqual(x, 'bar', lsp.CompletionItemKind.Method)
+                );
+            });
+
+        });
+
+        it('Identifier', function () {
+            let completions = completionProvider.provideCompletions('test', { line: 9, character: 11 });
+            assert.equal(completions.items.length, 1);
+            assert.equal(completions.items[0].label, 'bar');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
         });
 
     });
 
-    describe('variable completions', function(){
-        
-        let completionProvider:CompletionProvider;
-        before(function(){
+    describe('Variables', function () {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
             completionProvider = setup(variableSrc);
         });
 
-        it('variable completions from correct scope', function(){
-            var completions = completionProvider.provideCompletions('test', { line: 8, character: 5 });
+        it('Suggest variable from correct scope', function () {
+            let completions = completionProvider.provideCompletions('test', { line: 5, character: 5 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items.length, 1);
+            assert.equal(completions.items[0].label, '$baz');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Variable);
+           
+        });
+
+        it('Parameters', function () {
+            let completions = completionProvider.provideCompletions('test', { line: 2, character: 17 });
+            assert.equal(completions.items.length, 1);
+            assert.equal(completions.items[0].label, '$foo');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Variable);
             //console.log(JSON.stringify(completions, null, 4));
         });
+
     });
 
+    describe('Names', function () {
 
-    describe('name completions', function(){
-
-        let completionProvider:CompletionProvider;
-        before(function(){
-            completionProvider = inbuiltSetup(nameSrc);
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(nameSrc);
         });
 
-        it('name completions', function(){
-            var completions = completionProvider.provideCompletions('test', { line: 1, character: 5 });
+        it('name completions', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 3, character: 5 });
             //console.log(JSON.stringify(completions, null, 4));
+            //should also suggest keywords abstract, break, global
+            assert.equal(completions.items.length, 4);
+            completions.items.forEach((x) => {
+                assert.isTrue(
+                    isEqual(x, 'abstract', lsp.CompletionItemKind.Keyword) ||
+                    isEqual(x, 'break', lsp.CompletionItemKind.Keyword) ||
+                    isEqual(x, 'global', lsp.CompletionItemKind.Keyword) ||
+                    isEqual(x, 'Bar', lsp.CompletionItemKind.Class)
+                );
+            });
+
         });
 
     });
 
-    describe('use namespace completions', function(){
+    describe('Namespace use', function () {
 
-        let completionProvider:CompletionProvider;
-        before(function(){
-            completionProvider = inbuiltSetup(nsUse);
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(nsUse);
         });
 
-        it('use completions', function(){
+        it('use completions', function () {
             var completions = completionProvider.provideCompletions('test', { line: 2, character: 9 });
-            console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items.length, 1);
+            assert.equal(completions.items[0].label, 'Bar\\Foo');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Class);
+            //console.log(JSON.stringify(completions, null, 4));
         });
 
     });
 
+    describe('Class extends', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(classBaseSrc);
+        });
+
+        it('completions', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 3, character: 23 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items.length, 1);
+            assert.equal(completions.items[0].label, 'Foo');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Class);
+        });
+
+    });
+
+    describe('Implements', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(implementsSrc);
+        });
+
+        it('completions', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 3, character: 38 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items.length, 1);
+            assert.equal(completions.items[0].label, 'FooInterface');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Interface);
+        });
+
+    });
+
+    describe('Interface extends', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(interfaceBaseSrc);
+        });
+
+        it('completions', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 3, character: 27 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items.length, 1);
+            assert.equal(completions.items[0].label, 'Bar');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Interface);
+        });
+
+    });
+
+    describe('Use group', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(groupUseSrc);
+        });
+
+        it('completions', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 3, character: 9 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items.length, 1);
+            assert.equal(completions.items[0].label, 'Bar\\Baz');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Class);
+        });
+
+    });
 
 });
+
+
+
+
+
+
+
+

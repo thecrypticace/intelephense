@@ -1241,11 +1241,11 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     }
 
     classConstElement(modifiers: SymbolModifier, node: ClassConstElement, phpDoc: PhpDoc) {
-
+        
         let s: PhpSymbol = {
             kind: SymbolKind.ClassConstant,
             modifiers: modifiers,
-            name: this.identifier(node.name),
+            name: this.parsedDocument.nodeText(node.name),
             location: this.phraseLocation(node)
         }
 
@@ -2267,7 +2267,7 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
         let symbol = this._findSymbolForPhrase(<Phrase>node);
 
         let carry: string[] = [];
-        if (symbol) {
+        if (symbol && symbol.children) {
 
             let useVariables = symbol.children.filter(this._anonymousFunctionUseVariableSymbolFilter);
 
