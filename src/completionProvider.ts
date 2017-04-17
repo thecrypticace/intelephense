@@ -483,7 +483,10 @@ class NameCompletion extends AbstractNameCompletion {
         'try',
         'unset',
         'use',
-        'while'
+        'while',
+        //only valid in class header but need as suggestions here for parse error
+        'extends',
+        'implements'
     ];
 
     private static _expressionKeywords = [

@@ -249,13 +249,13 @@ export class NameResolver {
 
 export class TypeString {
 
-    private static _classNamePattern: RegExp = /([\\a-zA-Z_\x7f-\xff][\\a-zA-Z0-9_\x7f-\xff])*/g;
+    private static _classNamePattern: RegExp = /[$\\a-zA-Z_\x7f-\xff][\\a-zA-Z0-9_\x7f-\xff]*/g;
 
     private static _keywords: string[] = [
         'string', 'integer', 'int', 'boolean', 'bool', 'float',
         'double', 'object', 'mixed', 'array', 'resource',
         'void', 'null', 'false', 'true', 'self', 'static',
-        'callable'
+        'callable', '$this'
     ];
 
     private _parts: string[];
@@ -339,10 +339,10 @@ export class TypeString {
 
         let replacer = (match, offset, text) => {
 
-            if (match[0] === 'self' || match[0] === '$this' || match[0] === 'static') {
+            if (match === 'self' || match === '$this' || match === 'static') {
                 return nameResolver.thisName;
-            } else if (TypeString._keywords.indexOf(match[0]) >= 0) {
-                return match[0];
+            } else if (TypeString._keywords.indexOf(match) >= 0) {
+                return match;
             } else if (match[0] === '\\') {
                 return match.slice(1);
             } else {
