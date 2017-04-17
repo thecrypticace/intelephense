@@ -138,6 +138,11 @@ export class DefinitionProvider {
         let parent = traverser.parent() as ObjectAccessExpression;
         let memberName = context.tokenText(<Token>memberNamePhrase.name);
         let typeNames = context.resolveExpressionType(<Phrase>parent.variable).atomicClassArray();
+
+        if(parent.phraseType === PhraseType.PropertyAccessExpression){
+            memberName = '$' + memberName;
+        }
+
         let pred = (x: PhpSymbol) => {
             return memberName === x.name && !!x.location;
         };

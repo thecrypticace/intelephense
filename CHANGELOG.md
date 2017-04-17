@@ -1,6 +1,15 @@
 # Change Log
 
-## [0.6.0]
+## [unreleased]
+### Added
+* Tests - DefintionProvider; SignatureHelpProvider; CompletionProvider
+### Fixed
+* Completion provider fixes.
+* Definition provider go to property fix.
+### Dependencies
+* php7parser 0.9.1
+
+## [0.6.0] - 2017-04-17
 Preview release
 ### Added
 * Document symbols provider
