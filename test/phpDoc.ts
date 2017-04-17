@@ -14,7 +14,7 @@ describe('PhpDocParser', function () {
              */`
 
             let phpDoc = PhpDocParser.parse(text);
-            console.log(JSON.stringify(phpDoc.findParamTag('$value'), null, 4));
+            //console.log(JSON.stringify(phpDoc.findParamTag('$value'), null, 4));
 
         });
 
@@ -32,6 +32,16 @@ describe('PhpDocParser', function () {
 
             let phpDoc = PhpDocParser.parse(text);
             //console.log(JSON.stringify(phpDoc.findParamTag('$value'), null, 4));
+
+        });
+
+        it('Should parse @var', function(){
+
+            let text = `/** 
+            * @var Foo $v
+            */`;
+            let phpDoc = PhpDocParser.parse(text);
+            console.log(JSON.stringify(phpDoc, null, 4));
 
         });
 

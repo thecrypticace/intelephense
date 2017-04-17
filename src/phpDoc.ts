@@ -11,7 +11,7 @@ export namespace PhpDocParser {
     const summaryBoundaryPattern: RegExp = /\.(?:\r\n|\r|\n)|(?:\r\n|\r|\n){2}/;
     const methodParamPartBoundaryPattern: RegExp = /\s*,\s*|\s+/;
     const paramOrPropertyPattern = /^(@param|@property|@property-read|@property-write)\s+(\S+)\s+(\$\S+)\s*([^]*)$/;
-    const varPattern = /^(@var)\s+(\S+)\s+(\$\S+)?\s*([^]*)$/;
+    const varPattern = /^(@var)\s+(\S+)(?:\s+(\$\S+))?\s*([^]*)$/;
     const returnPattern = /^(@return)\s+(\S+)\s*([^]*)$/;
     const methodPattern = /^(@method)\s+(\S+\s+)?(\S+)\(\s*([^]*)\s*\)(?!\[)\s*([^]*)$/;
 
