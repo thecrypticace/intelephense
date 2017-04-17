@@ -50,7 +50,11 @@ function nameLabel(s: PhpSymbol, nsName: string, namePhraseType: PhraseType) {
     let label = s.name;
 
     if (nsName && s.name.indexOf(nsName) === 0 && label.length > nsName.length + 1) {
-        label = 'namespace\\' + label.slice(nsName.length + 1);
+        label = label.slice(nsName.length + 1);
+        if(namePhraseType === PhraseType.RelativeQualifiedName){
+            label = 'namespace\\' + label;
+        }
+        
     } else if (nsName && namePhraseType !== PhraseType.FullyQualifiedName && !(s.modifiers & SymbolModifier.Use)) {
         label = '\\' + label;
     }
@@ -362,8 +366,7 @@ class ClassTypeDesignatorCompletion extends AbstractNameCompletion {
 
         let traverser = context.createTraverser();
 
-        return ParsedDocument.isToken(traverser.node, [TokenType.Backslash, TokenType.Name]) &&
-            ParsedDocument.isPhrase(traverser.parent(), [PhraseType.NamespaceName]) &&
+        return ParsedDocument.isPhrase(traverser.parent(), [PhraseType.NamespaceName]) &&
             ParsedDocument.isPhrase(traverser.parent(),
                 [PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName]) &&
             ParsedDocument.isPhrase(traverser.parent(), [PhraseType.ClassTypeDesignator]);
@@ -520,8 +523,7 @@ class NameCompletion extends AbstractNameCompletion {
         }
 
         let traverser = context.createTraverser();
-        return ParsedDocument.isToken(traverser.node, [TokenType.Backslash, TokenType.Name]) &&
-            ParsedDocument.isPhrase(traverser.parent(), [PhraseType.NamespaceName]) &&
+        return ParsedDocument.isPhrase(traverser.parent(), [PhraseType.NamespaceName]) &&
             traverser.ancestor(this._isNamePhrase) !== null;
     }
 
@@ -671,8 +673,7 @@ class ObjectAccessCompletion implements CompletionStrategy {
                 [PhraseType.PropertyAccessExpression, PhraseType.MethodCallExpression]);
         }
 
-        return ParsedDocument.isToken(traverser.node, [TokenType.Name]) &&
-            ParsedDocument.isPhrase(traverser.parent(), [PhraseType.MemberName]);
+        return ParsedDocument.isPhrase(traverser.parent(), [PhraseType.MemberName]);
 
     }
 
@@ -810,8 +811,7 @@ class TypeDeclarationCompletion extends AbstractNameCompletion {
 class ClassBaseClauseCompletion extends AbstractNameCompletion {
 
     canSuggest(context: Context) {
-        return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash]) &&
-            context.createTraverser().ancestor(this._isClassBaseClause) !== null;
+        return context.createTraverser().ancestor(this._isClassBaseClause) !== null;
     }
 
     protected _getKeywords(context: Context) {
@@ -836,8 +836,7 @@ class ClassBaseClauseCompletion extends AbstractNameCompletion {
 class InterfaceClauseCompletion extends AbstractNameCompletion {
 
     canSuggest(context: Context) {
-        return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash]) &&
-            context.createTraverser().ancestor(this._isInterfaceClause) !== null;
+        return context.createTraverser().ancestor(this._isInterfaceClause) !== null;
 
     }
 
@@ -864,8 +863,7 @@ class NamespaceDefinitionCompletion implements CompletionStrategy {
 
     canSuggest(context: Context) {
 
-        return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash]) &&
-            context.createTraverser().ancestor(this._isNamespaceDefinition) !== null;
+        return context.createTraverser().ancestor(this._isNamespaceDefinition) !== null;
 
     }
 
@@ -903,8 +901,7 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
 
 
     canSuggest(context: Context) {
-        return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash]) &&
-            context.createTraverser().ancestor(this._isNamespaceUseClause) !== null;
+        return context.createTraverser().ancestor(this._isNamespaceUseClause) !== null;
     }
 
     completions(context: Context, maxItems: number) {
@@ -947,8 +944,7 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
 class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
 
     canSuggest(context: Context) {
-        return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash]) &&
-            context.createTraverser().ancestor(this._isNamespaceUseGroupClause) !== null;
+        return context.createTraverser().ancestor(this._isNamespaceUseGroupClause) !== null;
     }
 
     completions(context: Context, maxItems: number) {
@@ -1003,8 +999,7 @@ class DeclarationBodyCompletion implements CompletionStrategy {
     ];
 
     canSuggest(context: Context) {
-        return ParsedDocument.isToken(context.token, [TokenType.Name]) &&
-            ParsedDocument.isPhrase(context.createTraverser().parent(), DeclarationBodyCompletion._phraseTypes);
+        return ParsedDocument.isPhrase(context.createTraverser().parent(), DeclarationBodyCompletion._phraseTypes);
     }
 
     completions(context: Context, maxItems: number) {
@@ -1101,7 +1096,9 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
             kind: lsp.CompletionItemKind.Method,
             label: label,
             insertText: insertText,
-            insertTextFormat: lsp.InsertTextFormat.Snippet
+            insertTextFormat: lsp.InsertTextFormat.Snippet,
+            documentation:s.description,
+            detail:s.scope
         };
 
         return item;
