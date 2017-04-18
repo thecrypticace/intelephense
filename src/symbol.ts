@@ -1827,7 +1827,7 @@ export class SymbolIndex {
         let keys: string[] = [];
         
         if(s.name){
-            keys.push(s.name);
+            keys.push(s.name.toLowerCase());
         }
 
         let split = s.name.split('\\');
