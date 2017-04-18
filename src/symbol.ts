@@ -1727,7 +1727,8 @@ export class SymbolIndex {
             if (i !== -1) {
                 node.items.splice(i, 1);
                 if (!node.items.length) {
-                    this._deleteNode(node);
+                    //uneccessary? save a lookup and splice
+                    //this._deleteNode(node);
                 }
             }
 
