@@ -13,7 +13,7 @@ import {
 import {
     PhpSymbol, SymbolStore, SymbolTable, SymbolKind, SymbolModifier,
     TypeString, NameResolver, ExpressionTypeResolver, VariableTypeResolver,
-    MemberQuery, SymbolReader, TypeSource
+    MemberQuery, SymbolReader, TypeSource, VariableTable
 } from './symbol';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Predicate } from './types';
@@ -51,10 +51,10 @@ function nameLabel(s: PhpSymbol, nsName: string, namePhraseType: PhraseType) {
 
     if (nsName && s.name.indexOf(nsName) === 0 && label.length > nsName.length + 1) {
         label = label.slice(nsName.length + 1);
-        if(namePhraseType === PhraseType.RelativeQualifiedName){
+        if (namePhraseType === PhraseType.RelativeQualifiedName) {
             label = 'namespace\\' + label;
         }
-        
+
     } else if (nsName && namePhraseType !== PhraseType.FullyQualifiedName && !(s.modifiers & SymbolModifier.Use)) {
         label = '\\' + label;
     }
@@ -94,11 +94,23 @@ function symbolKindToLspSymbolKind(kind: SymbolKind) {
 }
 
 function toClassCompletionItem(s: PhpSymbol, label?: string) {
-    return <lsp.CompletionItem>{
+    let item = <lsp.CompletionItem>{
         kind: s.kind === SymbolKind.Interface ? lsp.CompletionItemKind.Interface : lsp.CompletionItemKind.Class,
         label: label ? label : s.name,
         documentation: s.description
     }
+
+    if (item.label.length && item.label[0] === '\\') {
+        item.sortText = item.label.slice(1);
+    }
+
+    if ((s.modifiers & SymbolModifier.Use) > 0 && s.associated && s.associated.length) {
+        item.detail = s.associated[0].name;
+    } else if (item.label.indexOf(s.name) < 0) {
+        item.detail = s.name;
+    }
+
+    return item;
 }
 
 function toFunctionCompletionItem(s: PhpSymbol, label?: string) {
@@ -108,6 +120,10 @@ function toFunctionCompletionItem(s: PhpSymbol, label?: string) {
         label: label ? label : s.name,
         documentation: s.description,
         detail: PhpSymbol.signatureString(s)
+    }
+
+    if (item.label.length && item.label[0] === '\\') {
+        item.sortText = item.label.slice(1);
     }
 
     return item;
@@ -135,17 +151,23 @@ function toClassConstantCompletionItem(s: PhpSymbol) {
         kind: lsp.CompletionItemKind.Value, //@todo use Constant
         label: s.name,
         documentation: s.description,
-        detail: s.value
+        detail: '= ' + s.value
     }
 }
 
 function toConstantCompletionItem(s: PhpSymbol, label?: string) {
-    return <lsp.CompletionItem>{
+    let item = <lsp.CompletionItem>{
         kind: lsp.CompletionItemKind.Value, //@todo use Constant
         label: label ? label : s.name,
         documentation: s.description,
-        detail: s.value
+        detail: '= ' + s.value
     }
+
+    if (item.label.length && item.label[0] === '\\') {
+        item.sortText = item.label.slice(1);
+    }
+
+    return item;
 }
 
 function toPropertyCompletionItem(s: PhpSymbol) {
@@ -164,15 +186,26 @@ function toConstructorCompletionItem(s: PhpSymbol, label?: string) {
         documentation: s.description
     }
 
+    if (item.label.length && item.label[0] === '\\') {
+        item.sortText = item.label.slice(1);
+    }
+
+    if ((s.modifiers & SymbolModifier.Use) > 0 && s.associated && s.associated.length) {
+        item.detail = s.associated[0].name;
+    } else if (item.label.indexOf(s.name) < 0) {
+        item.detail = s.name;
+    }
+
     return item;
 }
 
-function toVariableCompletionItem(s: PhpSymbol) {
+function toVariableCompletionItem(s: PhpSymbol, varTable: VariableTable) {
 
     return <lsp.CompletionItem>{
         label: s.name,
         kind: lsp.CompletionItemKind.Variable,
-        documentation: s.description
+        documentation: s.description,
+        detail: varTable.getType(s.name, '').toString()
     }
 
 }
@@ -424,9 +457,10 @@ class SimpleVariableCompletion implements CompletionStrategy {
         let isIncomplete = varSymbols.length > maxItems;
 
         let items: lsp.CompletionItem[] = [];
+        let varTable = context.variableTable;
 
         for (let n = 0; n < limit; ++n) {
-            items.push(toVariableCompletionItem(varSymbols[n]));
+            items.push(toVariableCompletionItem(varSymbols[n], varTable));
         }
 
         return <lsp.CompletionList>{
@@ -642,7 +676,7 @@ class ScopedAccessCompletion implements CompletionStrategy {
     private _createSymbolPredicate(text: string, notVisibilityMask: SymbolModifier) {
         return (s: PhpSymbol) => {
             return (s.kind === SymbolKind.ClassConstant ||
-                    (s.modifiers & SymbolModifier.Static) > 0) &&
+                (s.modifiers & SymbolModifier.Static) > 0) &&
                 (!notVisibilityMask || !(s.modifiers & notVisibilityMask)) &&
                 util.fuzzyStringMatch(text, s.name);
         };
@@ -1096,8 +1130,8 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
             label: label,
             insertText: insertText,
             insertTextFormat: lsp.InsertTextFormat.Snippet,
-            documentation:s.description,
-            detail:s.scope
+            documentation: s.description,
+            detail: s.scope
         };
 
         return item;
