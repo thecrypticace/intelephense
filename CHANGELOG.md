@@ -1,5 +1,14 @@
 # Change Log
 
+## [0.6.4] - 2017-04-19
+### Added
+* Detail on variable and constructor completion items.
+* Indexing on fqn parts.
+### Fixed
+* Variable types not resolving when on rhs of assignment
+* Infinite recursion on cyclical inheritance
+* Sort order of backslash prefixed completions
+
 ## [0.6.2] - 2017-04-18
 ### Added
 * Tests - DefintionProvider; SignatureHelpProvider; CompletionProvider; TypeString
