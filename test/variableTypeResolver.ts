@@ -82,8 +82,45 @@ describe('VariableTypeResolver', function () {
         let traverser = new TreeTraverser([doc.tree]);
         traverser.traverse(resolver);
 
-        console.log(JSON.stringify(resolver.variableTable.getType('$value', 'Foo'), null, 4));
+        assert.equal(resolver.variableTable.getType('$value', '').toString(), 'Foo');
 
     });
+
+    it('Object creation simple assignment', function () {
+
+        let src =
+            `<?php
+    class MyClass1 { 
+        function fn(){}
+    }
+    class MyClass2 { }
+
+    $myVar1 = new MyClass1();
+    $myVar2 = $myVar1->
+
+`;
+
+        let doc: ParsedDocument;
+        let resolver: VariableTypeResolver;
+
+        [doc, resolver] = setup(src);
+
+        let v = new TreeTraverser<Phrase|Token>([doc.tree]).find((x)=>{
+            return (<Token>x).tokenType === TokenType.Arrow;
+        });
+
+        resolver.haltAtNode = v;
+
+        let traverser = new TreeTraverser([doc.tree]);
+        traverser.traverse(resolver);
+
+        let varTable = resolver.variableTable;
+        console.log(JSON.stringify(varTable, null, 4));
+
+        //assert.equal(resolver.variableTable.getType('$myVar1', '').toString(), 'MyClass1');
+        //assert.equal(resolver.variableTable.getType('$myVar2', '').toString(), 'MyClass1');
+
+    });
+
 
 });
