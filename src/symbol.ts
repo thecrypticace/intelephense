@@ -2079,17 +2079,11 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
         public document: ParsedDocument,
         public nameResolver: NameResolver,
         public symbolStore: SymbolStore,
-        public haltAtNode?: Phrase | Token) {
-        this.haltAtNode = haltAtNode;
+        public haltAtToken?: Token) {
         this.haltTraverse = false;
     }
 
     preOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
-
-        if (this.haltAtNode === node) {
-            this.haltTraverse = true;
-            return false;
-        }
 
         switch ((<Phrase>node).phraseType) {
             case PhraseType.FunctionDeclaration:
@@ -2127,11 +2121,13 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
             case PhraseType.ByRefAssignmentExpression:
                 if (ParsedDocument.isPhrase((<BinaryExpression>node).left, [PhraseType.SimpleVariable, PhraseType.ListIntrinsic])) {
                     this._assignmentExpression(<BinaryExpression>node);
+                    this._checkForHaltToken(<Phrase>node);
                     return false;
                 }
                 return true;
             case PhraseType.InstanceOfExpression:
                 this._instanceOfExpression(<InstanceOfExpression>node);
+                this._checkForHaltToken(<Phrase>node);
                 return false;
             case PhraseType.ForeachStatement:
                 this._foreachStatement(<ForeachStatement>node);
@@ -2181,6 +2177,18 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
     }
 
+    private _checkForHaltToken(ancestor:Phrase){
+        if(!this.haltAtToken){
+            return;
+        }
+
+        let tFirst = this.document.firstToken(ancestor);
+        if(this.haltAtToken.offset >= tFirst.offset){
+            this.haltTraverse = true;
+        }
+
+    }
+
     private _qualifiedNameList(node: QualifiedNameList) {
 
         let fqns: string[] = [];
@@ -2216,6 +2224,11 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
     }
 
     private _token(t: Token) {
+
+        if (this.haltAtToken === t) {
+            this.haltTraverse = true;
+            return;
+        }
 
         //doc block type hints
         if (t.tokenType === TokenType.DocumentComment) {

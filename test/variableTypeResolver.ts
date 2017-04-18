@@ -75,9 +75,9 @@ describe('VariableTypeResolver', function () {
 
         let v = new TreeTraverser<Phrase|Token>([doc.tree]).find((x)=>{
             return (<Token>x).tokenType === TokenType.Arrow;
-        });
+        }) as Token;
 
-        resolver.haltAtNode = v;
+        resolver.haltAtToken = v;
 
         let traverser = new TreeTraverser([doc.tree]);
         traverser.traverse(resolver);
@@ -107,9 +107,9 @@ describe('VariableTypeResolver', function () {
 
         let v = new TreeTraverser<Phrase|Token>([doc.tree]).find((x)=>{
             return (<Token>x).tokenType === TokenType.Arrow;
-        });
+        }) as Token;
 
-        resolver.haltAtNode = v;
+        resolver.haltAtToken = v;
 
         let traverser = new TreeTraverser([doc.tree]);
         traverser.traverse(resolver);

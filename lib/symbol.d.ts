@@ -245,12 +245,13 @@ export declare class VariableTypeResolver implements TreeVisitor<Phrase | Token>
     document: ParsedDocument;
     nameResolver: NameResolver;
     symbolStore: SymbolStore;
-    haltAtNode: Phrase | Token;
+    haltAtToken: Token;
     private _varName;
     haltTraverse: boolean;
-    constructor(variableTable: VariableTable, document: ParsedDocument, nameResolver: NameResolver, symbolStore: SymbolStore, haltAtNode?: Phrase | Token);
+    constructor(variableTable: VariableTable, document: ParsedDocument, nameResolver: NameResolver, symbolStore: SymbolStore, haltAtToken?: Token);
     preOrder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
     postOrder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
+    private _checkForHaltToken(ancestor);
     private _qualifiedNameList(node);
     private _catchClause(node);
     private _listIntrinsic(node);
