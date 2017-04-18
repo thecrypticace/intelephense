@@ -321,7 +321,6 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         let matches = uniqueSymbolNames(context.symbolStore.match(text, pred, true));
         let limit = Math.min(matches.length, maxItems - items.length);
         let isIncomplete = matches.length > maxItems - items.length;
-        let toCompletionItem
 
         for (let n = 0; n < limit; ++n) {
             items.push(this._toCompletionItem(matches[n], nameLabel(matches[n], context.namespaceName, namePhrase ? namePhrase.phraseType : 0)));

@@ -590,7 +590,7 @@ export class SymbolStore {
 
     lookupTypeMembers(query: MemberQuery) {
         let type = this.find(query.typeName, this._classOrInterfaceFilter);
-        return this._lookupTypeMembers(type, query.memberPredicate);
+        return this._lookupTypeMembers(type, query.memberPredicate, []);
     }
 
     lookupTypeMember(query: MemberQuery) {
@@ -611,11 +611,14 @@ export class SymbolStore {
         return this.lookupMembersOnTypes(queries).shift();
     }
 
-    private _lookupTypeMembers(type: PhpSymbol, predicate: Predicate<PhpSymbol>) {
+    private _lookupTypeMembers(type: PhpSymbol, predicate: Predicate<PhpSymbol>, typeHistory: string[]) {
 
-        if (!type) {
+        if (!type || typeHistory.indexOf(type.name) > -1) {
             return [];
         }
+
+        //prevent cyclical lookup
+        typeHistory.push(type.name);
 
         let members = type.children ? type.children.filter(predicate) : [];
         let associated: PhpSymbol[] = [];
@@ -642,7 +645,7 @@ export class SymbolStore {
                 return x.kind === baseSymbol.kind;
             });
             if (baseSymbol) {
-                Array.prototype.push.apply(members, this._lookupTypeMembers(baseSymbol, basePredicate));
+                Array.prototype.push.apply(members, this._lookupTypeMembers(baseSymbol, basePredicate, typeHistory));
             }
 
         }
@@ -1241,7 +1244,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
     }
 
     classConstElement(modifiers: SymbolModifier, node: ClassConstElement, phpDoc: PhpDoc) {
-        
+
         let s: PhpSymbol = {
             kind: SymbolKind.ClassConstant,
             modifiers: modifiers,
@@ -2043,7 +2046,7 @@ export class ExpressionTypeResolver {
             return new TypeString('');
         }
 
-        if(kind === SymbolKind.Property){
+        if (kind === SymbolKind.Property) {
             memberName = '$' + memberName;
         }
 

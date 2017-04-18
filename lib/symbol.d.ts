@@ -125,7 +125,7 @@ export declare class SymbolStore {
     lookupTypeMember(query: MemberQuery): PhpSymbol;
     lookupMembersOnTypes(queries: MemberQuery[]): PhpSymbol[];
     lookupMemberOnTypes(queries: MemberQuery[]): PhpSymbol;
-    private _lookupTypeMembers(type, predicate);
+    private _lookupTypeMembers(type, predicate, typeHistory);
     private _indexSymbols(root);
     private _indexFilter(s);
 }
