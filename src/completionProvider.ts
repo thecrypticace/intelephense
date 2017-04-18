@@ -124,7 +124,7 @@ function toMethodCompletionItem(s: PhpSymbol) {
 
     if (s.name.slice(0, 2) === '__') {
         //sort magic methods last
-        item.sortText = 'z';
+        item.sortText = 'zzz';
     }
 
     return item;
