@@ -1825,23 +1825,25 @@ export class SymbolIndex {
     private _symbolKeys(s: PhpSymbol) {
 
         let keys: string[] = [];
-        let nsSeparatorPos = s.name.lastIndexOf('\\');
-        let name = s.name;
-        if (nsSeparatorPos > -1) {
-            keys.push(name.toLowerCase());
-            name = name.slice(nsSeparatorPos + 1);
-        }
+        let split = s.name.split('\\');
+        let name = split.pop();
 
         Array.prototype.push.apply(keys, util.trigrams(name));
-        if (name.length > 3 || name.length < 3) {
+        if (name && (name.length > 3 || name.length < 3)) {
             keys.push(name.toLowerCase());
+        }
+
+        for (let n = 0, l = split.length; n < l; ++n) {
+            if (split[n]) {
+                keys.push(split[n]);
+            }
         }
 
         let acronym = util.acronym(name);
         if (acronym.length > 1) {
             keys.push(acronym);
         }
-        return keys;
+        return Array.from(new Set(keys));
     }
 
 }
@@ -2178,13 +2180,13 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
 
     }
 
-    private _checkForHaltToken(ancestor:Phrase){
-        if(!this.haltAtToken){
+    private _checkForHaltToken(ancestor: Phrase) {
+        if (!this.haltAtToken) {
             return;
         }
 
         let tFirst = this.document.firstToken(ancestor);
-        if(this.haltAtToken.offset >= tFirst.offset){
+        if (this.haltAtToken.offset >= tFirst.offset) {
             this.haltTraverse = true;
         }
 
