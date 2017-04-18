@@ -1825,6 +1825,11 @@ export class SymbolIndex {
     private _symbolKeys(s: PhpSymbol) {
 
         let keys: string[] = [];
+        
+        if(s.name){
+            keys.push(s.name);
+        }
+
         let split = s.name.split('\\');
         let name = split.pop();
 
