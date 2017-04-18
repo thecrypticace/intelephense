@@ -458,7 +458,6 @@ class SimpleVariableCompletion implements CompletionStrategy {
 
         let items: lsp.CompletionItem[] = [];
         let varTable = context.variableTable;
-        console.log(varTable);
 
         for (let n = 0; n < limit; ++n) {
             items.push(toVariableCompletionItem(varSymbols[n], varTable));
