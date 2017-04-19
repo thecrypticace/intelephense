@@ -130,6 +130,11 @@ export namespace PhpSymbol {
         return s.children && s.children.find(isParameter) !== undefined;
     }
 
+    export function notFqn(s:PhpSymbol){
+        let pos = s.name.lastIndexOf('\\') + 1;
+        return s.name.slice(pos);
+    }
+
 }
 
 export class NameResolver {

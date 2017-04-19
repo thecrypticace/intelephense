@@ -46,31 +46,31 @@ function keywordCompletionItems(keywords: string[], text: string) {
 
 }
 
-function nameLabel(s: PhpSymbol, nsName: string, namePhraseType: PhraseType) {
-    let label = s.name;
+function insertText(s: PhpSymbol, nsName: string, namePhraseType: PhraseType) {
+    let insertText = s.name;
 
-    if (nsName && s.name.indexOf(nsName) === 0 && label.length > nsName.length + 1) {
-        label = label.slice(nsName.length + 1);
+    if (nsName && s.name.indexOf(nsName) === 0 && insertText.length > nsName.length + 1) {
+        insertText = insertText.slice(nsName.length + 1);
         if (namePhraseType === PhraseType.RelativeQualifiedName) {
-            label = 'namespace\\' + label;
+            insertText = 'namespace\\' + insertText;
         }
 
     } else if (nsName && namePhraseType !== PhraseType.FullyQualifiedName && !(s.modifiers & SymbolModifier.Use)) {
-        label = '\\' + label;
+        insertText = '\\' + insertText;
     }
-    return label;
+    return insertText;
 }
 
-function toNameCompletionItem(s: PhpSymbol, label?: string) {
+function toNameCompletionItem(s: PhpSymbol, insertText?: string) {
 
     switch (s.kind) {
         case SymbolKind.Class:
         case SymbolKind.Interface:
-            return toClassCompletionItem(s, label);
+            return toClassCompletionItem(s, insertText);
         case SymbolKind.Function:
-            return toFunctionCompletionItem(s, label);
+            return toFunctionCompletionItem(s, insertText);
         case SymbolKind.Constant:
-            return toConstantCompletionItem(s, label);
+            return toConstantCompletionItem(s, insertText);
         case SymbolKind.Namespace:
             return toNamespaceCompletionItem(s);
         default:
@@ -93,37 +93,31 @@ function symbolKindToLspSymbolKind(kind: SymbolKind) {
     }
 }
 
-function toClassCompletionItem(s: PhpSymbol, label?: string) {
+function toClassCompletionItem(s: PhpSymbol, insertText?: string) {
     let item = <lsp.CompletionItem>{
         kind: s.kind === SymbolKind.Interface ? lsp.CompletionItemKind.Interface : lsp.CompletionItemKind.Class,
-        label: label ? label : s.name,
-        documentation: s.description
-    }
-
-    if (item.label.length && item.label[0] === '\\') {
-        item.sortText = item.label.slice(1);
+        label: PhpSymbol.notFqn(s),
+        documentation: s.description,
+        insertText: insertText ? insertText : s.name
     }
 
     if ((s.modifiers & SymbolModifier.Use) > 0 && s.associated && s.associated.length) {
         item.detail = s.associated[0].name;
-    } else if (item.label.indexOf(s.name) < 0) {
+    } else {
         item.detail = s.name;
     }
 
     return item;
 }
 
-function toFunctionCompletionItem(s: PhpSymbol, label?: string) {
+function toFunctionCompletionItem(s: PhpSymbol, insertText?: string) {
 
     let item: lsp.CompletionItem = {
         kind: lsp.CompletionItemKind.Function,
-        label: label ? label : s.name,
+        label: PhpSymbol.notFqn(s),
         documentation: s.description,
-        detail: PhpSymbol.signatureString(s)
-    }
-
-    if (item.label.length && item.label[0] === '\\') {
-        item.sortText = item.label.slice(1);
+        detail: PhpSymbol.signatureString(s),
+        insertText:insertText ? insertText : s.name
     }
 
     return item;
@@ -155,16 +149,13 @@ function toClassConstantCompletionItem(s: PhpSymbol) {
     }
 }
 
-function toConstantCompletionItem(s: PhpSymbol, label?: string) {
+function toConstantCompletionItem(s: PhpSymbol, insertText?: string) {
     let item = <lsp.CompletionItem>{
         kind: lsp.CompletionItemKind.Value, //@todo use Constant
-        label: label ? label : s.name,
+        label: PhpSymbol.notFqn(s),
         documentation: s.description,
-        detail: '= ' + s.value
-    }
-
-    if (item.label.length && item.label[0] === '\\') {
-        item.sortText = item.label.slice(1);
+        detail: '= ' + s.value,
+        insertText: insertText ? insertText : s.name
     }
 
     return item;
@@ -179,20 +170,17 @@ function toPropertyCompletionItem(s: PhpSymbol) {
     }
 }
 
-function toConstructorCompletionItem(s: PhpSymbol, label?: string) {
+function toConstructorCompletionItem(s: PhpSymbol, insertText?: string) {
     let item = <lsp.CompletionItem>{
         kind: lsp.CompletionItemKind.Constructor,
-        label: label ? label : s.name,
-        documentation: s.description
-    }
-
-    if (item.label.length && item.label[0] === '\\') {
-        item.sortText = item.label.slice(1);
+        label: PhpSymbol.notFqn(s),
+        documentation: s.description,
+        insertText: insertText ? insertText : s.name
     }
 
     if ((s.modifiers & SymbolModifier.Use) > 0 && s.associated && s.associated.length) {
         item.detail = s.associated[0].name;
-    } else if (item.label.indexOf(s.name) < 0) {
+    } else {
         item.detail = s.name;
     }
 
@@ -349,7 +337,7 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         let isIncomplete = matches.length > maxItems - items.length;
 
         for (let n = 0; n < limit; ++n) {
-            items.push(this._toCompletionItem(matches[n], nameLabel(matches[n], context.namespaceName, namePhrase ? namePhrase.phraseType : 0)));
+            items.push(this._toCompletionItem(matches[n], insertText(matches[n], context.namespaceName, namePhrase ? namePhrase.phraseType : 0)));
         }
 
         return <lsp.CompletionList>{
@@ -360,7 +348,7 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
     }
 
     protected abstract _getKeywords(context: Context): string[];
-    protected abstract _toCompletionItem(s: PhpSymbol, label: string): lsp.CompletionItem;
+    protected abstract _toCompletionItem(s: PhpSymbol, insertText: string): lsp.CompletionItem;
 
     protected _getNamePhrase(context: Context) {
         return context.createTraverser().ancestor(this._isNamePhrase) as Phrase;
