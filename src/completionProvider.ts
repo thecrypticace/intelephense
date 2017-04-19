@@ -306,15 +306,6 @@ export class CompletionProvider {
 
     }
 
-    private _importedSymbolFilter(s: PhpSymbol) {
-        return (s.modifiers & SymbolModifier.Use) > 0 &&
-            (s.kind & (SymbolKind.Class | SymbolKind.Constant | SymbolKind.Function)) > 0
-    }
-
-    private _phraseType(p: Phrase) {
-        return p.phraseType;
-    }
-
 }
 
 interface CompletionStrategy {
@@ -351,7 +342,9 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
             };
         }
 
-        let matches = uniqueSymbolNames(context.symbolStore.match(text, pred, true));
+        //use directives
+        let matches = context.createNameResolver().importedSymbols.filter(pred);
+        Array.prototype.push.apply(matches, uniqueSymbolNames(context.symbolStore.match(text, pred, true)));
         let limit = Math.min(matches.length, maxItems - items.length);
         let isIncomplete = matches.length > maxItems - items.length;
 

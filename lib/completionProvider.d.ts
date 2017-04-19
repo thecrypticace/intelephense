@@ -9,6 +9,4 @@ export declare class CompletionProvider {
     constructor(symbolStore: SymbolStore, documentStore: ParsedDocumentStore);
     maxItems: number;
     provideCompletions(uri: string, position: lsp.Position): lsp.CompletionList;
-    private _importedSymbolFilter(s);
-    private _phraseType(p);
 }

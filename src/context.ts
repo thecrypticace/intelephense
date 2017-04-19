@@ -7,7 +7,7 @@
 import {
     SymbolStore, NameResolver, PhpSymbol, SymbolKind, SymbolModifier,
     ExpressionTypeResolver, VariableTypeResolver, VariableTable,
-    TypeString
+    TypeString, SymbolTable
 } from './symbol';
 import { TreeVisitor, TreeTraverser } from './types';
 import { ParsedDocument } from './parsedDocument';
@@ -243,6 +243,10 @@ export class Context {
         }
         return this._variableTable;
 
+    }
+
+    get symbolTable(){
+        return this.symbolStore.getSymbolTable(this.document.uri);
     }
 
     textBefore(length:number){

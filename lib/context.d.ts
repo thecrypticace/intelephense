@@ -1,4 +1,4 @@
-import { SymbolStore, NameResolver, PhpSymbol, SymbolKind, ExpressionTypeResolver, VariableTable, TypeString } from './symbol';
+import { SymbolStore, NameResolver, PhpSymbol, SymbolKind, ExpressionTypeResolver, VariableTable, TypeString, SymbolTable } from './symbol';
 import { TreeTraverser } from './types';
 import { ParsedDocument } from './parsedDocument';
 import { Position } from 'vscode-languageserver-types';
@@ -32,6 +32,7 @@ export declare class Context {
     readonly scopePhrase: Phrase;
     readonly scopeSymbol: PhpSymbol;
     readonly variableTable: VariableTable;
+    readonly symbolTable: SymbolTable;
     textBefore(length: number): string;
     tokenText(t: Token): string;
     nodeText(node: Phrase | Token, ignore?: TokenType[]): string;
