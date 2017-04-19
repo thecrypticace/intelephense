@@ -1130,17 +1130,15 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
 
         let paramString = paramStrings.join(', ');
         let escapedParamString = snippetEscape(paramString);
-        let label = `${s.name}(${paramString}) {}`;
         let insertText = `${s.name}(${escapedParamString}) {$0}`;
 
         let item: lsp.CompletionItem = {
             kind: lsp.CompletionItemKind.Method,
-            label: label,
+            label: s.name,
             insertText: insertText,
             insertTextFormat: lsp.InsertTextFormat.Snippet,
             documentation: s.description,
-            detail: s.scope,
-            filterText: s.name
+            detail: s.scope
         };
 
         return item;
