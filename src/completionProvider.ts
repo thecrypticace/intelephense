@@ -1124,7 +1124,8 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
             insertText: insertText,
             insertTextFormat: lsp.InsertTextFormat.Snippet,
             documentation: s.description,
-            detail: s.scope
+            detail: s.scope,
+            filterText:s.name
         };
 
         return item;
