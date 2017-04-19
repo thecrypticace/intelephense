@@ -662,7 +662,8 @@ export class SymbolStore {
 
     private _indexFilter(s: PhpSymbol) {
         return s.kind !== SymbolKind.Parameter &&
-            (s.kind !== SymbolKind.Variable || !s.scope) &&
+            (s.kind !== SymbolKind.Variable || !s.scope) && //script level vars
+            !(s.modifiers & SymbolModifier.Use) &&
             s.name.length > 0;
     }
 

@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.6.5] - 2017-04-20
+### Fixed
+* Use directives from other files showing as completion items
+
 ## [0.6.4] - 2017-04-19
 ### Added
 * Detail on variable and constructor completion items.
@@ -19,7 +23,6 @@
 * php7parser 0.9.1
 
 ## [0.6.0] - 2017-04-17
-Preview release
 ### Added
 * Document symbols provider
 * Workspace symbols provider
