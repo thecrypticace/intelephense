@@ -72,17 +72,17 @@ export function acronym(text: string) {
 export function trigrams(text: string) {
 
     if (text.length < 3) {
-        return [];
+        return new Set<string>();
     }
 
-    text = text.toLowerCase();
-    let trigrams: string[] = [];
+    //text = text.toLowerCase();
+    let trigrams: Set<string> = new Set();
 
     for (let n = 0, l = text.length - 2; n < l; ++n) {
-        trigrams.push(text.substr(n, 3));
+        trigrams.add(text.substr(n, 3));
     }
 
-    return Array.from(new Set<string>(trigrams));
+    return trigrams;
 }
 
 export function fuzzyStringMatch(query: string, subject: string) {
@@ -90,21 +90,31 @@ export function fuzzyStringMatch(query: string, subject: string) {
         return true;
     }
 
-    let substrings = trigrams(query);
-    if (query.length > 3 || query.length < 3) {
-        substrings.unshift(query);
-    }
+    query = query.toLowerCase();
+    let lcSubject = subject.toLowerCase();
 
-    for (let n = 0, l = substrings.length; n < l; ++n) {
-        if (subject.indexOf(substrings[n]) > -1) {
+    let substrings = trigrams(query);
+    substrings.add(query);
+
+    let iterator = substrings.values();
+    let result: IteratorResult<string>;
+
+    while (true) {
+
+        result = iterator.next();
+
+        if (result.done) {
+            break;
+        } else if (lcSubject.indexOf(result.value) > -1) {
             return true;
         }
+
     }
 
     return acronym(subject).indexOf(query) > -1;
 
 }
 
-export function ciStringMatch(a:string, b:string){
+export function ciStringMatch(a: string, b: string) {
     return a.toLowerCase() === b.toLowerCase();
 }

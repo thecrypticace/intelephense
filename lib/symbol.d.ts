@@ -212,7 +212,7 @@ export declare class SymbolIndex {
     remove(item: PhpSymbol): void;
     removeMany(items: PhpSymbol[]): void;
     match(text: string, fuzzy?: boolean): PhpSymbol[];
-    private _nodeMatch(text);
+    private _nodeMatch(lcText);
     private _nodeFind(text);
     private _insertNode(node);
     private _deleteNode(node);

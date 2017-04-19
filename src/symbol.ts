@@ -1745,13 +1745,13 @@ export class SymbolIndex {
 
     match(text: string, fuzzy?: boolean) {
 
+        text = text.toLowerCase();
         let substrings: string[];
-        if (fuzzy) {
-            substrings = util.trigrams(text);
-            if (text.length > 3 || text.length < 3) {
-                substrings.unshift(text);
-            }
 
+        if (fuzzy) {
+            let trigrams = util.trigrams(text);
+            trigrams.add(text);
+            substrings = Array.from(trigrams);
         } else {
             substrings = [text];
         }
@@ -1772,10 +1772,9 @@ export class SymbolIndex {
 
     }
 
-    private _nodeMatch(text: string) {
+    private _nodeMatch(lcText: string) {
 
         let collator = this._collator;
-        let lcText = text.toLowerCase();
         let compareLowerFn = (n: SymbolIndexNode) => {
             return collator.compare(n.key, lcText);
         };
@@ -1825,31 +1824,32 @@ export class SymbolIndex {
 
     private _symbolKeys(s: PhpSymbol) {
 
-        let keys: string[] = [];
-        
-        if(s.name){
-            keys.push(s.name.toLowerCase());
+        let notFqnPos = s.name.lastIndexOf('\\') + 1;
+        let name = s.name.slice(notFqnPos);
+        let lcName = name.toLowerCase();
+        let lcFqn = s.name.toLowerCase();
+
+        let keys = util.trigrams(lcName);
+        if (lcName) {
+            keys.add(lcName);
         }
 
-        let split = s.name.split('\\');
-        let name = split.pop();
+        keys.add(lcFqn);
 
-        Array.prototype.push.apply(keys, util.trigrams(name));
-        if (name && (name.length > 3 || name.length < 3)) {
-            keys.push(name.toLowerCase());
-        }
+        let lcSplit = lcFqn.split('\\');
+        lcSplit.pop();
 
-        for (let n = 0, l = split.length; n < l; ++n) {
-            if (split[n]) {
-                keys.push(split[n]);
+        for (let n = 0, l = lcSplit.length; n < l; ++n) {
+            if (lcSplit[n]) {
+                keys.add(lcSplit[n]);
             }
         }
 
         let acronym = util.acronym(name);
         if (acronym.length > 1) {
-            keys.push(acronym);
+            keys.add(acronym);
         }
-        return Array.from(new Set(keys));
+        return Array.from(keys);
     }
 
 }
