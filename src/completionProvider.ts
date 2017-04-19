@@ -512,10 +512,7 @@ class NameCompletion extends AbstractNameCompletion {
         'try',
         'unset',
         'use',
-        'while',
-        //only valid in class header but need as suggestions here for parse error
-        'extends',
-        'implements'
+        'while'
     ];
 
     private static _expressionKeywords = [
@@ -538,19 +535,49 @@ class NameCompletion extends AbstractNameCompletion {
         'as'
     ];
 
+    private static _openTagCompletion: lsp.CompletionList = {
+        isIncomplete: false,
+        items: [{
+            kind: lsp.CompletionItemKind.Keyword,
+            label: '<?php',
+            insertText: 'php'
+        }]
+    }
+
+    private static _extendsRegex = /\b(?:class|interface)\s+[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*\s+[a-z]+$/;
+    private static _implementsRegex = /\bclass\s+[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*(?:\s+extends\s+[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*)?\s+[a-z]+$/;
+
     canSuggest(context: Context) {
+
+        let traverser = context.createTraverser();
+        return ParsedDocument.isPhrase(traverser.parent(), [PhraseType.NamespaceName]) &&
+            traverser.ancestor(this._isNamePhrase) !== null;
+    }
+
+    completions(context: Context, maxItems: number) {
 
         //<?php (no trailing space) is considered short tag open and then name token
         //dont suggest in this context
         if (context.textBefore(3) === '<?p' ||
             context.textBefore(4) === '<?ph' ||
             context.textBefore(5) === '<?php') {
-            return false;
+            return NameCompletion._openTagCompletion;
         }
 
-        let traverser = context.createTraverser();
-        return ParsedDocument.isPhrase(traverser.parent(), [PhraseType.NamespaceName]) &&
-            traverser.ancestor(this._isNamePhrase) !== null;
+        //this strategy may get called during parse errors on class/interface declaration
+        //when wanting to use extends/implements.
+        //suppress name suggestions in this case
+        let textBefore = context.textBefore(200);
+        if (textBefore.match(NameCompletion._extendsRegex)) {
+            return lsp.CompletionList.create([{ kind: lsp.CompletionItemKind.Keyword, label: 'extends' }]);
+        }
+
+        if (textBefore.match(NameCompletion._implementsRegex)) {
+            return lsp.CompletionList.create([{ kind: lsp.CompletionItemKind.Keyword, label: 'implements' }]);
+        }
+
+        return super.completions(context, maxItems);
+
     }
 
     protected _toCompletionItem(s: PhpSymbol, label: string) {
@@ -1125,7 +1152,7 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
             insertTextFormat: lsp.InsertTextFormat.Snippet,
             documentation: s.description,
             detail: s.scope,
-            filterText:s.name
+            filterText: s.name
         };
 
         return item;
