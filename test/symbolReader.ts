@@ -15,6 +15,21 @@ function symbolReaderOutput(src: string) {
 
 describe('SymbolReader', () => {
 
+    it('namespaced abstract classes', function(){
+        let src = `<?php
+            namespace Foo;
+            /**
+             * docblock
+             */
+            abstract class Bar {}
+            class Baz extends Bar {}
+        `;
+
+        let output = symbolReaderOutput(src);
+        console.log(JSON.stringify(output, null, 4));
+
+    });
+
     it('Should read simple variables', () => {
         let src = `<?php 
                         $myVar = 1;

@@ -1825,27 +1825,18 @@ export class SymbolIndex {
     private _symbolKeys(s: PhpSymbol) {
 
         let notFqnPos = s.name.lastIndexOf('\\') + 1;
-        let name = s.name.slice(notFqnPos);
-        let lcName = name.toLowerCase();
+        let notFqn = s.name.slice(notFqnPos);
+        let lcNotFqn = notFqn.toLowerCase();
         let lcFqn = s.name.toLowerCase();
 
-        let keys = util.trigrams(lcName);
-        if (lcName) {
-            keys.add(lcName);
+        let keys = util.trigrams(lcNotFqn);
+        if (lcNotFqn) {
+            keys.add(lcNotFqn);
         }
 
         keys.add(lcFqn);
 
-        let lcSplit = lcFqn.split('\\');
-        lcSplit.pop();
-
-        for (let n = 0, l = lcSplit.length; n < l; ++n) {
-            if (lcSplit[n]) {
-                keys.add(lcSplit[n]);
-            }
-        }
-
-        let acronym = util.acronym(name);
+        let acronym = util.acronym(notFqn);
         if (acronym.length > 1) {
             keys.add(acronym);
         }
