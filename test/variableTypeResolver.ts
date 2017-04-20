@@ -21,6 +21,28 @@ function setup(phpSrc: string): [ParsedDocument, VariableTypeResolver] {
 
 describe('VariableTypeResolver', function () {
 
+    it('foreach', function(){
+
+        let src = 
+        `<?php
+            /** @var Foo[] $var */
+            $var = null;
+            foreach($var as $key => $val){
+
+            }
+        `;
+
+        let doc: ParsedDocument;
+        let varResolver: VariableTypeResolver;
+
+        [doc, varResolver] = setup(src);
+
+        let traverser = new TreeTraverser([doc.tree]);
+        traverser.traverse(varResolver);
+        assert.equal(varResolver.variableTable.getType('$val', '').toString(), 'Foo');
+
+    });
+
     it('Object creation simple assignment', function () {
 
         let src =

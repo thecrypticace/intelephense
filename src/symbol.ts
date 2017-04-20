@@ -293,7 +293,7 @@ export class TypeString {
 
         let parts: string[] = [];
         let part: string;
-
+        
         for (let n = 0; n < this._parts.length; ++n) {
             part = this._parts[n];
 
@@ -310,7 +310,7 @@ export class TypeString {
             }
 
         }
-
+        
         let typeString = new TypeString(null);
         typeString._parts = parts;
         return typeString;
@@ -2388,7 +2388,7 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
         let value = node.value;
 
         let exprResolver = new ExpressionTypeResolver(this.nameResolver, this.symbolStore, this.variableTable);
-        let type = exprResolver.resolveExpression(collection).arrayDereference();
+        let type = exprResolver.resolveExpression(collection.expr).arrayDereference();
 
         if (ParsedDocument.isPhrase(value.expr, [PhraseType.SimpleVariable])) {
             let varName = this._simpleVariable(<SimpleVariable>value.expr);
