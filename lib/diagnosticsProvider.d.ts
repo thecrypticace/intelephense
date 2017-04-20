@@ -13,7 +13,6 @@ export declare class DiagnosticsProvider {
     private _startDiagnostics;
     private _debounceMap;
     private _unsubscribeMap;
-    private _diagnosticsMap;
     private _maxItems;
     private _onParsedDocumentChanged;
     constructor();
@@ -24,6 +23,5 @@ export declare class DiagnosticsProvider {
     has(uri: string): boolean;
     debounceWait: number;
     private _diagnose(uri);
-    private _find(uri);
     private _parseErrorToDiagnostic(err, doc);
 }

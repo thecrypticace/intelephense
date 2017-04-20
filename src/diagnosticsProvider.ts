@@ -18,13 +18,12 @@ export class DiagnosticsProvider {
 
     maxItems: number;
 
-    private _docs: ParsedDocument[];
+    private _docs: { [index: string]: ParsedDocument };
     private _debounceWaitTime: number;
     private _publish: Event<PublishDiagnosticsEventArgs>;
     private _startDiagnostics: Event<string>;
     private _debounceMap: { [index: string]: Debounce<ParsedDocumentChangeEventArgs> };
     private _unsubscribeMap: { [index: string]: Unsubscribe };
-    private _diagnosticsMap: { [index: string]: lsp.Diagnostic[] };
     private _maxItems: number;
 
     private _onParsedDocumentChanged = (args: ParsedDocumentChangeEventArgs) => {
@@ -35,12 +34,11 @@ export class DiagnosticsProvider {
 
     constructor() {
         this._debounceWaitTime = 1000;
-        this._docs = [];
+        this._docs = {};
         this._publish = new Event<PublishDiagnosticsEventArgs>();
         this._startDiagnostics = new Event<string>();
         this._debounceMap = {};
         this._unsubscribeMap = {};
-        this._diagnosticsMap = {};
         this.maxItems = 100;
     }
 
@@ -57,7 +55,7 @@ export class DiagnosticsProvider {
             throw new Error('Duplicate Key');
         }
 
-        this._docs.unshift(doc);
+        this._docs[doc.uri] = doc;
 
         let dd = this._debounceMap[doc.uri] = new Debounce<ParsedDocumentChangeEventArgs>(
             this._onParsedDocumentChanged,
@@ -79,18 +77,15 @@ export class DiagnosticsProvider {
 
         this._unsubscribeMap[uri]();
         delete this._unsubscribeMap[uri];
-
-        //has will ensure doc is at index 0
-        this._docs.shift();
+        delete this._docs[uri];
         let debounce = this._debounceMap[uri];
         debounce.clear();
         delete this._debounceMap[uri];
-        delete this._diagnosticsMap[uri];
 
     }
 
     has(uri: string) {
-        return !!this._find(uri);
+        return this._docs[uri] !== undefined;
     }
 
     set debounceWait(value: number) {
@@ -105,7 +100,7 @@ export class DiagnosticsProvider {
 
         let diagnostics: lsp.Diagnostic[] = [];
         let parseErrorVisitor = new ErrorVisitor();
-        let doc = this._find(uri);
+        let doc = this._docs[uri];
         doc.traverse(parseErrorVisitor);
         let parseErrors = parseErrorVisitor.errors;
 
@@ -113,36 +108,8 @@ export class DiagnosticsProvider {
             diagnostics.push(this._parseErrorToDiagnostic(parseErrors[n], doc));
         }
 
-        this._diagnosticsMap[uri] = diagnostics;
-        diagnostics = [];
-
-        for (let n = 0, l = this._docs.length; n < l; ++n) {
-            Array.prototype.push.apply(diagnostics, this._diagnosticsMap[this._docs[n].uri]);
-        }
-
         return diagnostics.slice(0, this._maxItems);
 
-    }
-
-    private _find(uri: string) {
-        let shifted: ParsedDocument[] = [];
-        let doc: ParsedDocument;
-        let found: ParsedDocument;
-
-        while ((doc = this._docs.shift())) {
-            if (doc.uri === uri) {
-                found = doc;
-            } else {
-                shifted.push(doc);
-            }
-        }
-
-        this._docs = shifted;
-        if (found) {
-            this._docs.unshift(found);
-        }
-
-        return found;
     }
 
     private _parseErrorToDiagnostic(err: ParseError, doc: ParsedDocument) {
