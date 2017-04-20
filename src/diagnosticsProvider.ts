@@ -76,11 +76,10 @@ export class DiagnosticsProvider {
         }
 
         this._unsubscribeMap[uri]();
+        this._debounceMap[uri].clear();
+        delete this._debounceMap[uri];
         delete this._unsubscribeMap[uri];
         delete this._docs[uri];
-        let debounce = this._debounceMap[uri];
-        debounce.clear();
-        delete this._debounceMap[uri];
 
     }
 
@@ -101,6 +100,11 @@ export class DiagnosticsProvider {
         let diagnostics: lsp.Diagnostic[] = [];
         let parseErrorVisitor = new ErrorVisitor();
         let doc = this._docs[uri];
+
+        if(!doc){
+            return [];
+        }
+
         doc.traverse(parseErrorVisitor);
         let parseErrors = parseErrorVisitor.errors;
 
