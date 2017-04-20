@@ -62,11 +62,9 @@ export class DiagnosticsProvider {
             this._debounceWaitTime
         );
 
-        let unsubscribe = doc.changeEvent.subscribe((x) => {
+        this._unsubscribeMap[doc.uri] = doc.changeEvent.subscribe((x) => {
             dd.handle(x);
         });
-
-        this._unsubscribeMap[doc.uri] = unsubscribe;
 
     }
 
