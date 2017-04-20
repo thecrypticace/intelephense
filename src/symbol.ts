@@ -2526,7 +2526,7 @@ export class VariableTable {
         let keys = Object.keys(b.variables);
         let typedVar: TypedVariable;
         for (let n = 0, l = keys.length; n < l; ++n) {
-            typedVar = b[keys[n]];
+            typedVar = b.variables[keys[n]];
             if (a.variables[typedVar.name]) {
                 a.variables[typedVar.name].type = a.variables[typedVar.name].type.merge(typedVar.type);
             } else {
