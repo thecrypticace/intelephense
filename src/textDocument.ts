@@ -89,6 +89,12 @@ export class TextDocument {
 
     offsetAtPosition(pos: Position) {
         let offset = this.offsetAtLine(pos.line) + pos.character;
+        let nextLineOffset = this.offsetAtLine(pos.line + 1);
+
+        if(offset >= nextLineOffset){
+            offset = nextLineOffset + (offset - nextLineOffset);
+        }
+
         return Math.max(0, Math.min(offset, this._text.length));
     }
 
