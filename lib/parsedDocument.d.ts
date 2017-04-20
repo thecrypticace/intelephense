@@ -29,7 +29,6 @@ export declare class ParsedDocument {
     createAnonymousName(node: Phrase): string;
     positionAtOffset(offset: number): lsp.Position;
     offsetAtPosition(position: lsp.Position): number;
-    private _textDocumentChangeCompareFn(a, b);
 }
 export declare namespace ParsedDocument {
     function isToken(node: Phrase | Token, types?: TokenType[]): boolean;

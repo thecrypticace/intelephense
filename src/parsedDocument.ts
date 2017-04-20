@@ -74,7 +74,6 @@ export class ParsedDocument {
 
     applyChanges(contentChanges: lsp.TextDocumentContentChangeEvent[]) {
 
-        //contentChanges.sort(this._textDocumentChangeCompareFn);
         let change: lsp.TextDocumentContentChangeEvent;
 
         for (let n = 0, l = contentChanges.length; n < l; ++n) {
@@ -174,16 +173,6 @@ export class ParsedDocument {
     offsetAtPosition(position: lsp.Position) {
         return this._textDocument.offsetAtPosition(position);
     }
-
-    private _textDocumentChangeCompareFn(a: lsp.TextDocumentContentChangeEvent, b: lsp.TextDocumentContentChangeEvent) {
-        if (a.range.end.line > b.range.end.line) {
-            return -1;
-        } else if (a.range.end.line < b.range.end.line) {
-            return 1;
-        } else {
-            return b.range.end.character - a.range.end.character;
-        }
-    };
 
 }
 
