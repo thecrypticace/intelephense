@@ -130,7 +130,7 @@ export namespace PhpSymbol {
         return s.children && s.children.find(isParameter) !== undefined;
     }
 
-    export function notFqn(s:PhpSymbol){
+    export function notFqn(s: PhpSymbol) {
         let pos = s.name.lastIndexOf('\\') + 1;
         return s.name.slice(pos);
     }
@@ -1773,7 +1773,46 @@ export class SymbolIndex {
             Array.prototype.push.apply(matches, nodes[n].items);
         }
 
-        return Array.from(new Set<PhpSymbol>(matches));
+        if (fuzzy) {
+            return this._sortedFuzzyResults(text, matches);
+        } else {
+            return Array.from(new Set<PhpSymbol>(matches));
+        }
+
+    }
+
+    private _sortedFuzzyResults(query: string, matches: PhpSymbol[]) {
+
+        let map: { [index: string]: number } = {};
+        let s: PhpSymbol;
+        let name: string;
+        let checkIndexOf = query.length > 3;
+        let val:number;
+
+        for (let n = 0, l = matches.length; n < l; ++n) {
+            s = matches[n];
+            name = s.name;
+            if (map[name] === undefined) {
+                val = 0;
+                if (checkIndexOf) {
+                    val = (PhpSymbol.notFqn(s).indexOf(query) + 1) * -10;
+                    if (val < 0) {
+                        val += 1000;
+                    }
+                }
+                map[name] = val;
+            }
+            ++map[name];
+        }
+
+        let unique = Array.from(new Set(matches));
+
+        let sortFn = (a: PhpSymbol, b: PhpSymbol) => {
+            return map[b.name] - map[a.name];
+        }
+
+        unique.sort(sortFn);
+        return unique;
 
     }
 
