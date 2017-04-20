@@ -2188,7 +2188,8 @@ export class VariableTypeResolver implements TreeVisitor<Phrase | Token>{
         }
 
         let tFirst = this.document.firstToken(ancestor);
-        if (this.haltAtToken.offset >= tFirst.offset) {
+        let tEnd = this.document.lastToken(ancestor);
+        if (this.haltAtToken.offset >= tFirst.offset && this.haltAtToken.offset <= tEnd.offset) {
             this.haltTraverse = true;
         }
 
