@@ -85,6 +85,7 @@ export class DiagnosticsProvider {
         let debounce = this._debounceMap[uri];
         debounce.clear();
         delete this._debounceMap[uri];
+        delete this._diagnosticsMap[uri];
 
     }
 
