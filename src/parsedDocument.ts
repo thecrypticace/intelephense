@@ -74,7 +74,7 @@ export class ParsedDocument {
 
     applyChanges(contentChanges: lsp.TextDocumentContentChangeEvent[]) {
 
-        contentChanges.sort(this._textDocumentChangeCompareFn);
+        //contentChanges.sort(this._textDocumentChangeCompareFn);
         let change: lsp.TextDocumentContentChangeEvent;
 
         for (let n = 0, l = contentChanges.length; n < l; ++n) {
