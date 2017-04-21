@@ -15,6 +15,7 @@ function symbolReaderOutput(src: string) {
 
 describe('SymbolReader', () => {
 
+
     it('namespace use parse error', function () {
 
         let src =
@@ -26,33 +27,25 @@ describe('SymbolReader', () => {
 
     });
 
-    it('classes containing traits', function () {
+    it('namespace, use, class, trait', function () {
 
         let src =
             `<?php
-            namespace Bar;
+            namespace Wat;
+
             use Foo\\Baz;
             class Bar {
                 use Baz;
             }
         `;
         let output = symbolReaderOutput(src);
-        //console.log(JSON.stringify(output, null, 4));
-    });
-
-    it('namespaced abstract classes', function () {
-        let src = `<?php
-            namespace Foo;
-            /**
-             * docblock
-             */
-            abstract class Bar {}
-            class Baz extends Bar {}
-        `;
-
-        let output = symbolReaderOutput(src);
-        //console.log(JSON.stringify(output, null, 4));
-
+        assert.equal(output.children[0].kind, SymbolKind.Namespace);
+        assert.equal(output.children[0].name, 'Wat');
+        assert.equal(output.children[1].kind, SymbolKind.Class);
+        assert.equal(output.children[1].name, 'Baz');
+        assert.equal(output.children[2].kind, SymbolKind.Class);
+        assert.equal(output.children[2].name, 'Wat\\Bar');
+        assert.deepEqual(output.children[2].associated[0], {kind: SymbolKind.Trait, name:'Foo\\Baz'});
     });
 
     it('Should read simple variables', () => {

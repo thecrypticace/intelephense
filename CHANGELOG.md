@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.6.8] - 2017-04-21
+### Fixed
+* Crash when encountering parse error on namespace use
+* Traits mangling parse tree (php7parser)
+
+### Dependencies
+* php7parser 0.9.3
+
 ## [0.6.7] - 2017-04-21
 ### Dependencies 
 * php7parser 0.9.2
