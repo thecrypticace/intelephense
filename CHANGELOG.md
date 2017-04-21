@@ -1,8 +1,13 @@
 # Change Log
 
+## [0.6.7] - 2017-04-21
+### Dependencies 
+* php7parser 0.9.2
+
 ## [0.6.6] - 2017-04-21
 ### Added 
 * Sorting of fuzzy symbol matches
+
 ### Fixed
 * Diagnostics being reported on wrong file.
 * Document becoming out of sync when applying multiple changes
@@ -14,6 +19,7 @@
 * Shortened method override/implementation completion labels to just method name.
 * Reduced completion spam for extends and implements contexts.
 * Rolled back indexing on fqn parts.
+
 ### Fixed
 * Use directives from other files showing as completion items
 
@@ -21,6 +27,7 @@
 ### Added
 * Detail on variable and constructor completion items.
 * Indexing on fqn parts.
+
 ### Fixed
 * Variable types not resolving when on rhs of assignment
 * Infinite recursion on cyclical inheritance
@@ -29,9 +36,11 @@
 ## [0.6.2] - 2017-04-18
 ### Added
 * Tests - DefintionProvider; SignatureHelpProvider; CompletionProvider; TypeString
+
 ### Fixed
 * Completion provider fixes and tweaks.
 * Definition provider go to property fix.
+
 ### Dependencies
 * php7parser 0.9.1
 
