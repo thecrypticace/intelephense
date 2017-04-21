@@ -126,6 +126,12 @@ export declare class SymbolStore {
     lookupTypeMember(query: MemberQuery): PhpSymbol;
     lookupMembersOnTypes(queries: MemberQuery[]): PhpSymbol[];
     lookupMemberOnTypes(queries: MemberQuery[]): PhpSymbol;
+    /**
+     * This will return duplicate symbols where members are overridden or already implemented
+     * @param type
+     * @param predicate
+     * @param typeHistory
+     */
     private _lookupTypeMembers(type, predicate, typeHistory);
     private _indexSymbols(root);
     private _indexFilter(s);

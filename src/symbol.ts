@@ -130,8 +130,8 @@ export namespace PhpSymbol {
         return s.children && s.children.find(isParameter) !== undefined;
     }
 
-    export function notFqn(text:string) {
-        if(!text){
+    export function notFqn(text: string) {
+        if (!text) {
             return text;
         }
         let pos = text.lastIndexOf('\\') + 1;
@@ -296,7 +296,7 @@ export class TypeString {
 
         let parts: string[] = [];
         let part: string;
-        
+
         for (let n = 0; n < this._parts.length; ++n) {
             part = this._parts[n];
 
@@ -313,7 +313,7 @@ export class TypeString {
             }
 
         }
-        
+
         let typeString = new TypeString(null);
         typeString._parts = parts;
         return typeString;
@@ -619,6 +619,12 @@ export class SymbolStore {
         return this.lookupMembersOnTypes(queries).shift();
     }
 
+    /**
+     * This will return duplicate symbols where members are overridden or already implemented
+     * @param type 
+     * @param predicate 
+     * @param typeHistory 
+     */
     private _lookupTypeMembers(type: PhpSymbol, predicate: Predicate<PhpSymbol>, typeHistory: string[]) {
 
         if (!type || typeHistory.indexOf(type.name) > -1) {
@@ -627,33 +633,27 @@ export class SymbolStore {
 
         //prevent cyclical lookup
         typeHistory.push(type.name);
-
         let members = type.children ? type.children.filter(predicate) : [];
-        let associated: PhpSymbol[] = [];
-        let associatedKindMask = SymbolKind.Class ? SymbolKind.Class | SymbolKind.Trait : SymbolKind.Interface;
-        let baseSymbol: PhpSymbol;
 
-        if (type.associated) {
-            for (let n = 0, l = type.associated.length; n < l; ++n) {
-                baseSymbol = type.associated[n];
-                if ((baseSymbol.kind & associatedKindMask) > 0 && baseSymbol.name) {
-                    associated.push(baseSymbol);
-                }
-            }
+        if (!type.associated) {
+            return members;
         }
 
         //lookup in base class/traits
-        let basePredicate: Predicate<PhpSymbol> = (x) => {
+        let baseMemberPredicate: Predicate<PhpSymbol> = (x) => {
             return predicate(x) && !(x.modifiers & SymbolModifier.Private);
         };
+        let baseSymbol: PhpSymbol;
+        let basePredicate: Predicate<PhpSymbol>;
 
-        for (let n = 0, l = associated.length; n < l; ++n) {
-            baseSymbol = associated[n];
-            baseSymbol = this.find(baseSymbol.name, (x) => {
+        for (let n = 0, l = type.associated.length; n < l; ++n) {
+            baseSymbol = type.associated[n]; //stub symbol
+            basePredicate = (x) => {
                 return x.kind === baseSymbol.kind;
-            });
+            };
+            baseSymbol = this.find(baseSymbol.name, basePredicate);
             if (baseSymbol) {
-                Array.prototype.push.apply(members, this._lookupTypeMembers(baseSymbol, basePredicate, typeHistory));
+                Array.prototype.push.apply(members, this._lookupTypeMembers(baseSymbol, baseMemberPredicate, typeHistory));
             }
 
         }
@@ -757,7 +757,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                     this.namespaceUseDeclarationPrefix
                 );
 
-                if(!s){
+                if (!s) {
                     return false;
                 }
 
@@ -1795,7 +1795,7 @@ export class SymbolIndex {
         let s: PhpSymbol;
         let name: string;
         let checkIndexOf = query.length > 3;
-        let val:number;
+        let val: number;
 
         for (let n = 0, l = matches.length; n < l; ++n) {
             s = matches[n];
