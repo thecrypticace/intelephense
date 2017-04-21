@@ -96,7 +96,7 @@ function symbolKindToLspSymbolKind(kind: SymbolKind) {
 function toClassCompletionItem(s: PhpSymbol, insertText?: string) {
     let item = <lsp.CompletionItem>{
         kind: s.kind === SymbolKind.Interface ? lsp.CompletionItemKind.Interface : lsp.CompletionItemKind.Class,
-        label: PhpSymbol.notFqn(s),
+        label: PhpSymbol.notFqn(s.name),
         documentation: s.description,
         insertText: insertText ? insertText : s.name
     }
@@ -114,7 +114,7 @@ function toFunctionCompletionItem(s: PhpSymbol, insertText?: string) {
 
     let item: lsp.CompletionItem = {
         kind: lsp.CompletionItemKind.Function,
-        label: PhpSymbol.notFqn(s),
+        label: PhpSymbol.notFqn(s.name),
         documentation: s.description,
         detail: PhpSymbol.signatureString(s),
         insertText:insertText ? insertText : s.name
@@ -152,7 +152,7 @@ function toClassConstantCompletionItem(s: PhpSymbol) {
 function toConstantCompletionItem(s: PhpSymbol, insertText?: string) {
     let item = <lsp.CompletionItem>{
         kind: lsp.CompletionItemKind.Value, //@todo use Constant
-        label: PhpSymbol.notFqn(s),
+        label: PhpSymbol.notFqn(s.name),
         documentation: s.description,
         detail: '= ' + s.value,
         insertText: insertText ? insertText : s.name
@@ -173,7 +173,7 @@ function toPropertyCompletionItem(s: PhpSymbol) {
 function toConstructorCompletionItem(s: PhpSymbol, insertText?: string) {
     let item = <lsp.CompletionItem>{
         kind: lsp.CompletionItemKind.Constructor,
-        label: PhpSymbol.notFqn(s),
+        label: PhpSymbol.notFqn(s.name),
         documentation: s.description,
         insertText: insertText ? insertText : s.name
     }

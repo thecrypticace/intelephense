@@ -1,13 +1,13 @@
 import { SymbolReader, NameResolver, PhpSymbol, SymbolKind, SymbolTable } from '../src/symbol';
 import { ParsedDocument } from '../src/parsedDocument';
-import { expect } from 'chai';
+import { assert } from 'chai';
 import 'mocha';
 
 function symbolReaderOutput(src: string) {
 
     let parsedDoc = new ParsedDocument('test', src);
     let symbolTree: PhpSymbol = { kind: SymbolKind.None, name: '' };
-    let sr = new SymbolReader(parsedDoc, new NameResolver(parsedDoc, [], '','',''), [symbolTree]);
+    let sr = new SymbolReader(parsedDoc, new NameResolver(parsedDoc, [], '', '', ''), [symbolTree]);
     parsedDoc.traverse(sr);
     return symbolTree;
 
@@ -15,7 +15,32 @@ function symbolReaderOutput(src: string) {
 
 describe('SymbolReader', () => {
 
-    it('namespaced abstract classes', function(){
+    it('namespace use parse error', function () {
+
+        let src =
+            `<?php
+            use
+        `;
+
+        assert.doesNotThrow(() => { symbolReaderOutput(src) });
+
+    });
+
+    it('classes containing traits', function () {
+
+        let src =
+            `<?php
+            namespace Bar;
+            use Foo\\Baz;
+            class Bar {
+                use Baz;
+            }
+        `;
+        let output = symbolReaderOutput(src);
+        //console.log(JSON.stringify(output, null, 4));
+    });
+
+    it('namespaced abstract classes', function () {
         let src = `<?php
             namespace Foo;
             /**
@@ -26,7 +51,7 @@ describe('SymbolReader', () => {
         `;
 
         let output = symbolReaderOutput(src);
-        console.log(JSON.stringify(output, null, 4));
+        //console.log(JSON.stringify(output, null, 4));
 
     });
 
@@ -39,7 +64,7 @@ describe('SymbolReader', () => {
         //console.log(JSON.stringify(output, null, 4));
     });
 
-    it('Should assign phpdoc info', ()=>{
+    it('Should assign phpdoc info', () => {
 
         let src = `
         <?php
@@ -54,7 +79,7 @@ describe('SymbolReader', () => {
         `;
 
         let output = symbolReaderOutput(src);
-        console.log(JSON.stringify(output, null, 4));
+        //console.log(JSON.stringify(output, null, 4));
 
     });
 });

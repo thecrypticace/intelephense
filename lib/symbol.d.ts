@@ -49,7 +49,7 @@ export interface PhpSymbol {
 export declare namespace PhpSymbol {
     function signatureString(s: PhpSymbol): string;
     function hasParameters(s: PhpSymbol): boolean;
-    function notFqn(s: PhpSymbol): string;
+    function notFqn(text: string): string;
 }
 export declare class NameResolver {
     document: ParsedDocument;

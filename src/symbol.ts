@@ -130,9 +130,12 @@ export namespace PhpSymbol {
         return s.children && s.children.find(isParameter) !== undefined;
     }
 
-    export function notFqn(s: PhpSymbol) {
-        let pos = s.name.lastIndexOf('\\') + 1;
-        return s.name.slice(pos);
+    export function notFqn(text:string) {
+        if(!text){
+            return text;
+        }
+        let pos = text.lastIndexOf('\\') + 1;
+        return text.slice(pos);
     }
 
 }
@@ -753,6 +756,11 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                     this.namespaceUseDeclarationKind,
                     this.namespaceUseDeclarationPrefix
                 );
+
+                if(!s){
+                    return false;
+                }
+
                 this._addSymbol(s, false);
                 if (s.associated && s.associated.length > 0 && s.name) {
                     this.nameResolver.importedSymbols.push(s);
@@ -1582,7 +1590,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     concatNamespaceName(prefix: string, name: string) {
         if (!name) {
-            return null;
+            return name;
         } else if (!prefix) {
             return name;
         } else {
@@ -1599,7 +1607,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
         let s: PhpSymbol = {
             kind: kind ? kind : SymbolKind.Class,
-            name: node.aliasingClause ? this.parsedDocument.tokenText(node.aliasingClause.alias) : fqn.split('\\').pop(),
+            name: node.aliasingClause ? this.parsedDocument.tokenText(node.aliasingClause.alias) : PhpSymbol.notFqn(fqn),
             associated: [],
             location: this.phraseLocation(node),
             modifiers: SymbolModifier.Use
@@ -1795,7 +1803,7 @@ export class SymbolIndex {
             if (map[name] === undefined) {
                 val = 0;
                 if (checkIndexOf) {
-                    val = (PhpSymbol.notFqn(s).indexOf(query) + 1) * -10;
+                    val = (PhpSymbol.notFqn(s.name).indexOf(query) + 1) * -10;
                     if (val < 0) {
                         val += 1000;
                     }
