@@ -138,7 +138,7 @@ class ErrorVisitor implements TreeVisitor<Phrase | Token>{
         return this._errors;
     }
 
-    preOrder(node: Token | Phrase, spine: (Token | Phrase)[]) {
+    preorder(node: Token | Phrase, spine: (Token | Phrase)[]) {
 
         if (ParsedDocument.isPhrase(node) && (<Phrase>node).errors) {
             Array.prototype.push.apply(this._errors, (<Phrase>node).errors);

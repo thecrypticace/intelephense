@@ -13,7 +13,7 @@ import { TextDocument } from './textDocument';
 import * as lsp from 'vscode-languageserver-types';
 import {
     TreeVisitor, TreeTraverser, Event, Debounce, Unsubscribe,
-    Predicate
+    Predicate, Traversable
 } from './types';
 
 const textDocumentChangeDebounceWait = 250;
@@ -22,7 +22,7 @@ export interface ParsedDocumentChangeEventArgs {
     parsedDocument: ParsedDocument;
 }
 
-export class ParsedDocument {
+export class ParsedDocument implements Traversable<Phrase | Token>{
 
     private static _wordRegex = /[$a-zA-Z_\x80-\xff][\\a-zA-Z0-9_\x80-\xff]*$/;
     private _textDocument: TextDocument;
@@ -53,7 +53,7 @@ export class ParsedDocument {
         return this._changeEvent;
     }
 
-    textBeforeOffset(offset:number, length:number){
+    textBeforeOffset(offset: number, length: number) {
         return this._textDocument.textBeforeOffset(offset, length);
     }
 
@@ -70,6 +70,7 @@ export class ParsedDocument {
     traverse(visitor: TreeVisitor<Phrase | Token>) {
         let traverser = new TreeTraverser<Phrase | Token>([this._parseTree]);
         traverser.traverse(visitor);
+        return visitor;
     }
 
     applyChanges(contentChanges: lsp.TextDocumentContentChangeEvent[]) {
@@ -96,9 +97,35 @@ export class ParsedDocument {
         }
     }
 
-    phraseRange(p: Phrase) {
-        let tFirst = this.firstToken(p);
-        let tLast = this.lastToken(p);
+    nodeLocation(node: Phrase | Token) {
+        if (!node) {
+            return null;
+        }
+
+        let range = this.nodeRange(node);
+
+        if (!range) {
+            return null;
+        }
+
+        return <lsp.Location>{
+            uri: this.uri,
+            range: range
+        }
+    }
+
+    nodeRange(node: Phrase | Token) {
+
+        if (!node) {
+            return null;
+        }
+
+        if (ParsedDocument.isToken(node)) {
+            return this.tokenRange(<Token>node);
+        }
+
+        let tFirst = this.firstToken(node);
+        let tLast = this.lastToken(node);
 
         if (!tFirst || !tLast) {
             return null;
@@ -154,6 +181,10 @@ export class ParsedDocument {
             return '';
         }
 
+        if (ParsedDocument.isToken(node)) {
+            return this.tokenText(<Token>node);
+        }
+
         let visitor = new ToStringVisitor(this, ignore);
         let traverser = new TreeTraverser([node]);
         traverser.traverse(visitor);
@@ -161,7 +192,7 @@ export class ParsedDocument {
     }
 
     createAnonymousName(node: Phrase) {
-        let range = this.phraseRange(node);
+        let range = this.nodeRange(node);
         let suffix = [range.start.line, range.start.character, range.end.line, range.end.character].join('#');
         return '#anonymous#' + suffix;
     }
@@ -295,7 +326,7 @@ class ToStringVisitor implements TreeVisitor<Phrase | Token> {
         return this._text;
     }
 
-    postOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+    postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
         if (ParsedDocument.isToken(node) && (!this._ignore || this._ignore.indexOf((<Token>node).tokenType) < 0)) {
             this._text += this._doc.tokenText(<Token>node);

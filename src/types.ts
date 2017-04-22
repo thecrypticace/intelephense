@@ -91,12 +91,12 @@ export class TreeTraverser<T extends TreeLike> {
         return visitor.count;
     }
 
-    depth(){
+    depth() {
         return this._spine.length - 1;
     }
 
-    up(n:number){
-        let steps = Math.max(this._spine.length -1, n);
+    up(n: number) {
+        let steps = Math.max(this._spine.length - 1, n);
         this._spine = this._spine.slice(0, this._spine.length - steps);
     }
 
@@ -165,8 +165,8 @@ export class TreeTraverser<T extends TreeLike> {
 
     }
 
-    parent(){
-        if(this._spine.length > 1){
+    parent() {
+        if (this._spine.length > 1) {
             this._spine.pop();
             return this.node;
         }
@@ -174,7 +174,7 @@ export class TreeTraverser<T extends TreeLike> {
         return null;
     }
 
-    clone(){
+    clone() {
         return new TreeTraverser(this._spine);
     }
 
@@ -186,8 +186,8 @@ export class TreeTraverser<T extends TreeLike> {
 
         let descend = true;
 
-        if (visitor.preOrder) {
-            descend = visitor.preOrder(treeNode, spine);
+        if (visitor.preorder) {
+            descend = visitor.preorder(treeNode, spine);
             if (visitor.haltTraverse) {
                 return;
             }
@@ -206,19 +206,32 @@ export class TreeTraverser<T extends TreeLike> {
 
         }
 
-        if (visitor.postOrder) {
-            visitor.postOrder(treeNode, spine);
+        if (visitor.postorder) {
+            visitor.postorder(treeNode, spine);
         }
 
     }
 
 }
 
+export interface Traversable<T extends TreeLike> {
+    traverse(visitor: TreeVisitor<T>): TreeVisitor<T>;
+}
+
 export interface TreeVisitor<T extends TreeLike> {
 
+    /**
+     * True will halt traverse immediately.
+     * No further functions will be called.
+     */
     haltTraverse?: boolean;
-    preOrder?(node: T, spine: T[]): boolean;
-    postOrder?(node: T, spine: T[]): void;
+
+    /**
+     * Return value determines whether to descend into child nodes
+     */
+    preorder?(node: T, spine: T[]): boolean;
+
+    postorder?(node: T, spine: T[]): void;
 
 }
 
@@ -236,7 +249,7 @@ class FilterVisitor<T> implements TreeVisitor<T>{
         return this._array;
     }
 
-    preOrder(node: T, spine: T[]) {
+    preorder(node: T, spine: T[]) {
         if (this._predicate(node)) {
             this._array.push(node);
         }
@@ -261,7 +274,7 @@ class FindVisitor<T> implements TreeVisitor<T> {
         return this._found;
     }
 
-    preOrder(node: T, spine: T[]) {
+    preorder(node: T, spine: T[]) {
 
         if (this._predicate(node)) {
             this._found = spine.slice(0);
@@ -331,7 +344,7 @@ export class ToArrayVisitor<T> implements TreeVisitor<T> {
         return this._array;
     }
 
-    preOrder(t: T, spine: T[]) {
+    preorder(t: T, spine: T[]) {
         this._array.push(t);
         return true;
     }
@@ -350,7 +363,7 @@ export class CountVisitor<T> implements TreeVisitor<T> {
         return this._count;
     }
 
-    preOrder(t: T, spine: T[]) {
+    preorder(t: T, spine: T[]) {
         ++this._count;
         return true;
     }

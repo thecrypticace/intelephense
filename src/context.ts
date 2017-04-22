@@ -5,38 +5,35 @@
 'use strict';
 
 import {
-    SymbolStore, NameResolver, PhpSymbol, SymbolKind, SymbolModifier,
-    ExpressionTypeResolver, VariableTypeResolver, VariableTable,
-    TypeString, SymbolTable
+    SymbolStore, PhpSymbol, SymbolKind, SymbolModifier,
+    ExpressionTypeResolver, VariableTypeResolver, VariableTable
 } from './symbol';
-import { TreeVisitor, TreeTraverser } from './types';
+import {NameResolver} from './nameResolver';
+import { TreeTraverser } from './types';
+import {TypeString} from './typeString';
 import { ParsedDocument } from './parsedDocument';
+import {ParsedDocumentVisitor} from './parsedDocumentVisitor';
 import { Position } from 'vscode-languageserver-types';
 import {
     Phrase, Token, PhraseType, NamespaceDefinition, ClassDeclaration,
     TokenType
 } from 'php7parser';
 
-class ContextVisitor implements TreeVisitor<Phrase | Token>{
-
-    haltTraverse: boolean;
+class ContextVisitor extends ParsedDocumentVisitor {
 
     private _spine: (Phrase | Token)[];
-    private _namespaceDefinition: NamespaceDefinition;
 
-    constructor(public offset) {
-        this.haltTraverse = false;
+    constructor(
+        public offset:number, 
+        public nameResolver:NameResolver) {
+        super(nameResolver)
     }
 
-    get spine() {
-        return this._spine;
+    get spine(){
+        return this._spine.slice(0);
     }
 
-    get namespaceDefinition() {
-        return this._namespaceDefinition;
-    }
-
-    preOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+    protected _preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
         if (this.haltTraverse) {
             return false;
@@ -49,24 +46,16 @@ class ContextVisitor implements TreeVisitor<Phrase | Token>{
             return false;
         }
 
-        if ((<Phrase>node).phraseType === PhraseType.NamespaceDefinition) {
-            this._namespaceDefinition = <NamespaceDefinition>node;
-        }
-
         return true;
 
     }
 
-    postOrder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+    protected _postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
         if (this.haltTraverse) {
             return;
         }
 
-        if ((<Phrase>node).phraseType === PhraseType.NamespaceDefinition &&
-            (<NamespaceDefinition>node).statementList) {
-            this._namespaceDefinition = undefined;
-        }
     }
 
 
@@ -85,7 +74,11 @@ export class Context {
     private _thisBaseSymbol: PhpSymbol;
     private _namespaceName: string;
 
-    constructor(public symbolStore: SymbolStore, public document: ParsedDocument, public position: Position) {
+    constructor(
+        public symbolStore:SymbolStore,
+        public document: ParsedDocument, 
+        public position: Position
+    ) {
 
         this._offset = document.offsetAtPosition(position) - 1;
         let contextVisitor = new ContextVisitor(this._offset);
@@ -169,7 +162,7 @@ export class Context {
             let phrase = this.thisPhrase;
             if (phrase) {
                 let symbolTable = this.symbolStore.getSymbolTable(this.document.uri);
-                let phrasePos = this.document.phraseRange(phrase).start;
+                let phrasePos = this.document.nodeRange(phrase).start;
                 this._thisSymbol = symbolTable.symbolAtPosition(phrasePos);
             } else {
                 this._thisSymbol = null;
@@ -219,7 +212,7 @@ export class Context {
 
             let phrase = this.scopePhrase;
             let symbolTable = this.symbolStore.getSymbolTable(this.document.uri);
-            let phrasePos = this.document.phraseRange(phrase).start;
+            let phrasePos = this.document.nodeRange(phrase).start;
             this._scopeSymbol = symbolTable.symbolAtPosition(phrasePos);
 
             if (!this._scopeSymbol) {
