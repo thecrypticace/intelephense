@@ -298,6 +298,10 @@ export class SymbolReader extends ParsedDocumentVisitor {
                 }
                 return true;
 
+            case PhraseType.FunctionDeclarationBody:
+            case PhraseType.MethodDeclarationBody:
+                return !this.externalOnly;
+
             case undefined:
                 this._token(<Token>node);
                 return false;
