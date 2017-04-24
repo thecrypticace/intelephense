@@ -192,9 +192,9 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
     }
 
     createAnonymousName(node: Phrase) {
-        let range = this.nodeRange(node);
-        let suffix = [range.start.line, range.start.character, range.end.line, range.end.character].join('#');
-        return '#anonymous#' + suffix;
+        let tFirst = this.firstToken(node);
+        let offset = tFirst ? tFirst.offset : 0;
+        return `#anonymous#${this.uri}#${offset}`;
     }
 
     positionAtOffset(offset: number) {

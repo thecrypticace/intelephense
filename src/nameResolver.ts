@@ -18,36 +18,37 @@ import { TreeTraverser, TreeVisitor } from './types';
 
 export class NameResolver {
 
-    constructor(
-        public document: ParsedDocument,
-        public importedSymbolStubs?: PhpSymbol[],
-        public namespaceName?: string,
-        public className?: string,
-        public classBaseName?: string
-    ) {
-        if(!this.className){
-            this.className = '';
-        }
+    private _classStack:[string, string][];
+    rules:PhpSymbol[];
+    namespace = '';
 
-        if(!this.importedSymbolStubs){
-            this.importedSymbolStubs = [];
-        }
+    constructor() {
+        this.rules = [];
+        this._classStack = [];
+     }
 
-        if(!this.namespaceName){
-            this.namespaceName = '';
-        }
+     get className(){
+         return this._classStack.length ? this._classStack[this._classStack.length - 1][0] : '';
+     }
 
-        if(!this.className){
-            this.className = '';
-        }
+     get classBaseName(){
+         return this._classStack.length ? this._classStack[this._classStack.length - 1][1] : '';
+     }
 
-        if(!this.classBaseName){
-            this.classBaseName = '';
-        }
+     /**
+      * 
+      * @param classNameTuple className, classBaseName
+      */
+     pushClassName(classNameTuple:[string, string]){
+        this._classStack.push(classNameTuple);
+     }
+
+     popClassName(){
+         this._classStack.pop();
      }
 
     resolveRelative(relativeName: string) {
-        return this.concatNamespaceName(this.namespaceName, relativeName);
+        return this.concatNamespaceName(this.namespace, relativeName);
     }
 
     resolveNotFullyQualified(notFqn: string, kind: SymbolKind) {
@@ -78,52 +79,10 @@ export class NameResolver {
         }
     }
 
-    createAnonymousName(node: Phrase) {
-        return this.document.createAnonymousName(node);
-    }
-
-    /**
-     * Resolves name node to FQN
-     * @param node 
-     * @param kind needed to resolve qualified names against import rules
-     */
-    resolveNameNode(node:Phrase, kind:SymbolKind){
-        if(!node){
-            return '';
-        }
-
-        switch (node.phraseType) {
-            case PhraseType.QualifiedName:
-                return this.resolveNotFullyQualified(this.namespaceNameNodeText((<QualifiedName>node).name), kind);
-            case PhraseType.RelativeQualifiedName:
-                return this.resolveRelative(this.namespaceNameNodeText((<RelativeQualifiedName>node).name));
-            case PhraseType.FullyQualifiedName:
-                return this.namespaceNameNodeText((<FullyQualifiedName>node).name);
-            case PhraseType.NamespaceName:
-                return this.namespaceNameNodeText(<NamespaceName>node);
-            default:
-                return '';
-        }
-    }
-
-    nodeText(node:Phrase|Token, ignore?:TokenType[]){
-        return this.document.nodeText(node, ignore);
-    }
-
-    namespaceNameNodeText(node: NamespaceName) {
-
-        if(ParsedDocument.isPhrase(node, [PhraseType.NamespaceName])){
-            return '';
-        }
-
-        return this.document.nodeText(node, [TokenType.Comment, TokenType.Whitespace]);
-
-    }
-
     private _matchImportedSymbol(text: string, kind: SymbolKind) {
         let s: PhpSymbol;
-        for (let n = 0, l = this.importedSymbolStubs.length; n < l; ++n) {
-            s = this.importedSymbolStubs[n];
+        for (let n = 0, l = this.rules.length; n < l; ++n) {
+            s = this.rules[n];
             if (s.name && s.kind === kind && text === s.name) {
                 return s;
             }

@@ -4,9 +4,10 @@
 
 'use strict';
 
-import {ParsedDocumentVisitor} from './parsedDocumentVisitor';
-import {ParsedDocument} from './parsedDocument';
-import {Phrase, PhraseType, Token, TokenType, NamespaceName, FunctionDeclarationHeader,
+import { ParsedDocumentVisitor } from './parsedDocumentVisitor';
+import { ParsedDocument } from './parsedDocument';
+import {
+    Phrase, PhraseType, Token, TokenType, NamespaceName, FunctionDeclarationHeader,
     ReturnType, TypeDeclaration, QualifiedName, ParameterDeclarationList,
     ParameterDeclaration, ConstElement, FunctionDeclaration, ClassDeclaration,
     ClassDeclarationHeader, ClassBaseClause, ClassInterfaceClause, QualifiedNameList,
@@ -21,12 +22,13 @@ import {Phrase, PhraseType, Token, TokenType, NamespaceName, FunctionDeclaration
     MemberName, PropertyAccessExpression, ClassTypeDesignator, ScopedCallExpression,
     ScopedMemberName, ScopedPropertyAccessExpression, BinaryExpression, TernaryExpression,
     RelativeScope, ListIntrinsic, IfStatement, InstanceOfExpression, InstanceofTypeDesignator,
-    ArrayInitialiserList, ArrayElement, ForeachStatement, CatchClause} from 'php7parser';
-import {PhpDoc, PhpDocParser, Tag, MethodTagParam} from './phpDoc';
-import {PhpSymbol, SymbolKind, SymbolModifier, TypeSource} from './symbol';
-import {NameResolver} from './nameResolver';
-import {TypeString} from './typeString';
-import {Location} from 'vscode-languageserver-types';
+    ArrayInitialiserList, ArrayElement, ForeachStatement, CatchClause
+} from 'php7parser';
+import { PhpDoc, PhpDocParser, Tag, MethodTagParam } from './phpDoc';
+import { PhpSymbol, SymbolKind, SymbolModifier, TypeSource } from './symbol';
+import { NameResolver } from './nameResolver';
+import { TypeString } from './typeString';
+import { Location } from 'vscode-languageserver-types';
 
 export class SymbolReader extends ParsedDocumentVisitor {
 
@@ -61,24 +63,20 @@ export class SymbolReader extends ParsedDocumentVisitor {
     lastPhpDoc: PhpDoc;
     lastPhpDocLocation: Location;
     namespaceUseDeclarationKind: SymbolKind;
-    namespaceUseDeclarationPrefix: string;
+    namespaceUseDeclarationPrefix: string = '';
     classConstDeclarationModifier: SymbolModifier;
     propertyDeclarationModifier: SymbolModifier;
-    ignore: PhraseType[];
+    externalOnly = false;
 
     constructor(
-        public parsedDocument: ParsedDocument,
+        document: ParsedDocument,
         public nameResolver: NameResolver,
         public spine: PhpSymbol[]
     ) {
-        super(nameResolver);
+        super(document, nameResolver);
     }
 
     protected _preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
-
-        if (this.ignore && ParsedDocument.isPhrase(node, this.ignore)) {
-            return false;
-        }
 
         let s: PhpSymbol;
 
@@ -91,7 +89,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
 
             case PhraseType.NamespaceUseDeclaration:
                 [this.namespaceUseDeclarationKind, this.namespaceUseDeclarationPrefix] =
-                    this.namespaceUseDeclaration(<NamespaceUseDeclaration>node);
+                    this._namespaceUseDeclaration(<NamespaceUseDeclaration>node);
                 return true;
 
             case PhraseType.NamespaceUseClause:
@@ -99,10 +97,6 @@ export class SymbolReader extends ParsedDocumentVisitor {
                     this.namespaceUseDeclarationKind,
                     this.namespaceUseDeclarationPrefix
                 );
-
-                if (!s) {
-                    return false;
-                }
 
                 this._addSymbol(s, false);
                 return false;
@@ -295,8 +289,8 @@ export class SymbolReader extends ParsedDocumentVisitor {
 
                 s = {
                     kind: SymbolKind.Variable,
-                    name: this.parsedDocument.tokenText((<CatchClause>node).variable),
-                    location: this.tokenLocation((<CatchClause>node).variable)
+                    name: this._nodeText((<CatchClause>node).variable),
+                    location: this._nodeLocation((<CatchClause>node).variable)
                 }
 
                 if (!this._variableExists(s.name)) {
@@ -315,10 +309,6 @@ export class SymbolReader extends ParsedDocumentVisitor {
     }
 
     protected _postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
-
-        if (this.ignore && ParsedDocument.isPhrase(node, this.ignore)) {
-            return;
-        }
 
         switch ((<Phrase>node).phraseType) {
             case PhraseType.FunctionDeclaration:
@@ -397,15 +387,9 @@ export class SymbolReader extends ParsedDocumentVisitor {
 
         switch (t.tokenType) {
             case TokenType.DocumentComment:
-                let phpDocTokenText = this.parsedDocument.tokenText(t);
+                let phpDocTokenText = this._nodeText(t);
                 this.lastPhpDoc = PhpDocParser.parse(phpDocTokenText);
-                this.lastPhpDocLocation = {
-                    uri: this.parsedDocument.uri,
-                    range: {
-                        start: this.parsedDocument.positionAtOffset(t.offset),
-                        end: this.parsedDocument.positionAtOffset(t.offset + phpDocTokenText.length)
-                    }
-                };
+                this.lastPhpDocLocation = this._nodeLocation(t);
                 break;
             case TokenType.CloseBrace:
                 this.lastPhpDoc = null;
@@ -441,41 +425,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
     }
 
     nameTokenToFqn(t: Token) {
-        let name = this.parsedDocument.tokenText(t);
-        return name ? this.nameResolver.resolveRelative(name) : '';
-    }
-
-    phraseLocation(p: Phrase) {
-        if (!p) {
-            return null;
-        }
-
-        let range = this.parsedDocument.nodeRange(p);
-
-        if (!range) {
-            return null;
-        }
-
-        return <Location>{
-            uri: this.parsedDocument.uri,
-            range: range
-        }
-    }
-
-    tokenLocation(t: Token) {
-        if (!t) {
-            return null;
-        }
-
-        let range = this.parsedDocument.tokenRange(t);
-        if (!range) {
-            return null;
-        }
-        return <Location>{
-            uri: this.parsedDocument.uri,
-            range: range
-        }
-
+        return this.nameResolver.resolveRelative(this._nodeText(t));
     }
 
     functionDeclaration(node: FunctionDeclaration, phpDoc: PhpDoc) {
@@ -483,7 +433,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
         let s: PhpSymbol = {
             kind: SymbolKind.Function,
             name: '',
-            location: this.phraseLocation(node),
+            location: this._nodeLocation(node),
             children: []
         }
 
@@ -508,8 +458,8 @@ export class SymbolReader extends ParsedDocumentVisitor {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Parameter,
-            name: this.parsedDocument.tokenText(node.name),
-            location: this.phraseLocation(node)
+            name: this._nodeText(node.name),
+            location: this._nodeLocation(node)
         };
 
         if (phpDoc) {
@@ -521,7 +471,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
         }
 
         if (node.value) {
-            s.value = this.parsedDocument.nodeText(node.value);
+            s.value = this._nodeText(node.value);
         }
 
         return s;
@@ -535,7 +485,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
 
         if (ParsedDocument.isPhrase(node)) {
 
-            let text = this.nameResolver.resolveNameNode(<any>node.name, SymbolKind.Class);
+            let text = this._namePhraseToFqn(<any>node.name, SymbolKind.Class);
             let notFqn = PhpSymbol.notFqn(text);
             if (SymbolReader._builtInTypes.indexOf(notFqn) > -1) {
                 return notFqn;
@@ -543,7 +493,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
             return text;
 
         } else {
-            return this.parsedDocument.tokenText(<Token>node.name);
+            return this._nodeText(<Token>node.name);
         }
 
 
@@ -554,7 +504,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
         let s: PhpSymbol = {
             kind: SymbolKind.Constant,
             name: this.nameTokenToFqn(node.name),
-            location: this.phraseLocation(node)
+            location: this._nodeLocation(node)
         };
 
         if (phpDoc) {
@@ -580,8 +530,8 @@ export class SymbolReader extends ParsedDocumentVisitor {
         let s: PhpSymbol = {
             kind: SymbolKind.ClassConstant,
             modifiers: modifiers,
-            name: this.parsedDocument.nodeText(node.name),
-            location: this.phraseLocation(node)
+            name: this._nodeText(node.name),
+            location: this._nodeLocation(node)
         }
 
         if (phpDoc) {
@@ -601,7 +551,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
         let s: PhpSymbol = {
             kind: SymbolKind.Method,
             name: '',
-            location: this.phraseLocation(node),
+            location: this._nodeLocation(node),
             children: []
         }
 
@@ -640,9 +590,9 @@ export class SymbolReader extends ParsedDocumentVisitor {
 
         let s: PhpSymbol = {
             kind: SymbolKind.Property,
-            name: this.parsedDocument.tokenText(node.name),
+            name: this._nodeText(node.name),
             modifiers: modifiers,
-            location: this.phraseLocation(node)
+            location: this._nodeLocation(node)
         }
 
         if (phpDoc) {
@@ -658,7 +608,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
     }
 
     identifier(node: Identifier) {
-        return this.parsedDocument.tokenText(node.name);
+        return this._nodeText(node.name);
     }
 
     interfaceDeclaration(node: InterfaceDeclaration, phpDoc: PhpDoc, phpDocLoc: Location) {
@@ -666,7 +616,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
         let s: PhpSymbol = {
             kind: SymbolKind.Interface,
             name: '',
-            location: this.phraseLocation(node),
+            location: this._nodeLocation(node),
             children: []
         }
 
@@ -771,7 +721,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
         let s: PhpSymbol = {
             kind: SymbolKind.Trait,
             name: '',
-            location: this.phraseLocation(node),
+            location: this._nodeLocation(node),
             children: []
         }
 
@@ -792,7 +742,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
         let s: PhpSymbol = {
             kind: SymbolKind.Class,
             name: '',
-            location: this.phraseLocation(node),
+            location: this._nodeLocation(node),
             children: []
         };
 
@@ -819,41 +769,39 @@ export class SymbolReader extends ParsedDocumentVisitor {
     classBaseClause(node: ClassBaseClause) {
         return <PhpSymbol>{
             kind: SymbolKind.Class,
-            name: this.nameResolver.resolveNameNode(node.name, SymbolKind.Class)
+            name: this._namePhraseToFqn(node.name, SymbolKind.Class)
+        };
+    }
+
+    stringToInterfaceSymbolStub(text: string) {
+        return <PhpSymbol>{
+            kind: SymbolKind.Interface,
+            name: name
         };
     }
 
     classInterfaceClause(node: ClassInterfaceClause) {
+        return this.qualifiedNameList(node.nameList).map<PhpSymbol>(this.stringToInterfaceSymbolStub);
+    }
 
-        let mapFn = (name: string) => {
-            return <PhpSymbol>{
-                kind: SymbolKind.Interface,
-                name: name
-            }
-        }
-
-        return this.qualifiedNameList(node.nameList).map<PhpSymbol>(mapFn);
-
+    stringToTraitSymbolStub(text: string) {
+        return <PhpSymbol>{
+            kind: SymbolKind.Trait,
+            name: name
+        };
     }
 
     traitUseClause(node: TraitUseClause) {
-        let mapFn = (name: string) => {
-            return <PhpSymbol>{
-                kind: SymbolKind.Trait,
-                name: name
-            };
-        };
-
-        return this.qualifiedNameList(node.nameList).map<PhpSymbol>(mapFn);
+        return this.qualifiedNameList(node.nameList).map<PhpSymbol>(this.stringToTraitSymbolStub);
     }
 
     anonymousClassDeclaration(node: AnonymousClassDeclaration) {
 
         return <PhpSymbol>{
             kind: SymbolKind.Class,
-            name: this.parsedDocument.createAnonymousName(node),
+            name: this._createAnonymousName(node),
             modifiers: SymbolModifier.Anonymous,
-            location: this.phraseLocation(node)
+            location: this._nodeLocation(node)
         };
     }
 
@@ -861,9 +809,9 @@ export class SymbolReader extends ParsedDocumentVisitor {
 
         return <PhpSymbol>{
             kind: SymbolKind.Function,
-            name: this.parsedDocument.createAnonymousName(node),
+            name: this._createAnonymousName(node),
             modifiers: SymbolModifier.Anonymous,
-            location: this.phraseLocation(node)
+            location: this._nodeLocation(node)
         };
 
     }
@@ -871,8 +819,8 @@ export class SymbolReader extends ParsedDocumentVisitor {
     anonymousFunctionUseVariable(node: AnonymousFunctionUseVariable) {
         return <PhpSymbol>{
             kind: SymbolKind.Variable,
-            name: this.parsedDocument.tokenText(node.name),
-            location: this.phraseLocation(node),
+            name: this._nodeText(node.name),
+            location: this._nodeLocation(node),
             modifiers: SymbolModifier.Use
         };
     }
@@ -884,8 +832,8 @@ export class SymbolReader extends ParsedDocumentVisitor {
 
         return <PhpSymbol>{
             kind: SymbolKind.Variable,
-            name: this.parsedDocument.tokenText(<Token>node.name),
-            location: this.phraseLocation(node)
+            name: this._nodeText(<Token>node.name),
+            location: this._nodeLocation(node)
         };
     }
 
@@ -897,7 +845,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
             return names;
         }
         for (let n = 0, l = node.elements.length; n < l; ++n) {
-            name = this.nameResolver.resolveNameNode(node.elements[n], SymbolKind.Class);
+            name = this._namePhraseToFqn(node.elements[n], SymbolKind.Class);
             if (name) {
                 names.push(name);
             }
@@ -906,53 +854,20 @@ export class SymbolReader extends ParsedDocumentVisitor {
 
     }
 
-    concatNamespaceName(prefix: string, name: string) {
-        if (!name) {
-            return name;
-        } else if (!prefix) {
-            return name;
-        } else {
-            return prefix + '\\' + name;
-        }
-    }
-
     namespaceUseClause(node: NamespaceUseClause, kind: SymbolKind, prefix: string) {
 
-        let fqn = this.concatNamespaceName(prefix, this.parsedDocument.nodeText(node.name, [TokenType.Whitespace]));
-        if (!fqn) {
-            return null;
+        let fqn = this.nameResolver.concatNamespaceName(prefix, this._namespaceNamePhraseToString(node.name));
+        if (!kind) {
+            kind = SymbolKind.Class;
         }
 
-        let s: PhpSymbol = {
-            kind: kind ? kind : SymbolKind.Class,
-            name: node.aliasingClause ? this.parsedDocument.tokenText(node.aliasingClause.alias) : PhpSymbol.notFqn(fqn),
-            associated: [],
-            location: this.phraseLocation(node),
+        return <PhpSymbol>{
+            kind: kind,
+            name: node.aliasingClause ? this._nodeText(node.aliasingClause.alias) : PhpSymbol.notFqn(fqn),
+            associated: [{ kind: kind, name: fqn }],
+            location: this._nodeLocation(node),
             modifiers: SymbolModifier.Use
         };
-
-        s.associated.push({ kind: s.kind, name: fqn });
-        return s;
-
-    }
-
-    tokenToSymbolKind(t: Token) {
-        switch (t.tokenType) {
-            case TokenType.Function:
-                return SymbolKind.Function;
-            case TokenType.Const:
-                return SymbolKind.Constant;
-            default:
-                return SymbolKind.None;
-        }
-    }
-
-    namespaceUseDeclaration(node: NamespaceUseDeclaration): [SymbolKind, string] {
-
-        return [
-            node.kind ? this.tokenToSymbolKind(node.kind) : SymbolKind.None,
-            node.prefix ? this.parsedDocument.nodeText(node.prefix, [TokenType.Whitespace]) : ''
-        ];
 
     }
 
@@ -960,8 +875,8 @@ export class SymbolReader extends ParsedDocumentVisitor {
 
         return <PhpSymbol>{
             kind: SymbolKind.Namespace,
-            name: this.parsedDocument.nodeText(node.name, [TokenType.Whitespace]),
-            location: this.phraseLocation(node),
+            name: this._namespaceNamePhraseToString(node.name),
+            location: this._nodeLocation(node),
             children: []
         };
 
