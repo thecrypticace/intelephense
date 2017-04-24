@@ -504,7 +504,8 @@ export class SymbolReader extends ParsedDocumentVisitor {
         let s: PhpSymbol = {
             kind: SymbolKind.Constant,
             name: this.nameTokenToFqn(node.name),
-            location: this._nodeLocation(node)
+            location: this._nodeLocation(node),
+            value: this._nodeText(node.value)
         };
 
         if (phpDoc) {
@@ -531,7 +532,8 @@ export class SymbolReader extends ParsedDocumentVisitor {
             kind: SymbolKind.ClassConstant,
             modifiers: modifiers,
             name: this._nodeText(node.name),
-            location: this._nodeLocation(node)
+            location: this._nodeLocation(node),
+            value:this._nodeText(node.value)
         }
 
         if (phpDoc) {
