@@ -117,7 +117,7 @@ function toFunctionCompletionItem(s: PhpSymbol, insertText?: string) {
         label: PhpSymbol.notFqn(s.name),
         documentation: s.description,
         detail: PhpSymbol.signatureString(s),
-        insertText:insertText ? insertText : s.name
+        insertText: insertText ? insertText : s.name
     }
 
     return item;
@@ -428,9 +428,9 @@ class SimpleVariableCompletion implements CompletionStrategy {
 
         let scope = context.scopeSymbol;
         let symbolMask = SymbolKind.Variable | SymbolKind.Parameter;
-        let varSymbols = scope.children.filter((x) => {
+        let varSymbols = scope.children ? scope.children.filter((x) => {
             return (x.kind & symbolMask) > 0 && x.name.indexOf(text) === 0;
-        });
+        }) : [];
         //also suggest built in globals vars
         Array.prototype.push.apply(varSymbols, context.symbolStore.match(text, this._isBuiltInGlobalVar));
 
