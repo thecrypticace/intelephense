@@ -22,7 +22,7 @@ import {
     MemberName, PropertyAccessExpression, ClassTypeDesignator, ScopedCallExpression,
     ScopedMemberName, ScopedPropertyAccessExpression, BinaryExpression, TernaryExpression,
     RelativeScope, ListIntrinsic, IfStatement, InstanceOfExpression, InstanceofTypeDesignator,
-    ArrayInitialiserList, ArrayElement, ForeachStatement, CatchClause
+    ArrayInitialiserList, ArrayElement, ForeachStatement, CatchClause, ArgumentExpressionList
 } from 'php7parser';
 import { PhpDoc, PhpDocParser, Tag, MethodTagParam } from './phpDoc';
 import { PhpSymbol, SymbolKind, SymbolModifier, TypeSource } from './symbol';
@@ -302,6 +302,15 @@ export class SymbolReader extends ParsedDocumentVisitor {
             case PhraseType.MethodDeclarationBody:
                 return !this.externalOnly;
 
+            case PhraseType.FunctionCallExpression:
+                //define
+                s = this.functionCallExpression(<FunctionCallExpression>node);
+                if (s) {
+                    this._addSymbol(s, false);
+                }
+
+                return false;
+
             case undefined:
                 this._token(<Token>node);
                 return false;
@@ -428,6 +437,37 @@ export class SymbolReader extends ParsedDocumentVisitor {
 
     }
 
+    argListToStringArray(node: ArgumentExpressionList) {
+
+        let textArray: string[] = [];
+
+        for (let n = 0, l = node.elements.length; n < l; ++n) {
+            textArray.push(this._nodeText(node.elements[n]));
+        }
+        return textArray;
+    }
+
+    functionCallExpression(node: FunctionCallExpression) {
+        let fnName = this._nodeText(node.callableExpr);
+        if (fnName.length && fnName[0] === '\\') {
+            fnName = fnName.slice(1);
+        }
+
+        if (fnName.toLowerCase() !== 'define' || !node.argumentList) {
+            return null;
+        }
+
+        let argTextArray = this.argListToStringArray(node.argumentList);
+        let name = argTextArray.shift().slice(1, -1);
+        let value = argTextArray.shift();
+
+        return <PhpSymbol>{
+            kind: SymbolKind.Constant,
+            name: name,
+            value: value
+        }
+    }
+
     nameTokenToFqn(t: Token) {
         return this.nameResolver.resolveRelative(this._nodeText(t));
     }
@@ -537,7 +577,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
             modifiers: modifiers,
             name: this._nodeText(node.name),
             location: this._nodeLocation(node),
-            value:this._nodeText(node.value)
+            value: this._nodeText(node.value)
         }
 
         if (phpDoc) {
