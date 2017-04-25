@@ -26,31 +26,25 @@ import { TreeTraverser, TreeVisitor } from './types';
  * 
  * Don't return false when visiting namespace definitions and namespace use declarations -- name resolving will be buggy
  * 
- * When wanting to halt at token be sure to call _containsHaltToken if not decending into children.
+ * If not descending into children and wishinf to halt make sure to use _containsHaltOffset
+ * _preorder still runs on the token containing the haltOffset.
  * 
  */
 export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Token> {
 
     private _namespaceUseDeclarationKind: SymbolKind;
     private _namespaceUseDeclarationPrefix: string;
-    private _doc: ParsedDocument;
 
     haltTraverse = false;
+    haltAtOffset = -1;
 
     constructor(
-        document: ParsedDocument,
-        public nameResolver: NameResolver,
-        public haltAtToken?: Token
+        public document: ParsedDocument,
+        public nameResolver: NameResolver
     ) {
-        this._doc = document;
     }
 
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
-
-        if (this.haltAtToken && this.haltAtToken === node) {
-            this.haltTraverse = true;
-            return false;
-        }
 
         switch ((<Phrase>node).phraseType) {
 
@@ -77,6 +71,13 @@ export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Toke
 
             case PhraseType.ClassDeclarationHeader:
                 this.nameResolver.pushClassName(this._classDeclarationHeader(<ClassDeclarationHeader>node));
+                break;
+
+            case undefined:
+                //tokens
+                if(ParsedDocument.isOffsetInToken(this.haltAtOffset, <Token>node)){
+                    this.haltTraverse = true;
+                }
                 break;
 
             default:
@@ -180,40 +181,24 @@ export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Toke
     protected abstract _preorder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
     protected abstract _postorder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
 
-    protected _containsHaltToken(node: Phrase | Token) {
-
-        if (!this.haltAtToken) {
-            return false;
-        }
-
-        if (ParsedDocument.isToken(node)) {
-            return this.haltAtToken === node;
-        }
-
-        let traverser = new TreeTraverser([node]);
-        let tHalt = this.haltAtToken;
-        let fn = (x: Token | Phrase) => {
-            return x === tHalt;
-        };
-
-        return !!traverser.find(fn);
-
+    protected _containsHaltOffset(node: Phrase | Token) {
+        return ParsedDocument.isOffsetInNode(this.haltAtOffset, node);
     }
 
     protected _nodeText(node: Phrase | Token, ignore?: TokenType[]) {
-        return this._doc.nodeText(node, ignore);
+        return this.document.nodeText(node, ignore);
     }
 
     protected _nodeRange(node: Phrase | Token) {
-        return this._doc.nodeRange(node);
+        return this.document.nodeRange(node);
     }
 
     protected _nodeLocation(node: Phrase | Token) {
-        return this._doc.nodeLocation(node);
+        return this.document.nodeLocation(node);
     }
 
     protected _createAnonymousName(node: Phrase) {
-        return this._doc.createAnonymousName(node);
+        return this.document.createAnonymousName(node);
     }
 
     /**
@@ -246,7 +231,7 @@ export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Toke
             return '';
         }
 
-        return this._doc.nodeText(node, [TokenType.Comment, TokenType.Whitespace]);
+        return this.document.nodeText(node, [TokenType.Comment, TokenType.Whitespace]);
 
     }
 }

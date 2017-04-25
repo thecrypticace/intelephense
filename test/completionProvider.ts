@@ -1,5 +1,5 @@
 import { CompletionProvider } from '../src/completionProvider';
-import { SymbolStore, SymbolTable } from '../src/symbol';
+import { SymbolStore, SymbolTable } from '../src/symbolStore';
 import { ParsedDocumentStore, ParsedDocument } from '../src/parsedDocument';
 import * as lsp from 'vscode-languageserver-types';
 import { assert } from 'chai';
@@ -115,7 +115,7 @@ function inbuiltSetup(src: string) {
     let doc = new ParsedDocument('test', src);
     parsedDocumentStore.add(doc);
     symbolStore.add(SymbolTable.create(doc));
-    symbolStore.add(SymbolTable.createBuiltIn());
+    symbolStore.add(SymbolTable.readBuiltInSymbols());
     return completionProvider;
 }
 

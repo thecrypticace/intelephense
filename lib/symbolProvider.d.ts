@@ -1,5 +1,6 @@
 import * as lsp from 'vscode-languageserver-types';
-import { PhpSymbol, SymbolStore } from './symbol';
+import { PhpSymbol } from './symbol';
+import { SymbolStore } from './symbolStore';
 export declare class SymbolProvider {
     symbolStore: SymbolStore;
     constructor(symbolStore: SymbolStore);

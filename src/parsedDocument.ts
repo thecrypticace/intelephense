@@ -53,6 +53,11 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         return this._changeEvent;
     }
 
+    find(predicate: Predicate<Phrase|Token>) {
+        let traverser = new TreeTraverser([this._parseTree]);
+        return traverser.find(predicate);
+    }
+
     textBeforeOffset(offset: number, length: number) {
         return this._textDocument.textBeforeOffset(offset, length);
     }
@@ -73,6 +78,10 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         return visitor;
     }
 
+    createTraverser(){
+        return new TreeTraverser<Phrase|Token>([this._parseTree]);
+    }
+
     applyChanges(contentChanges: lsp.TextDocumentContentChangeEvent[]) {
 
         let change: lsp.TextDocumentContentChangeEvent;
@@ -91,10 +100,13 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
             return null;
         }
 
-        return <lsp.Range>{
+        let r = <lsp.Range>{
             start: this._textDocument.positionAtOffset(t.offset),
             end: this._textDocument.positionAtOffset(t.offset + t.length)
         }
+
+        r.end.character++;
+        return r;
     }
 
     nodeLocation(node: Phrase | Token) {
@@ -124,51 +136,22 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
             return this.tokenRange(<Token>node);
         }
 
-        let tFirst = this.firstToken(node);
-        let tLast = this.lastToken(node);
+        let tFirst = ParsedDocument.firstToken(node);
+        let tLast = ParsedDocument.lastToken(node);
 
         if (!tFirst || !tLast) {
             return null;
         }
 
-        return <lsp.Range>{
+        let range = <lsp.Range>{
             start: this._textDocument.positionAtOffset(tFirst.offset),
             end: this._textDocument.positionAtOffset(tLast.offset + tLast.length)
         }
 
-    }
+        //end range char + 1 as cursor is outside of last offset
+        range.end.character++;
+        return range;
 
-    firstToken(node: Phrase | Token) {
-
-        if (ParsedDocument.isToken(node)) {
-            return node as Token;
-        }
-
-        let t: Token;
-        for (let n = 0, l = (<Phrase>node).children.length; n < l; ++n) {
-            t = this.firstToken((<Phrase>node).children[n]);
-            if (t !== null) {
-                return t;
-            }
-        }
-
-        return null;
-    }
-
-    lastToken(node: Phrase | Token) {
-        if (ParsedDocument.isToken(node)) {
-            return node as Token;
-        }
-
-        let t: Token;
-        for (let n = (<Phrase>node).children.length - 1; n >= 0; --n) {
-            t = this.lastToken((<Phrase>node).children[n]);
-            if (t !== null) {
-                return t;
-            }
-        }
-
-        return null;
     }
 
     tokenText(t: Token) {
@@ -192,7 +175,7 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
     }
 
     createAnonymousName(node: Phrase) {
-        let tFirst = this.firstToken(node);
+        let tFirst = ParsedDocument.firstToken(node);
         let offset = tFirst ? tFirst.offset : 0;
         return `#anonymous#${this.uri}#${offset}`;
     }
@@ -205,9 +188,52 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         return this._textDocument.offsetAtPosition(position);
     }
 
+    namespaceNamePhraseToString(node: Phrase | Token) {
+
+        if (!ParsedDocument.isPhrase(node, [PhraseType.NamespaceName])) {
+            return '';
+        }
+
+        return this.nodeText(node, [TokenType.Comment, TokenType.Whitespace]);
+
+    }
+
 }
 
 export namespace ParsedDocument {
+
+    export function firstToken(node: Phrase | Token) {
+
+        if (ParsedDocument.isToken(node)) {
+            return node as Token;
+        }
+
+        let t: Token;
+        for (let n = 0, l = (<Phrase>node).children.length; n < l; ++n) {
+            t = this.firstToken((<Phrase>node).children[n]);
+            if (t !== null) {
+                return t;
+            }
+        }
+
+        return null;
+    }
+
+    export function lastToken(node: Phrase | Token) {
+        if (ParsedDocument.isToken(node)) {
+            return node as Token;
+        }
+
+        let t: Token;
+        for (let n = (<Phrase>node).children.length - 1; n >= 0; --n) {
+            t = this.lastToken((<Phrase>node).children[n]);
+            if (t !== null) {
+                return t;
+            }
+        }
+
+        return null;
+    }
 
     export function isToken(node: Phrase | Token, types?: TokenType[]) {
         return node && (<Token>node).tokenType !== undefined &&
@@ -220,9 +246,30 @@ export namespace ParsedDocument {
     }
 
     export function isOffsetInToken(offset: number, t: Token) {
-        return ParsedDocument.isToken(t) &&
+        return offset > -1 && ParsedDocument.isToken(t) &&
             t.offset <= offset &&
             t.offset + t.length - 1 >= offset;
+    }
+
+    export function isOffsetInNode(offset, node:Phrase|Token){
+
+        if(!node || offset < 0){
+            return false;
+        }
+
+        if(ParsedDocument.isToken(node)){
+            return ParsedDocument.isOffsetInToken(offset, <Token>node);
+        }
+
+        let tFirst = ParsedDocument.firstToken(node);
+        let tLast = ParsedDocument.lastToken(node);
+
+        if(!tFirst || !tLast){
+            return false;
+        }
+
+        return tFirst.offset <= offset && tLast.offset + tLast.length - 1 >= offset;
+
     }
 
     export function isFixedMemberName(phrase: MemberName) {

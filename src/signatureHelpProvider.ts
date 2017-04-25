@@ -5,10 +5,9 @@
 'use strict';
 
 import * as lsp from 'vscode-languageserver-types';
-import {
-    SymbolStore, ExpressionTypeResolver, SymbolKind, PhpSymbol,
-    MemberQuery, SymbolModifier
-} from './symbol';
+import { SymbolKind, PhpSymbol, SymbolModifier } from './symbol';
+import { SymbolStore, MemberQuery } from './symbolStore';
+import { ExpressionTypeResolver } from './typeResolver';
 import { Context } from './context';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import {
@@ -72,7 +71,7 @@ export class SignatureHelpProvider {
             signatures.push(this._signatureInfo(fn, params.slice(0, nRequiredParams + n)));
         }
 
-        let activeSig = signatures.findIndex((v)=>{
+        let activeSig = signatures.findIndex((v) => {
             return v.parameters.length > argNumber;
         });
 
@@ -84,30 +83,30 @@ export class SignatureHelpProvider {
     }
 
     private _signatureInfo(fn: PhpSymbol, params: PhpSymbol[]) {
-        
+
         let paramInfoArray = this._parameterInfoArray(params);
         let label = fn.name + '(';
-        label += paramInfoArray.map((v)=>{
+        label += paramInfoArray.map((v) => {
             return v.label;
         }).join(', ');
         label += ')';
 
-        if(fn.type && !fn.type.isEmpty()){
+        if (fn.type && !fn.type.isEmpty()) {
             label += ': ' + fn.type.toString();
         }
 
         return <lsp.SignatureInformation>{
             label: label,
-            documentation:fn.description,
-            parameters:paramInfoArray
+            documentation: fn.description,
+            parameters: paramInfoArray
         }
 
     }
 
-    private _parameterInfoArray(params:PhpSymbol[]){
+    private _parameterInfoArray(params: PhpSymbol[]) {
 
-        let infos:lsp.ParameterInformation[] = [];
-        for(let n= 0, l = params.length; n < l; ++n){
+        let infos: lsp.ParameterInformation[] = [];
+        for (let n = 0, l = params.length; n < l; ++n) {
             infos.push(this._parameterInfo(params[n]));
         }
 
@@ -235,7 +234,7 @@ export class SignatureHelpProvider {
         }
 
         let token = context.token;
-        let delimeters = argList.children.filter((x)=>{
+        let delimeters = argList.children.filter((x) => {
             return (<Token>x).tokenType === TokenType.Comma && (<Token>x).offset <= token.offset;
         });
 

@@ -1,5 +1,6 @@
 import { SignatureHelpProvider } from '../src/signatureHelpProvider';
-import { SymbolStore, SymbolTable, SymbolKind } from '../src/symbol';
+import { SymbolKind } from '../src/symbol';
+import {SymbolStore, SymbolTable} from '../src/symbolStore';
 import { ParsedDocumentStore, ParsedDocument } from '../src/parsedDocument';
 import * as lsp from 'vscode-languageserver-types';
 import { assert } from 'chai';

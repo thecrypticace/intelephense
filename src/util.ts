@@ -118,3 +118,7 @@ export function fuzzyStringMatch(query: string, subject: string) {
 export function ciStringMatch(a: string, b: string) {
     return a.toLowerCase() === b.toLowerCase();
 }
+
+export function whitespace(n:number){
+    return new Array(n).fill(' ').join('');
+}

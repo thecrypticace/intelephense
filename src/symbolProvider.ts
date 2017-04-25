@@ -5,7 +5,8 @@
 'use strict';
 
 import * as lsp from 'vscode-languageserver-types';
-import { PhpSymbol, SymbolKind, SymbolStore, SymbolModifier } from './symbol';
+import { PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
+import {SymbolStore} from './symbolStore';
 
 const namespacedSymbolMask =
     SymbolKind.Interface |

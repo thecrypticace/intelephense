@@ -5,7 +5,8 @@
 'use strict';
 
 import * as lsp from 'vscode-languageserver-types';
-import { SymbolStore, PhpSymbol, SymbolKind, MemberQuery } from './symbol';
+import { PhpSymbol, SymbolKind } from './symbol';
+import {SymbolStore, MemberQuery} from './symbolStore';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Context } from './context';
 import {

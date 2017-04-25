@@ -1,8 +1,12 @@
-import { SymbolStore, NameResolver, PhpSymbol, SymbolKind, ExpressionTypeResolver, VariableTable, TypeString, SymbolTable } from './symbol';
+import { PhpSymbol, SymbolKind } from './symbol';
+import { SymbolStore, SymbolTable } from './symbolStore';
+import { ExpressionTypeResolver, VariableTable } from './typeResolver';
+import { NameResolver } from './nameResolver';
 import { TreeTraverser } from './types';
+import { TypeString } from './typeString';
 import { ParsedDocument } from './parsedDocument';
-import { Position } from 'vscode-languageserver-types';
-import { Phrase, Token, NamespaceDefinition, ClassDeclaration, TokenType } from 'php7parser';
+import { Position, TextEdit } from 'vscode-languageserver-types';
+import { Phrase, Token, ClassDeclaration, TokenType } from 'php7parser';
 export declare class Context {
     symbolStore: SymbolStore;
     document: ParsedDocument;
@@ -16,29 +20,36 @@ export declare class Context {
     private _thisPhrase;
     private _thisSymbol;
     private _thisBaseSymbol;
-    private _namespaceName;
+    private _nameResolver;
+    private _lastNamespaceUseDeclaration;
+    private _openingInlineText;
     constructor(symbolStore: SymbolStore, document: ParsedDocument, position: Position);
     readonly word: string;
+    readonly wordStartPosition: Position;
     readonly token: Token;
     readonly offset: number;
     readonly spine: (Token | Phrase)[];
-    readonly thisName: string;
-    readonly thisBaseName: string;
-    readonly namespaceName: string;
-    readonly namespacePhrase: NamespaceDefinition;
-    readonly thisPhrase: ClassDeclaration;
-    readonly thisSymbol: PhpSymbol;
-    readonly thisBaseSymbol: PhpSymbol;
+    readonly className: string;
+    readonly classBaseName: string;
+    readonly namespace: string;
+    /**
+     * The TextEdit returned from this contains whitespace to correctly format declaration
+     * the use declaration string should be appended to existing text.
+     */
+    readonly useDeclarationTextEdit: TextEdit;
+    readonly classDeclarationPhrase: ClassDeclaration;
+    readonly classSymbol: PhpSymbol;
+    readonly classBaseSymbol: PhpSymbol;
     readonly scopePhrase: Phrase;
     readonly scopeSymbol: PhpSymbol;
     readonly variableTable: VariableTable;
     readonly symbolTable: SymbolTable;
+    readonly nameResolver: NameResolver;
     textBefore(length: number): string;
     tokenText(t: Token): string;
     nodeText(node: Phrase | Token, ignore?: TokenType[]): string;
     resolveFqn(phrase: Phrase, kind: SymbolKind): string;
     resolveExpressionType(expr: Phrase): TypeString;
-    createNameResolver(): NameResolver;
     createTraverser(): TreeTraverser<Token | Phrase>;
     createExpressionTypeResolver(): ExpressionTypeResolver;
     private _isScopePhrase(p);

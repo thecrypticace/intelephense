@@ -13,7 +13,7 @@ describe('ParsedDocument' ,function(){
 
         let doc = new ParsedDocument('test', firstTokenSrc);
         let classNode = (<any>doc.tree).elements[1];
-        let tFirst = doc.firstToken(classNode);
+        let tFirst = ParsedDocument.firstToken(classNode);
         console.log(JSON.stringify(doc.tree, ParsedDocument.stringyfyReplacer, 4));
         console.log(JSON.stringify(tFirst, null, 4));
 

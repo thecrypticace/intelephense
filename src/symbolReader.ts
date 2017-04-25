@@ -964,4 +964,5 @@ export namespace SymbolReader {
         }
 
     }
+
 }

@@ -1,4 +1,6 @@
-import { VariableTypeResolver, NameResolver, SymbolStore, VariableTable, SymbolTable } from '../src/symbol';
+import {SymbolStore, SymbolTable } from '../src/symbolStore';
+import {VariableTypeResolver, VariableTable} from '../src/typeResolver';
+import {NameResolver} from '../src/nameResolver';
 import { TreeTraverser } from '../src/types';
 import { ParsedDocument } from '../src/parsedDocument';
 import {Token, TokenType, Phrase} from 'php7parser';

@@ -1,5 +1,5 @@
 import * as lsp from 'vscode-languageserver-types';
-import { SymbolStore } from './symbol';
+import { SymbolStore } from './symbolStore';
 import { ParsedDocumentStore } from './parsedDocument';
 export declare class SignatureHelpProvider {
     symbolStore: SymbolStore;

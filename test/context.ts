@@ -1,5 +1,5 @@
 import { Context } from '../src/context';
-import { SymbolStore } from '../src/symbol';
+import { SymbolStore } from '../src/symbolStore';
 import { ParsedDocument } from '../src/parsedDocument';
 import { Position } from 'vscode-languageserver-types';
 import { Token, TokenType } from 'php7parser';

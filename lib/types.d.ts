@@ -38,10 +38,20 @@ export declare class TreeTraverser<T extends TreeLike> {
     clone(): TreeTraverser<T>;
     private _traverse(treeNode, visitor, spine);
 }
+export interface Traversable<T extends TreeLike> {
+    traverse(visitor: TreeVisitor<T>): TreeVisitor<T>;
+}
 export interface TreeVisitor<T extends TreeLike> {
+    /**
+     * True will halt traverse immediately.
+     * No further functions will be called.
+     */
     haltTraverse?: boolean;
-    preOrder?(node: T, spine: T[]): boolean;
-    postOrder?(node: T, spine: T[]): void;
+    /**
+     * Return value determines whether to descend into child nodes
+     */
+    preorder?(node: T, spine: T[]): boolean;
+    postorder?(node: T, spine: T[]): void;
 }
 export declare class Debounce<T> {
     wait: number;
@@ -57,13 +67,13 @@ export declare class ToArrayVisitor<T> implements TreeVisitor<T> {
     private _array;
     constructor();
     readonly array: T[];
-    preOrder(t: T, spine: T[]): boolean;
+    preorder(t: T, spine: T[]): boolean;
 }
 export declare class CountVisitor<T> implements TreeVisitor<T> {
     private _count;
     constructor();
     readonly count: number;
-    preOrder(t: T, spine: T[]): boolean;
+    preorder(t: T, spine: T[]): boolean;
 }
 export declare class BinarySearch<T> {
     private _sortedArray;

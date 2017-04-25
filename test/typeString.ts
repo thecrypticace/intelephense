@@ -1,4 +1,5 @@
-import {TypeString, NameResolver} from '../src/symbol';
+import {NameResolver} from '../src/nameResolver';
+import {TypeString} from '../src/typeString'
 import {ParsedDocument} from '../src/parsedDocument';
 import { assert } from 'chai';
 import 'mocha';

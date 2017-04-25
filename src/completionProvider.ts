@@ -11,10 +11,13 @@ import {
     ClassBaseClause, InterfaceBaseClause, ClassInterfaceClause
 } from 'php7parser';
 import {
-    PhpSymbol, SymbolStore, SymbolTable, SymbolKind, SymbolModifier,
-    TypeString, NameResolver, ExpressionTypeResolver, VariableTypeResolver,
-    MemberQuery, SymbolReader, TypeSource, VariableTable
+    PhpSymbol, SymbolKind, SymbolModifier, TypeSource
 } from './symbol';
+import {SymbolStore, SymbolTable, MemberQuery} from './symbolStore';
+import {SymbolReader} from './symbolReader';
+import {TypeString} from './typeString';
+import {NameResolver} from './nameResolver';
+import {ExpressionTypeResolver, VariableTypeResolver, VariableTable} from './typeResolver';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Predicate } from './types';
 import { Context } from './context';
@@ -193,7 +196,7 @@ function toVariableCompletionItem(s: PhpSymbol, varTable: VariableTable) {
         label: s.name,
         kind: lsp.CompletionItemKind.Variable,
         documentation: s.description,
-        detail: varTable.getType(s.name, '').toString()
+        detail: varTable.getType(s.name).toString()
     }
 
 }
@@ -324,20 +327,20 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         let pred = this._symbolFilter;
         if (namePhrase && namePhrase.phraseType === PhraseType.RelativeQualifiedName) {
             text = text.slice(10); //namespace\
-            let ns = context.namespaceName;
+            let ns = context.namespace;
             pred = (x) => {
                 return this._symbolFilter && x.name.indexOf(ns) === 0;
             };
         }
 
         //use directives
-        let matches = context.createNameResolver().importedSymbols.filter(pred);
+        let matches = context.nameResolver.rules.filter(pred);
         Array.prototype.push.apply(matches, uniqueSymbolNames(context.symbolStore.match(text, pred, true)));
         let limit = Math.min(matches.length, maxItems - items.length);
         let isIncomplete = matches.length > maxItems - items.length;
 
         for (let n = 0; n < limit; ++n) {
-            items.push(this._toCompletionItem(matches[n], insertText(matches[n], context.namespaceName, namePhrase ? namePhrase.phraseType : 0)));
+            items.push(this._toCompletionItem(matches[n], insertText(matches[n], context.namespace, namePhrase ? namePhrase.phraseType : 0)));
         }
 
         return <lsp.CompletionList>{
@@ -419,7 +422,6 @@ class SimpleVariableCompletion implements CompletionStrategy {
 
     completions(context: Context, maxItems: number) {
 
-        let nameResolver = context.createNameResolver();
         let text = context.word;
 
         if (!text) {
@@ -638,9 +640,9 @@ class ScopedAccessCompletion implements CompletionStrategy {
         for (let n = 0, l = typeNames.length; n < l; ++n) {
             typeName = typeNames[n];
 
-            if (typeName === context.thisName) {
+            if (typeName === context.className) {
                 pred = ownMemberPred;
-            } else if (typeName === context.thisBaseName) {
+            } else if (typeName === context.classBaseName) {
                 pred = baseMemberPred;
             } else {
                 pred = memberPred;
@@ -740,9 +742,9 @@ class ObjectAccessCompletion implements CompletionStrategy {
         for (let n = 0, l = typeNames.length; n < l; ++n) {
             typeName = typeNames[n];
 
-            if (typeName === context.thisName) {
+            if (typeName === context.className) {
                 pred = ownPred;
-            } else if (typeName === context.thisBaseName) {
+            } else if (typeName === context.classBaseName) {
                 pred = basePred;
             } else {
                 pred = memberPred;
@@ -1056,7 +1058,7 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
 
     canSuggest(context: Context) {
         let traverser = context.createTraverser();
-        let thisSymbol = context.thisSymbol;
+        let thisSymbol = context.classSymbol;
         return ParsedDocument.isPhrase(traverser.parent(), [PhraseType.Identifier]) &&
             ParsedDocument.isPhrase(traverser.parent(), [PhraseType.MethodDeclarationHeader]) &&
             !!thisSymbol && !!thisSymbol.associated && thisSymbol.associated.length > 0;
@@ -1073,8 +1075,8 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
         modifiers &= (SymbolModifier.Public | SymbolModifier.Protected);
 
         let existingMethodNames: string[] = [];
-        if (context.thisSymbol.children) {
-            existingMethodNames = context.thisSymbol.children.filter((x) => {
+        if (context.classSymbol.children) {
+            existingMethodNames = context.classSymbol.children.filter((x) => {
                 return x.kind === SymbolKind.Method;
             }).map((x) => {
                 return x.name;
@@ -1095,7 +1097,7 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
                 util.fuzzyStringMatch(text, x.name);
         }
 
-        let queries = context.thisSymbol.associated.filter((x) => {
+        let queries = context.classSymbol.associated.filter((x) => {
             return (x.kind & (SymbolKind.Class | SymbolKind.Interface)) > 0;
         }).map<MemberQuery>((x) => {
             return {

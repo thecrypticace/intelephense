@@ -1,4 +1,7 @@
-import { SymbolReader, NameResolver, PhpSymbol, SymbolKind, SymbolTable } from '../src/symbol';
+import { PhpSymbol, SymbolKind } from '../src/symbol';
+import { SymbolTable } from '../src/symbolStore';
+import { NameResolver } from '../src/nameResolver';
+import { SymbolReader } from '../src/symbolReader';
 import { ParsedDocument } from '../src/parsedDocument';
 import { assert } from 'chai';
 import 'mocha';
@@ -7,7 +10,7 @@ function symbolReaderOutput(src: string) {
 
     let parsedDoc = new ParsedDocument('test', src);
     let symbolTree: PhpSymbol = { kind: SymbolKind.None, name: '' };
-    let sr = new SymbolReader(parsedDoc, new NameResolver(parsedDoc, [], '', '', ''), [symbolTree]);
+    let sr = new SymbolReader(parsedDoc, new NameResolver(), [symbolTree]);
     parsedDoc.traverse(sr);
     return symbolTree;
 
@@ -45,7 +48,7 @@ describe('SymbolReader', () => {
         assert.equal(output.children[1].name, 'Baz');
         assert.equal(output.children[2].kind, SymbolKind.Class);
         assert.equal(output.children[2].name, 'Wat\\Bar');
-        assert.deepEqual(output.children[2].associated[0], {kind: SymbolKind.Trait, name:'Foo\\Baz'});
+        assert.deepEqual(output.children[2].associated[0], { kind: SymbolKind.Trait, name: 'Foo\\Baz' });
     });
 
     it('Should read simple variables', () => {

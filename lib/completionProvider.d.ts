@@ -1,4 +1,4 @@
-import { SymbolStore } from './symbol';
+import { SymbolStore } from './symbolStore';
 import { ParsedDocumentStore } from './parsedDocument';
 import * as lsp from 'vscode-languageserver-types';
 export declare class CompletionProvider {

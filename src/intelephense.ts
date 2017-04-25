@@ -5,7 +5,7 @@
 'use strict';
 
 import { ParsedDocument, ParsedDocumentStore, ParsedDocumentChangeEventArgs } from './parsedDocument';
-import { SymbolStore, SymbolTable } from './symbol';
+import { SymbolStore, SymbolTable } from './symbolStore';
 import { SymbolProvider } from './symbolProvider';
 import { CompletionProvider } from './completionProvider';
 import { DiagnosticsProvider, PublishDiagnosticsEventArgs } from './diagnosticsProvider';
@@ -64,7 +64,7 @@ export namespace Intelephense {
         signatureHelpProvider = new SignatureHelpProvider(symbolStore, documentStore);
         definitionProvider = new DefinitionProvider(symbolStore, documentStore);
         unsubscribeMap['documentChange'] = documentStore.parsedDocumentChangeEvent.subscribe(symbolStore.onParsedDocumentChange);
-        symbolStore.add(SymbolTable.createBuiltIn());
+        symbolStore.add(SymbolTable.readBuiltInSymbols());
 
     }
 
@@ -146,13 +146,9 @@ export namespace Intelephense {
             return symbolTable ? symbolTable.count : 0;
         }
 
-        //ignore method and function bodies because external api is only of interest
-        const ignore = [
-            PhraseType.MethodDeclarationBody, PhraseType.FunctionDeclarationBody
-        ];
         let text = textDocument.text;
         let parsedDocument = new ParsedDocument(uri, text);
-        let symbolTable = SymbolTable.create(parsedDocument, ignore);
+        let symbolTable = SymbolTable.create(parsedDocument, true);
         symbolStore.remove(uri);
         symbolStore.add(symbolTable);
         return symbolTable.count;
