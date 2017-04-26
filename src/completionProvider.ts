@@ -13,11 +13,11 @@ import {
 import {
     PhpSymbol, SymbolKind, SymbolModifier, TypeSource
 } from './symbol';
-import {SymbolStore, SymbolTable, MemberQuery} from './symbolStore';
-import {SymbolReader} from './symbolReader';
-import {TypeString} from './typeString';
-import {NameResolver} from './nameResolver';
-import {ExpressionTypeResolver, VariableTypeResolver, VariableTable} from './typeResolver';
+import { SymbolStore, SymbolTable, MemberQuery } from './symbolStore';
+import { SymbolReader } from './symbolReader';
+import { TypeString } from './typeString';
+import { NameResolver } from './nameResolver';
+import { ExpressionTypeResolver, VariableTypeResolver, VariableTable } from './typeResolver';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Predicate } from './types';
 import { Context } from './context';
@@ -48,6 +48,11 @@ function keywordCompletionItems(keywords: string[], text: string) {
     return items;
 
 }
+
+const signatureHelpCommand = <lsp.Command>{
+    command: 'vscode.executeSignatureHelpProvider',
+    title: 'Signature Help'
+};
 
 function insertText(s: PhpSymbol, nsName: string, namePhraseType: PhraseType) {
     let insertText = s.name;
@@ -115,12 +120,24 @@ function toClassCompletionItem(s: PhpSymbol, insertText?: string) {
 
 function toFunctionCompletionItem(s: PhpSymbol, insertText?: string) {
 
+    if(!insertText){
+        insertText = s.name;
+    }
+
     let item: lsp.CompletionItem = {
         kind: lsp.CompletionItemKind.Function,
         label: PhpSymbol.notFqn(s.name),
         documentation: s.description,
         detail: PhpSymbol.signatureString(s),
-        insertText: insertText ? insertText : s.name
+        insertText: insertText
+    }
+
+    if(PhpSymbol.hasParameters(s)){
+        item.insertText = snippetEscape(item.insertText) + '($0)';
+        item.command = signatureHelpCommand;
+        item.insertTextFormat = lsp.InsertTextFormat.Snippet;
+    } else {
+        item.insertText += '()';
     }
 
     return item;
