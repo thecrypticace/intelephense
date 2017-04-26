@@ -84,7 +84,7 @@ export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Toke
                 break;
         }
 
-        return this.preorder(node, spine);
+        return this._preorder(node, spine);
 
     }
 

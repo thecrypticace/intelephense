@@ -23,7 +23,7 @@ export declare abstract class ParsedDocumentVisitor implements TreeVisitor<Phras
     haltTraverse: boolean;
     haltAtOffset: number;
     constructor(document: ParsedDocument, nameResolver: NameResolver);
-    preorder(node: Phrase | Token, spine: (Phrase | Token)[]): any;
+    preorder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
     postorder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
     private _classDeclarationHeader(node);
     private _anonymousClassDeclaration(node);

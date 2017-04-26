@@ -13,7 +13,7 @@ export namespace PhpDocParser {
     const paramOrPropertyPattern = /^(@param|@property|@property-read|@property-write)\s+(\S+)\s+(\$\S+)\s*([^]*)$/;
     const varPattern = /^(@var)\s+(\S+)(?:\s+(\$\S+))?\s*([^]*)$/;
     const returnPattern = /^(@return)\s+(\S+)\s*([^]*)$/;
-    const methodPattern = /^(@method)\s+(\S+\s+)?(\S+)\(\s*([^]*)\s*\)(?!\[)\s*([^]*)$/;
+    const methodPattern = /^(@method)\s+(?:(\S+)\s+)?(\S+)\(\s*([^]*)\s*\)\s*([^]*)$/;
 
     export function parse(input: string) {
 
@@ -56,7 +56,7 @@ export namespace PhpDocParser {
     function parseTag(text:string){
 
         let substring = text.slice(0, 4);
-        let match: RegExpMatchArray;      
+        let match: RegExpMatchArray;
 
         switch(substring){
             case '@par':
@@ -77,7 +77,7 @@ export namespace PhpDocParser {
                 return null;
             case '@met':
                 if((match = text.match(methodPattern))){
-                    return methodTag(match[5], match[6], match[7], methodParameters(match[8]), match[9]);
+                    return methodTag(match[1], match[2], match[3], methodParameters(match[4]), match[5]);
                 }
                 return null;
             default:

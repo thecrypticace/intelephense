@@ -822,7 +822,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
     stringToInterfaceSymbolStub(text: string) {
         return <PhpSymbol>{
             kind: SymbolKind.Interface,
-            name: name
+            name: text
         };
     }
 
@@ -833,7 +833,7 @@ export class SymbolReader extends ParsedDocumentVisitor {
     stringToTraitSymbolStub(text: string) {
         return <PhpSymbol>{
             kind: SymbolKind.Trait,
-            name: name
+            name: text
         };
     }
 

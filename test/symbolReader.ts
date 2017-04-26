@@ -1,4 +1,4 @@
-import { PhpSymbol, SymbolKind } from '../src/symbol';
+import { PhpSymbol, SymbolKind, SymbolModifier } from '../src/symbol';
 import { SymbolTable } from '../src/symbolStore';
 import { NameResolver } from '../src/nameResolver';
 import { SymbolReader } from '../src/symbolReader';
@@ -17,6 +17,28 @@ function symbolReaderOutput(src: string) {
 }
 
 describe('SymbolReader', () => {
+
+    it('@method tags', function(){
+        let src = `<?php
+            /**
+             * @method int fn(string $p) method description
+             */
+            class Foo { }`;
+
+            let symbols = symbolReaderOutput(src);
+            let method = symbols.children[0].children[0];
+            let param = method.children[0];
+
+            assert.equal(method.kind, SymbolKind.Method);
+            assert.equal(method.modifiers, SymbolModifier.Magic);
+            assert.equal(method.name, 'fn');
+            assert.equal(method.type.toString(), 'int');
+            assert.equal(param.kind, SymbolKind.Parameter);
+            assert.equal(param.name, '$p');
+            assert.equal(param.type.toString(), 'string');
+
+            //console.log(JSON.stringify(symbols, null, 4));
+    });
 
 
     it('namespace use parse error', function () {
