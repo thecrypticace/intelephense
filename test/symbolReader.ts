@@ -18,6 +18,19 @@ function symbolReaderOutput(src: string) {
 
 describe('SymbolReader', () => {
 
+    it('define', function(){
+
+        let src = `<?php
+            define('FOO', 1);
+        `;
+
+        let symbols = symbolReaderOutput(src);
+        let defineConstant = symbols.children[0];
+        assert.equal(defineConstant.name, 'FOO');
+        assert.equal(defineConstant.kind, SymbolKind.Constant);
+
+    });
+
     it('@method tags', function(){
         let src = `<?php
             /**

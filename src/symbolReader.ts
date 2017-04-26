@@ -459,6 +459,9 @@ export class SymbolReader extends ParsedDocumentVisitor {
 
         let argTextArray = this.argListToStringArray(node.argumentList);
         let name = argTextArray.shift().slice(1, -1);
+        if(name && name[0] === '\\'){
+            name = name.slice(1);
+        }
         let value = argTextArray.shift();
 
         return <PhpSymbol>{
