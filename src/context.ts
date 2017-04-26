@@ -53,8 +53,7 @@ class ContextVisitor extends ParsedDocumentVisitor {
 
     protected _preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
-        if (this._containsHaltOffset(node)) {
-            this.haltTraverse = true;
+        if (this.haltTraverse) {
             this._spine = spine.slice(0);
             this._spine.push(node);
             return false;
@@ -74,6 +73,7 @@ class ContextVisitor extends ParsedDocumentVisitor {
             case PhraseType.NamespaceUseDeclaration:
                 this._lastNamespaceUseDeclaration = node as NamespaceUseDeclaration;
                 break;
+
         }
 
 
@@ -126,7 +126,7 @@ export class Context {
     ) {
 
         this._offset = document.offsetAtPosition(position) - 1;
-        let contextVisitor = new ContextVisitor(this.document, this._nameResolver, this._offset);
+        let contextVisitor = new ContextVisitor(this.document, new NameResolver(), this._offset);
         document.traverse(contextVisitor);
         this._parseTreeSpine = contextVisitor.spine;
         this._openingInlineText = contextVisitor.openingInlineText;

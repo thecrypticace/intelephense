@@ -98,6 +98,26 @@ var groupUseSrc =
     class Baz {}
 `;
 
+var methodTagSrc =
+`<?php
+    /**
+     * @method int bar()
+     */
+     class Foo {}
+     $var = new Foo();
+     $var->
+`;
+
+var propertyTagSrc = 
+`<?php
+    /**
+     * @property int $prop
+     */
+    class Foo {}
+    $var = new Foo();
+    $var->
+`;
+
 function setup(src: string) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -214,6 +234,24 @@ describe('CompletionProvider', () => {
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
         });
 
+        it('@method', function(){
+            let provider = setup(methodTagSrc);
+            let completions = provider.provideCompletions('test', { line: 6, character: 11 });
+            assert.equal(completions.items.length, 1);
+            assert.equal(completions.items[0].label, 'bar');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+
+        });
+
+        it('@property', function(){
+            let provider = setup(propertyTagSrc);
+            let completions = provider.provideCompletions('test', { line: 6, character: 10 });
+            assert.equal(completions.items.length, 1);
+            assert.equal(completions.items[0].label, 'prop');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Property);
+
+        });
+
     });
 
     describe('Variables', function () {
@@ -277,7 +315,8 @@ describe('CompletionProvider', () => {
         it('use completions', function () {
             var completions = completionProvider.provideCompletions('test', { line: 2, character: 9 });
             assert.equal(completions.items.length, 1);
-            assert.equal(completions.items[0].label, 'Bar\\Foo');
+            assert.equal(completions.items[0].label, 'Foo');
+            assert.equal(completions.items[0].insertText, 'Bar\\Foo');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Class);
             //console.log(JSON.stringify(completions, null, 4));
         });
@@ -346,7 +385,8 @@ describe('CompletionProvider', () => {
             var completions = completionProvider.provideCompletions('test', { line: 3, character: 9 });
             //console.log(JSON.stringify(completions, null, 4));
             assert.equal(completions.items.length, 1);
-            assert.equal(completions.items[0].label, 'Bar\\Baz');
+            assert.equal(completions.items[0].label, 'Baz');
+            assert.equal(completions.items[0].insertText, 'Bar\\Baz');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Class);
         });
 

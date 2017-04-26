@@ -46,6 +46,10 @@ export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Toke
 
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
+        if(this.haltTraverse){
+            return false;
+        }
+
         switch ((<Phrase>node).phraseType) {
 
             case PhraseType.NamespaceDefinition:
