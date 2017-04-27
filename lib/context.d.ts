@@ -23,7 +23,9 @@ export declare class Context {
     private _nameResolver;
     private _lastNamespaceUseDeclaration;
     private _openingInlineText;
+    private _wordStartPosition;
     constructor(symbolStore: SymbolStore, document: ParsedDocument, position: Position);
+    readonly uri: string;
     readonly word: string;
     readonly wordStartPosition: Position;
     readonly token: Token;

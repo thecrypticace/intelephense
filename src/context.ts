@@ -118,6 +118,7 @@ export class Context {
     private _nameResolver: NameResolver;
     private _lastNamespaceUseDeclaration: NamespaceUseDeclaration;
     private _openingInlineText: InlineText;
+    private _wordStartPosition: Position;
 
     constructor(
         public symbolStore: SymbolStore,
@@ -134,13 +135,20 @@ export class Context {
 
     }
 
+    get uri() {
+        return this.document.uri;
+    }
+
     get word() {
         return this.document.wordAtOffset(this._offset);
     }
 
     get wordStartPosition() {
-        let startOffset = this._offset - (this.word.length - 1);
-        return this.document.positionAtOffset(startOffset);
+        if (this._wordStartPosition === undefined) {
+            let startOffset = this._offset - (this.word.length - 1);
+            this._wordStartPosition = this.document.positionAtOffset(startOffset);
+        }
+        return this._wordStartPosition;
     }
 
     get token() {
