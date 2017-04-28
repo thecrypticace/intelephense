@@ -5,14 +5,14 @@
 'use strict';
 
 import { ParsedDocument, ParsedDocumentStore, ParsedDocumentChangeEventArgs } from './parsedDocument';
-import { SymbolStore, SymbolTable } from './symbolStore';
+import { SymbolStore, SymbolTable, SymbolTableDto } from './symbolStore';
 import { SymbolProvider } from './symbolProvider';
 import { CompletionProvider } from './completionProvider';
 import { DiagnosticsProvider, PublishDiagnosticsEventArgs } from './diagnosticsProvider';
 import { Debounce, Unsubscribe } from './types';
 import { SignatureHelpProvider } from './signatureHelpProvider';
 import { DefinitionProvider } from './definitionProvider';
-import {PhraseType} from 'php7parser';
+import { PhraseType } from 'php7parser';
 import * as lsp from 'vscode-languageserver-types';
 
 export namespace Intelephense {
@@ -68,15 +68,15 @@ export namespace Intelephense {
 
     }
 
-    export function setDiagnosticsProviderDebounce(value:number){
+    export function setDiagnosticsProviderDebounce(value: number) {
         diagnosticsProvider.debounceWait = value;
     }
 
-    export function setDiagnosticsProviderMaxItems(value:number){
+    export function setDiagnosticsProviderMaxItems(value: number) {
         diagnosticsProvider.maxItems = value;
     }
 
-    export function setCompletionProviderMaxItems(value:number){
+    export function setCompletionProviderMaxItems(value: number) {
         completionProvider.maxItems = value;
     }
 
@@ -136,6 +136,19 @@ export namespace Intelephense {
         return definitionProvider.provideDefinition(textDocument.uri, position);
     }
 
+    export function addSymbols(symbolTableDto: SymbolTableDto) {
+
+        if (documentStore.has(symbolTableDto.uri)) {
+            //if doc is open dont add symbols
+            return;
+        }
+
+        let table = SymbolTable.fromDto(symbolTableDto);
+        symbolStore.remove(table.uri);
+        symbolStore.add(table);
+
+    }
+
     export function discover(textDocument: lsp.TextDocumentItem) {
 
         let uri = textDocument.uri;
@@ -151,7 +164,7 @@ export namespace Intelephense {
         let symbolTable = SymbolTable.create(parsedDocument, true);
         symbolStore.remove(uri);
         symbolStore.add(symbolTable);
-        return symbolTable.count;
+        return symbolTable.toDto();
 
     }
 
