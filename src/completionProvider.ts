@@ -117,15 +117,6 @@ function toFunctionCompletionItem(s: PhpSymbol, context: Context, namePhraseType
         insertText: createInsertText(s, context.namespace, namePhraseType)
     }
 
-    if (PhpSymbol.hasParameters(s)) {
-        let wordPos = context.wordStartPosition;
-        item.command = createSignatureHelpCommand(context.uri, lsp.Position.create(wordPos.line, wordPos.character + item.insertText.length + 1));
-        item.insertText = snippetEscape(item.insertText) + '($0)';
-        item.insertTextFormat = lsp.InsertTextFormat.Snippet;
-    } else {
-        item.insertText += '()';
-    }
-
     return item;
 }
 
