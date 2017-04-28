@@ -4,14 +4,14 @@
 
 'use strict';
 
-import {PhpSymbol, SymbolIndex, SymbolKind, SymbolModifier} from './symbol';
-import {TreeTraverser, Predicate} from './types';
-import {Position} from 'vscode-languageserver-types';
-import {TypeString} from './typeString';
+import { PhpSymbol, SymbolIndex, SymbolKind, SymbolModifier, PhpSymbolDto } from './symbol';
+import { TreeTraverser, Predicate, TreeVisitor } from './types';
+import { Position, Location, Range } from 'vscode-languageserver-types';
+import { TypeString } from './typeString';
 import * as builtInSymbols from './builtInSymbols.json';
-import {ParsedDocument, ParsedDocumentChangeEventArgs} from './parsedDocument';
-import {SymbolReader} from './symbolReader';
-import {NameResolver} from './nameResolver';
+import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
+import { SymbolReader } from './symbolReader';
+import { NameResolver } from './nameResolver';
 
 export class SymbolTable {
 
@@ -32,6 +32,12 @@ export class SymbolTable {
         let traverser = new TreeTraverser([this.root]);
         //subtract 1 for root
         return traverser.count() - 1;
+    }
+
+    traverse(visitor: TreeVisitor<PhpSymbol>) {
+        let traverser = new TreeTraverser([this.root]);
+        traverser.traverse(visitor);
+        return visitor;
     }
 
     filter(predicate: Predicate<PhpSymbol>) {
@@ -55,7 +61,18 @@ export class SymbolTable {
         return this.filter(pred).pop();
     }
 
-     static create(parsedDocument: ParsedDocument, externalOnly?: boolean) {
+    toDto() {
+        return <SymbolTableDto>{
+            uri: this.uri,
+            root: (<ToPhpSymbolDtoVisitor>this.traverse(new ToPhpSymbolDtoVisitor())).root
+        }
+    }
+
+    static fromDto(dto: SymbolTableDto) {
+
+    }
+
+    static create(parsedDocument: ParsedDocument, externalOnly?: boolean) {
 
         let symbolReader = new SymbolReader(
             parsedDocument,
@@ -278,5 +295,108 @@ export class SymbolStore {
     }
 
 
+
+}
+
+export interface SymbolTableDto {
+    uri: string;
+    root: PhpSymbolDto;
+}
+
+class ToPhpSymbolDtoVisitor implements TreeVisitor<PhpSymbol> {
+
+    private _dtoStack;
+
+    constructor() {
+        this._dtoStack = [];
+    }
+
+    get root() {
+        return this._dtoStack.length ? this._dtoStack[0] : null;
+    }
+
+    preorder(node: PhpSymbol, spine: PhpSymbol[]) {
+
+        let parent = this._dtoStack.length ? this._dtoStack[this._dtoStack.length - 1] : null;
+
+        let dto = <PhpSymbolDto>{
+            kind: node.kind,
+            name: node.name
+        };
+
+        if (node.modifiers) {
+            dto.modifiers = node.modifiers;
+        }
+
+        if (node.location) {
+            dto.location = this._rangeToArray(node.location.range)
+        }
+
+        if (node.associated) {
+            dto.associated = this._associatedToAssociatedDto(node.associated);
+        }
+
+        if (node.description) {
+            dto.description = node.description
+        }
+
+        if (node.scope) {
+            dto.scope = node.scope;
+        }
+
+        if (node.value) {
+            dto.value = node.value;
+        }
+
+        if (node.typeSource) {
+            dto.typeSource = node.typeSource;
+        }
+
+        if (node.type) {
+            dto.type = node.type.toString();
+        }
+
+        if (parent) {
+            if (!parent.children) {
+                parent.children = [];
+            }
+
+            parent.children.push(dto);
+        }
+
+        this._dtoStack.push(dto);
+        return true;
+
+    }
+
+    postorder(node: PhpSymbol, spine: PhpSymbol[]) {
+        if (this._dtoStack.length) {
+            this._dtoStack.pop();
+        }
+    }
+
+    private _rangeToArray(range: Range) {
+        return [
+            range.start.line,
+            range.start.character,
+            range.end.line,
+            range.end.character
+        ];
+    }
+
+    private _associatedToAssociatedDto(associated: PhpSymbol[]) {
+
+        let dtos: PhpSymbolDto[] = [];
+        let s: PhpSymbol;
+        for (let n = 0, l = associated.length; n < l; ++n) {
+            s = associated[n];
+            dtos.push({
+                kind: s.kind,
+                name: s.name
+            });
+        }
+
+        return dtos;
+    }
 
 }

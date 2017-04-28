@@ -337,4 +337,18 @@ interface SymbolIndexNode {
     items: PhpSymbol[];
 }
 
+export interface PhpSymbolDto {
+    kind: SymbolKind;
+    name: string;
+    location?: number[];
+    modifiers?: SymbolModifier;
+    description?: string;
+    type?: string;
+    associated?: PhpSymbolDto[];
+    children?: PhpSymbolDto[];
+    scope?: string;
+    value?: string;
+    typeSource?: TypeSource;
+}
+
 
