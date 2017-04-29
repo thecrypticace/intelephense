@@ -158,7 +158,7 @@ export namespace Intelephense {
         if (documentStore.has(uri)) {
             //if document is in doc store/opened then dont rediscover.
             let symbolTable = symbolStore.getSymbolTable(uri);
-            return symbolTable ? symbolTable.count : 0;
+            return symbolTable ? symbolTable.toDto() : null;
         }
 
         let text = textDocument.text;

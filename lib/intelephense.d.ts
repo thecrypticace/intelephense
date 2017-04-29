@@ -19,7 +19,7 @@ export declare namespace Intelephense {
     function provideSignatureHelp(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): lsp.SignatureHelp;
     function provideDefinition(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): lsp.Location;
     function addSymbols(symbolTableDto: SymbolTableDto): void;
-    function discover(textDocument: lsp.TextDocumentItem): number | SymbolTableDto;
+    function discover(textDocument: lsp.TextDocumentItem): SymbolTableDto;
     function forget(uri: string): number;
     function numberDocumentsOpen(): number;
     function numberDocumentsKnown(): number;
