@@ -4,10 +4,10 @@
 
 'use strict';
 
-import {TypeString} from './typeString';
-import {BinarySearch} from './types';
-import {Location} from 'vscode-languageserver-types';
-import * as util from './util'; 
+import { TypeString } from './typeString';
+import { BinarySearch } from './types';
+import { Location } from 'vscode-languageserver-types';
+import * as util from './util';
 
 export const enum SymbolKind {
     None = 0,
@@ -311,6 +311,10 @@ export class SymbolIndex {
 
     private _symbolKeys(s: PhpSymbol) {
 
+        if (s.kind === SymbolKind.Namespace) {
+            return this._namespaceSymbolKeys(s);
+        }
+
         let notFqnPos = s.name.lastIndexOf('\\') + 1;
         let notFqn = s.name.slice(notFqnPos);
         let lcNotFqn = notFqn.toLowerCase();
@@ -328,6 +332,21 @@ export class SymbolIndex {
             keys.add(acronym);
         }
         return Array.from(keys);
+    }
+
+    private _hasLength(text:string){
+        return text.length > 0;
+    }
+
+    private _namespaceSymbolKeys(s: PhpSymbol) {
+        if (!s.name) {
+            return [];
+        }
+
+        let lcName = s.name.toLowerCase();
+        let keys = [lcName];
+        Array.prototype.push.apply(keys, lcName.split('\\').filter(this._hasLength));
+        return keys;
     }
 
 }

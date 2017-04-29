@@ -1,3 +1,5 @@
+import { SymbolTableDto } from './symbolStore';
+import { CompletionProviderConfig } from './completionProvider';
 import { PublishDiagnosticsEventArgs } from './diagnosticsProvider';
 import * as lsp from 'vscode-languageserver-types';
 export declare namespace Intelephense {
@@ -6,7 +8,7 @@ export declare namespace Intelephense {
     function initialise(): void;
     function setDiagnosticsProviderDebounce(value: number): void;
     function setDiagnosticsProviderMaxItems(value: number): void;
-    function setCompletionProviderMaxItems(value: number): void;
+    function setCompletionProviderConfig(config: CompletionProviderConfig): void;
     function openDocument(textDocument: lsp.TextDocumentItem): void;
     function closeDocument(textDocument: lsp.TextDocumentIdentifier): void;
     function editDocument(textDocument: lsp.VersionedTextDocumentIdentifier, contentChanges: lsp.TextDocumentContentChangeEvent[]): void;
@@ -15,7 +17,8 @@ export declare namespace Intelephense {
     function provideCompletions(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): lsp.CompletionList;
     function provideSignatureHelp(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): lsp.SignatureHelp;
     function provideDefinition(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): lsp.Location;
-    function discover(textDocument: lsp.TextDocumentItem): number;
+    function addSymbols(symbolTableDto: SymbolTableDto): void;
+    function discover(textDocument: lsp.TextDocumentItem): number | SymbolTableDto;
     function forget(uri: string): number;
     function numberDocumentsOpen(): number;
     function numberDocumentsKnown(): number;

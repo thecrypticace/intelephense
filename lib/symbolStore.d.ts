@@ -1,5 +1,5 @@
-import { PhpSymbol } from './symbol';
-import { Predicate } from './types';
+import { PhpSymbol, PhpSymbolDto } from './symbol';
+import { Predicate, TreeVisitor } from './types';
 import { Position } from 'vscode-languageserver-types';
 import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
 export declare class SymbolTable {
@@ -8,9 +8,12 @@ export declare class SymbolTable {
     constructor(uri: string, root: PhpSymbol);
     readonly symbols: PhpSymbol[];
     readonly count: number;
+    traverse(visitor: TreeVisitor<PhpSymbol>): TreeVisitor<PhpSymbol>;
     filter(predicate: Predicate<PhpSymbol>): PhpSymbol[];
     find(predicate: Predicate<PhpSymbol>): PhpSymbol;
     symbolAtPosition(position: Position): PhpSymbol;
+    toDto(): SymbolTableDto;
+    static fromDto(dto: SymbolTableDto): SymbolTable;
     static create(parsedDocument: ParsedDocument, externalOnly?: boolean): SymbolTable;
     static readBuiltInSymbols(): SymbolTable;
     static builtInSymbolTypeStrings(symbols: any[]): void;
@@ -55,4 +58,8 @@ export declare class SymbolStore {
     private _lookupTypeMembers(type, predicate, typeHistory);
     private _indexSymbols(root);
     private _indexFilter(s);
+}
+export interface SymbolTableDto {
+    uri: string;
+    root: PhpSymbolDto;
 }

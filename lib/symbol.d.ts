@@ -68,4 +68,19 @@ export declare class SymbolIndex {
     private _insertNode(node);
     private _deleteNode(node);
     private _symbolKeys(s);
+    private _hasLength(text);
+    private _namespaceSymbolKeys(s);
+}
+export interface PhpSymbolDto {
+    kind: SymbolKind;
+    name: string;
+    location?: number[];
+    modifiers?: SymbolModifier;
+    description?: string;
+    type?: string;
+    associated?: PhpSymbolDto[];
+    children?: PhpSymbolDto[];
+    scope?: string;
+    value?: string;
+    typeSource?: TypeSource;
 }

@@ -7,7 +7,7 @@
 import { ParsedDocument, ParsedDocumentStore, ParsedDocumentChangeEventArgs } from './parsedDocument';
 import { SymbolStore, SymbolTable, SymbolTableDto } from './symbolStore';
 import { SymbolProvider } from './symbolProvider';
-import { CompletionProvider } from './completionProvider';
+import { CompletionProvider, CompletionProviderConfig } from './completionProvider';
 import { DiagnosticsProvider, PublishDiagnosticsEventArgs } from './diagnosticsProvider';
 import { Debounce, Unsubscribe } from './types';
 import { SignatureHelpProvider } from './signatureHelpProvider';
@@ -76,8 +76,8 @@ export namespace Intelephense {
         diagnosticsProvider.maxItems = value;
     }
 
-    export function setCompletionProviderMaxItems(value: number) {
-        completionProvider.maxItems = value;
+    export function setCompletionProviderConfig(config: CompletionProviderConfig) {
+        completionProvider.config = config;
     }
 
     export function openDocument(textDocument: lsp.TextDocumentItem) {

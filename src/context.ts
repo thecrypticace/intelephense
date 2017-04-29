@@ -176,13 +176,21 @@ export class Context {
     }
 
     /**
-     * The TextEdit returned from this contains whitespace to correctly format declaration
-     * the use declaration string should be appended to existing text.
+     * Only supports non-aliased declarations
+     * If a non-aliased declaration will cause duplicate symbols then this returns null
+     * @param fqn 
      */
-    get useDeclarationTextEdit() {
+    createUseDeclarationTextEdit(fqn: string, kind?:SymbolKind) {
 
         let text: string;
         let nodeRange: Range;
+        let hasRule: Predicate<PhpSymbol> = (x) => {
+            return PhpSymbol.notFqn(fqn) === x.name;
+        };
+
+        if (this._nameResolver.rules.find(hasRule)) {
+            return null;
+        }
 
         if (this._lastNamespaceUseDeclaration) {
             nodeRange = this.document.nodeRange(this._lastNamespaceUseDeclaration);
@@ -197,6 +205,19 @@ export class Context {
             return TextEdit.insert({ line: 0, character: 0 }, text);
         }
 
+        let kindText = '';
+        switch(kind){
+            case SymbolKind.Function:
+                kindText = 'function ';
+                break;
+            case SymbolKind.Constant:
+                kindText = 'const ';
+                break;
+            default:
+                break;
+        }
+
+        text += `use ${kindText}${fqn};`;
         return TextEdit.insert(nodeRange.end, text);
 
     }

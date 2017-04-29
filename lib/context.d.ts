@@ -35,10 +35,11 @@ export declare class Context {
     readonly classBaseName: string;
     readonly namespace: string;
     /**
-     * The TextEdit returned from this contains whitespace to correctly format declaration
-     * the use declaration string should be appended to existing text.
+     * Only supports non-aliased declarations
+     * If a non-aliased declaration will cause duplicate symbols then this returns null
+     * @param fqn
      */
-    readonly useDeclarationTextEdit: TextEdit;
+    createUseDeclarationTextEdit(fqn: string, kind?: SymbolKind): TextEdit;
     readonly classDeclarationPhrase: ClassDeclaration;
     readonly classSymbol: PhpSymbol;
     readonly classBaseSymbol: PhpSymbol;
