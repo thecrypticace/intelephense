@@ -21,14 +21,14 @@ export namespace Intelephense {
 
     const phpLanguageId = 'php';
 
-    let documentStore: ParsedDocumentStore;
-    let symbolStore: SymbolStore;
-    let symbolProvider: SymbolProvider;
-    let completionProvider: CompletionProvider;
-    let diagnosticsProvider: DiagnosticsProvider;
-    let signatureHelpProvider: SignatureHelpProvider;
-    let definitionProvider: DefinitionProvider;
-    let unsubscribeMap: { [index: string]: Unsubscribe };
+    let documentStore = new ParsedDocumentStore();
+    let symbolStore = new SymbolStore();
+    let symbolProvider = new SymbolProvider(symbolStore);
+    let completionProvider = new CompletionProvider(symbolStore, documentStore);
+    let diagnosticsProvider = new DiagnosticsProvider();
+    let signatureHelpProvider = new SignatureHelpProvider(symbolStore, documentStore);
+    let definitionProvider = new DefinitionProvider(symbolStore, documentStore);
+    let unsubscribeMap: { [index: string]: Unsubscribe } = {};
 
     function unsubscribe(key: string) {
         if (typeof unsubscribeMap[key] === 'function') {
@@ -57,14 +57,6 @@ export namespace Intelephense {
 
     export function initialise() {
 
-        unsubscribeMap = {};
-        documentStore = new ParsedDocumentStore();
-        symbolStore = new SymbolStore();
-        symbolProvider = new SymbolProvider(symbolStore);
-        completionProvider = new CompletionProvider(symbolStore, documentStore);
-        diagnosticsProvider = new DiagnosticsProvider();
-        signatureHelpProvider = new SignatureHelpProvider(symbolStore, documentStore);
-        definitionProvider = new DefinitionProvider(symbolStore, documentStore);
         unsubscribeMap['documentChange'] = documentStore.parsedDocumentChangeEvent.subscribe(symbolStore.onParsedDocumentChange);
         symbolStore.add(SymbolTable.readBuiltInSymbols());
 
