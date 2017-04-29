@@ -2,6 +2,7 @@ import { SymbolTableDto } from './symbolStore';
 import { CompletionProviderConfig } from './completionProvider';
 import { PublishDiagnosticsEventArgs } from './diagnosticsProvider';
 import * as lsp from 'vscode-languageserver-types';
+export { SymbolTableDto } from './symbolStore';
 export declare namespace Intelephense {
     function onDiagnosticsStart(fn: (uri: string) => void): void;
     function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void): void;
