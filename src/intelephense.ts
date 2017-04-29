@@ -15,6 +15,8 @@ import { DefinitionProvider } from './definitionProvider';
 import { PhraseType } from 'php7parser';
 import * as lsp from 'vscode-languageserver-types';
 
+export {SymbolTableDto} from './symbolStore';
+
 export namespace Intelephense {
 
     const phpLanguageId = 'php';
