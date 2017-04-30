@@ -292,7 +292,6 @@ export class Context {
         switch ((<Phrase>p).phraseType) {
             case PhraseType.FunctionDeclaration:
             case PhraseType.MethodDeclaration:
-            case PhraseType.AnonymousFunctionCreationExpression:
             case PhraseType.ClassDeclaration:
             case PhraseType.InterfaceDeclaration:
             case PhraseType.TraitDeclaration:

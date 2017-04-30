@@ -265,7 +265,7 @@ class FindVisitor<T> implements TreeVisitor<T> {
 
         if (this._predicate(node)) {
             this._found = spine.slice(0);
-            this.found.push(node);
+            this._found.push(node);
             this.haltTraverse = true;
             return false;
         }

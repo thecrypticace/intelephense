@@ -2463,6 +2463,7 @@ export class VariableTable {
             let type: TypeString;
             for (let n = 0; n < carry.length; ++n) {
                 type = this.getType(carry[n], '');
+                console.log(JSON.stringify(type, null, 4));
                 if (type) {
                     scope.variables[carry[n]] = { name: carry[n], type: type };
                 }
