@@ -41,6 +41,7 @@ export declare class Context {
     createNameResolver(): NameResolver;
     createTraverser(): TreeTraverser<Token | Phrase>;
     createExpressionTypeResolver(): ExpressionTypeResolver;
+    private _isAbsoluteScopePhrase(p);
     private _isScopePhrase(p);
     private _isScopeBody(p);
     private _importFilter(s);

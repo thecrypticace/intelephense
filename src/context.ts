@@ -236,7 +236,11 @@ export class Context {
         if (!this._variableTable) {
             let varTypeResolver = new VariableTypeResolver(
                 new VariableTable(), this.document, this.createNameResolver(), this.symbolStore, this.token);
-            let scope = this.scopePhrase;
+            let t = this.createTraverser();
+            let scope = t.ancestor(this._isAbsoluteScopePhrase);
+            if(!scope){
+                scope = this._parseTreeSpine[0] as Phrase;
+            }
             let traverser = new TreeTraverser([scope]);
             traverser.traverse(varTypeResolver);
             this._variableTable = varTypeResolver.variableTable;
@@ -288,11 +292,26 @@ export class Context {
         return new ExpressionTypeResolver(this.createNameResolver(), this.symbolStore, this.variableTable);
     }
 
+    private _isAbsoluteScopePhrase(p: Phrase | Token) {
+        switch ((<Phrase>p).phraseType) {
+            case PhraseType.FunctionDeclaration:
+            case PhraseType.MethodDeclaration:
+            case PhraseType.ClassDeclaration:
+            case PhraseType.InterfaceDeclaration:
+            case PhraseType.TraitDeclaration:
+            case PhraseType.AnonymousClassDeclaration:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     private _isScopePhrase(p: Phrase | Token) {
         switch ((<Phrase>p).phraseType) {
             case PhraseType.FunctionDeclaration:
             case PhraseType.MethodDeclaration:
             case PhraseType.ClassDeclaration:
+            case PhraseType.AnonymousFunctionCreationExpression:
             case PhraseType.InterfaceDeclaration:
             case PhraseType.TraitDeclaration:
             case PhraseType.AnonymousClassDeclaration:
