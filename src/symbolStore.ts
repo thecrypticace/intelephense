@@ -375,7 +375,7 @@ class ToPhpSymbolDtoVisitor implements TreeVisitor<PhpSymbol> {
     }
 
     postorder(node: PhpSymbol, spine: PhpSymbol[]) {
-        if (this._dtoStack.length) {
+        if (this._dtoStack.length > 1) {
             this._dtoStack.pop();
         }
     }
