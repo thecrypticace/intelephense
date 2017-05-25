@@ -84,6 +84,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case TokenType.DocumentComment:
                 break;
             case TokenType.Semicolon:
+            case TokenType.Comma:
                 rule = FormatVisitor.noSpaceBefore;
                 break;
 
@@ -125,17 +126,41 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
     postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
+        switch((<Phrase>node).phraseType){
+            case PhraseType.CaseStatement:
+            case PhraseType.DefaultStatement:
+                --this.indent;
+                return;
+            default:
+                break;
+        }
+
         switch ((<Token>node).tokenType) {
             case TokenType.OpenParenthesis:
             case TokenType.OpenBracket:
             case TokenType.OpenBrace:
                 ++this.indent;
                 break;
+            case TokenType.Colon:
+                if(this._shouldIndentAfterColon(<Phrase>spine[spine.length - 1])){
+                    ++this.indent;
+                }
+                break;
             default:
                 break;
 
         }
 
+    }
+
+    private _shouldIndentAfterColon(parent:Phrase){
+        switch(parent.phraseType){
+            case PhraseType.CaseStatement:
+            case PhraseType.DefaultStatement:
+                return true;
+            default:
+                return false;
+        }
     }
 
     private _shouldOpenParenthesisHaveNoSpaceBefore(parent: Phrase) {
