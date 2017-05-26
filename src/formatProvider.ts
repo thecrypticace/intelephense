@@ -126,7 +126,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
     postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
-        switch((<Phrase>node).phraseType){
+        switch ((<Phrase>node).phraseType) {
             case PhraseType.CaseStatement:
             case PhraseType.DefaultStatement:
                 --this.indent;
@@ -138,14 +138,24 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         switch ((<Token>node).tokenType) {
             case TokenType.OpenParenthesis:
             case TokenType.OpenBracket:
+                this._nextFormatRule = FormatVisitor.noSpaceOrNewlineIndentBefore
+                ++this.indent;
+                break;
+
             case TokenType.OpenBrace:
                 ++this.indent;
                 break;
+
             case TokenType.Colon:
-                if(this._shouldIndentAfterColon(<Phrase>spine[spine.length - 1])){
+                if (this._shouldIndentAfterColon(<Phrase>spine[spine.length - 1])) {
                     ++this.indent;
                 }
                 break;
+
+             case TokenType.Backslash:
+                this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                break;
+
             default:
                 break;
 
@@ -153,8 +163,8 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
     }
 
-    private _shouldIndentAfterColon(parent:Phrase){
-        switch(parent.phraseType){
+    private _shouldIndentAfterColon(parent: Phrase) {
+        switch (parent.phraseType) {
             case PhraseType.CaseStatement:
             case PhraseType.DefaultStatement:
                 return true;
@@ -247,7 +257,7 @@ namespace FormatVisitor {
         return lsp.TextEdit.del(doc.tokenRange(previous));
     }
 
-    export function noSpaceOrNewlineIndentPlusOneBefore(previous: Token, doc: ParsedDocument, formatOptions: lsp.FormattingOptions, indent: number): lsp.TextEdit {
+    export function noSpaceOrNewlineIndentBefore(previous: Token, doc: ParsedDocument, formatOptions: lsp.FormattingOptions, indent: number): lsp.TextEdit {
         if (previous.tokenType !== TokenType.Whitespace) {
             return null;
         }
@@ -258,7 +268,7 @@ namespace FormatVisitor {
             return lsp.TextEdit.del(doc.tokenRange(previous));
         }
 
-        let expectedWs = createWhitespace(newlineCount, '\n') + createIndentText(indent + 1, formatOptions);
+        let expectedWs = createWhitespace(newlineCount, '\n') + createIndentText(indent, formatOptions);
         if (actualWs === expectedWs) {
             return null;
         }
