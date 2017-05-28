@@ -302,6 +302,18 @@ export namespace ParsedDocument {
         return k && !isNumeric(k) && nodeKeys.indexOf(k) < 0 ? undefined : v;
     }
 
+    export function firstPhraseOfType(type:PhraseType, nodes:(Phrase|Token)[]){
+
+        let child:Phrase;
+        for(let n = 0, l = nodes.length; n < l; ++n ){
+            child = nodes[n] as Phrase;
+            if(child.phraseType === type){
+                return child;
+            }
+        }
+        return null;
+    }
+
 }
 
 export class ParsedDocumentStore {

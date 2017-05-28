@@ -34,12 +34,15 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
     private _edits: lsp.TextEdit[];
     private _previousToken: Token;
     private _nextFormatRule: FormatRule;
+    private _isMultilineNameList = false;
+    private _isMultilineCommaDelimitedListStack:boolean[];
 
     constructor(
         public doc: ParsedDocument,
         public indent: number,
         public formatOptions: lsp.FormattingOptions) {
         this._edits = [];
+        this._isMultilineCommaDelimitedListStack = [];
     }
 
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
@@ -49,7 +52,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         switch ((<Phrase>node).phraseType) {
             case PhraseType.FunctionDeclarationBody:
                 if (parent.phraseType === PhraseType.AnonymousFunctionCreationExpression) {
-                    break;
+                    return true;
                 }
             // fall through
             case PhraseType.MethodDeclarationBody:
@@ -58,6 +61,50 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.InterfaceDeclarationBody:
                 this._nextFormatRule = FormatVisitor.newlineIndentBefore;
                 return true;
+
+            case PhraseType.ExpressionStatement:
+            case PhraseType.DoStatement:
+            case PhraseType.IfStatement:
+            case PhraseType.BreakStatement:
+            case PhraseType.CaseStatement:
+            case PhraseType.ContinueStatement:
+            case PhraseType.DeclareStatement:
+            case PhraseType.DefaultStatement:
+            case PhraseType.ForeachStatement:
+            case PhraseType.ForStatement:
+            case PhraseType.GotoStatement:
+            case PhraseType.HaltCompilerStatement:
+            case PhraseType.NamedLabelStatement:
+            case PhraseType.NullStatement:
+            case PhraseType.ReturnStatement:
+            case PhraseType.SwitchStatement:
+            case PhraseType.ThrowStatement:
+            case PhraseType.TryStatement:
+            case PhraseType.WhileStatement:
+                if (!this._nextFormatRule) {
+                    this._nextFormatRule = FormatVisitor.newlineIndentBefore;
+                }
+                return true;
+
+            case PhraseType.FullyQualifiedName:
+            case PhraseType.RelativeQualifiedName:
+            case PhraseType.QualifiedName:
+                if (
+                    parent.phraseType === PhraseType.QualifiedNameList &&
+                    ((this._previousToken &&
+                        this._previousToken.tokenType === TokenType.Whitespace &&
+                        FormatVisitor.countNewlines(this.doc.tokenText(this._previousToken)) > 0) ||
+                        this._hasNewlineWhitespaceChild(parent))
+                ) {
+                    this._nextFormatRule = FormatVisitor.newlineIndentPlusOneBefore;
+                }
+                return true;
+
+            case PhraseType.ParameterDeclarationList:
+            case PhraseType.ArgumentExpressionList:
+            case PhraseType.ClosureUseList:
+            case PhraseType.QualifiedNameList:
+                
 
             case undefined:
                 //tokens
@@ -100,6 +147,18 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 }
                 break;
 
+            case TokenType.ElseIf:
+            case TokenType.Else:
+                if (!rule) {
+                    if (this._hasColonChild(parent)) {
+                        rule = FormatVisitor.newlineIndentBefore;
+                    } else {
+                        rule = FormatVisitor.singleSpaceBefore;
+                    }
+                }
+
+                break;
+
             case TokenType.OpenBrace:
                 if (!rule) {
                     rule = FormatVisitor.singleSpaceBefore;
@@ -110,6 +169,12 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case TokenType.CloseParenthesis:
                 --this.indent;
                 break;
+
+            case TokenType.Extends:
+            case TokenType.Implements:
+                rule = FormatVisitor.singleSpaceBefore;
+                break;
+
             default:
                 if (!rule) {
                     rule = FormatVisitor.singleSpaceOrNewlineIndentPlusOneBefore;
@@ -126,10 +191,20 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
     postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
+        let parent = (spine.length ? spine[spine.length - 1] : null) as Phrase;
+
         switch ((<Phrase>node).phraseType) {
             case PhraseType.CaseStatement:
             case PhraseType.DefaultStatement:
                 --this.indent;
+                return;
+            case PhraseType.NamespaceDefinition:
+                this._nextFormatRule = FormatVisitor.doubleNewlineIndentBefore;
+                return;
+            case PhraseType.NamespaceUseDeclaration:
+                if (this._isLastNamespaceUseDeclaration(parent, <Phrase>node)) {
+                    this._nextFormatRule = FormatVisitor.doubleNewlineIndentBefore;
+                }
                 return;
             default:
                 break;
@@ -138,11 +213,12 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         switch ((<Token>node).tokenType) {
             case TokenType.OpenParenthesis:
             case TokenType.OpenBracket:
-                this._nextFormatRule = FormatVisitor.noSpaceOrNewlineIndentBefore
+                this._nextFormatRule = FormatVisitor.noSpaceOrNewlineIndentBefore;
                 ++this.indent;
                 break;
 
             case TokenType.OpenBrace:
+                this._nextFormatRule = FormatVisitor.newlineIndentBefore;
                 ++this.indent;
                 break;
 
@@ -152,7 +228,56 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 }
                 break;
 
-             case TokenType.Backslash:
+            case TokenType.Backslash:
+                this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                break;
+
+            case TokenType.Class:
+                this._nextFormatRule = FormatVisitor.singleSpaceBefore;
+                break;
+
+            case TokenType.Extends:
+                if (parent.phraseType === PhraseType.ClassBaseClause) {
+                    this._nextFormatRule = FormatVisitor.singleSpaceBefore;
+                }
+                break;
+
+            case TokenType.Ampersand:
+                if(parent.phraseType !== PhraseType.BitwiseExpression){
+                    this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                }
+                break;
+
+            case TokenType.Plus:
+            case TokenType.Minus:
+                if(parent.phraseType === PhraseType.UnaryOpExpression){
+                    this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                }
+                break;
+
+            case TokenType.PlusPlus:
+                if (parent.phraseType === PhraseType.PrefixIncrementExpression) {
+                    this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                }
+                break;
+
+            case TokenType.MinusMinus:
+                if (parent.phraseType === PhraseType.PrefixDecrementExpression) {
+                    this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                }
+                break;
+
+            case TokenType.Ellipsis:
+            case TokenType.Exclamation:
+            case TokenType.AtSymbol:
+            case TokenType.ArrayCast:
+            case TokenType.BooleanCast:
+            case TokenType.FloatCast:
+            case TokenType.IntegerCast:
+            case TokenType.ObjectCast:
+            case TokenType.StringCast:
+            case TokenType.UnsetCast:
+            case TokenType.Tilde:
                 this._nextFormatRule = FormatVisitor.noSpaceBefore;
                 break;
 
@@ -160,6 +285,33 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
         }
+
+    }
+
+    private _hasNewlineWhitespaceChild(phrase: Phrase) {
+        for (let n = 0, l = phrase.children.length; n < l; ++n) {
+            if (
+                (<Token>phrase.children[n]).tokenType === TokenType.Whitespace &&
+                FormatVisitor.countNewlines(this.doc.tokenText(<Token>phrase.children[n])) > 0
+            ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private _isLastNamespaceUseDeclaration(parent: Phrase, child: Phrase) {
+
+        let i = parent.children.indexOf(child);
+        while (i < parent.children.length) {
+            ++i;
+            child = parent.children[i] as Phrase;
+            if (child.phraseType) {
+                return child.phraseType !== PhraseType.NamespaceUseDeclaration;
+            }
+        }
+
+        return true;
 
     }
 
@@ -191,6 +343,17 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             default:
                 return false;
         }
+    }
+
+    private _hasColonChild(phrase: Phrase) {
+
+        for (let n = 0, l = phrase.children.length; n < l; ++n) {
+            if ((<Token>phrase.children[n]).tokenType === TokenType.Colon) {
+                return true;
+            }
+        }
+        return false;
+
     }
 
 
@@ -318,7 +481,7 @@ namespace FormatVisitor {
         return text;
     }
 
-    function countNewlines(text: string) {
+    export function countNewlines(text: string) {
 
         let c: string;
         let count = 0;
