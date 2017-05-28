@@ -35,7 +35,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
     private _previousToken: Token;
     private _nextFormatRule: FormatRule;
     private _isMultilineNameList = false;
-    private _isMultilineCommaDelimitedListStack:boolean[];
+    private _isMultilineCommaDelimitedListStack: boolean[];
 
     constructor(
         public doc: ParsedDocument,
@@ -104,7 +104,21 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.ArgumentExpressionList:
             case PhraseType.ClosureUseList:
             case PhraseType.QualifiedNameList:
-                
+            case PhraseType.ClassConstElementList:
+            case PhraseType.ConstElementList:
+            case PhraseType.PropertyElementList:
+                if (
+                    (this._previousToken &&
+                        this._previousToken.tokenType === TokenType.Whitespace &&
+                        FormatVisitor.countNewlines(this.doc.tokenText(this._previousToken)) > 0) ||
+                    this._hasNewlineWhitespaceChild(<Phrase>node)
+                ) {
+                    this._nextFormatRule = FormatVisitor.newlineIndentPlusOneBefore;
+                    this._isMultilineCommaDelimitedListStack.push(true);
+                } else {
+                    this._isMultilineCommaDelimitedListStack.push(false);
+                }
+                return true;
 
             case undefined:
                 //tokens
@@ -124,12 +138,15 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
                 this._nextFormatRule = rule;
                 break;
+
             case TokenType.Comment:
 
                 this._nextFormatRule = rule;
                 break;
+
             case TokenType.DocumentComment:
                 break;
+
             case TokenType.Semicolon:
             case TokenType.Comma:
                 rule = FormatVisitor.noSpaceBefore;
@@ -166,7 +183,11 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 break;
             case TokenType.CloseBrace:
             case TokenType.CloseBracket:
+
             case TokenType.CloseParenthesis:
+                if(!rule){
+                    rule = FormatVisitor.noSpaceBefore;
+                }
                 --this.indent;
                 break;
 
@@ -198,14 +219,32 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.DefaultStatement:
                 --this.indent;
                 return;
+
             case PhraseType.NamespaceDefinition:
                 this._nextFormatRule = FormatVisitor.doubleNewlineIndentBefore;
                 return;
+
             case PhraseType.NamespaceUseDeclaration:
                 if (this._isLastNamespaceUseDeclaration(parent, <Phrase>node)) {
                     this._nextFormatRule = FormatVisitor.doubleNewlineIndentBefore;
                 }
                 return;
+
+            case PhraseType.ParameterDeclarationList:
+            case PhraseType.ArgumentExpressionList:
+            case PhraseType.ClosureUseList:
+            case PhraseType.QualifiedNameList:
+                if (this._isMultilineCommaDelimitedListStack.pop()) {
+                    this._nextFormatRule = FormatVisitor.newlineIndentBefore;
+                }
+                return;
+
+            case PhraseType.ClassConstElementList:
+            case PhraseType.ConstElementList:
+            case PhraseType.PropertyElementList:
+                this._isMultilineCommaDelimitedListStack.pop();
+                return;
+
             default:
                 break;
         }
@@ -220,6 +259,21 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case TokenType.OpenBrace:
                 this._nextFormatRule = FormatVisitor.newlineIndentBefore;
                 ++this.indent;
+                break;
+
+            case TokenType.CloseBrace:
+                if (parent.phraseType === PhraseType.EncapsulatedVariable) {
+                    this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                } else if (
+                    parent.phraseType !== PhraseType.EncapsulatedExpression &&
+                    parent.phraseType !== PhraseType.SubscriptExpression
+                ) {
+                    this._nextFormatRule = FormatVisitor.newlineIndentBefore;
+                }
+                break;
+
+            case TokenType.Semicolon:
+                this._nextFormatRule = FormatVisitor.newlineIndentBefore;
                 break;
 
             case TokenType.Colon:
@@ -243,14 +297,14 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case TokenType.Ampersand:
-                if(parent.phraseType !== PhraseType.BitwiseExpression){
+                if (parent.phraseType !== PhraseType.BitwiseExpression) {
                     this._nextFormatRule = FormatVisitor.noSpaceBefore;
                 }
                 break;
 
             case TokenType.Plus:
             case TokenType.Minus:
-                if(parent.phraseType === PhraseType.UnaryOpExpression){
+                if (parent.phraseType === PhraseType.UnaryOpExpression) {
                     this._nextFormatRule = FormatVisitor.noSpaceBefore;
                 }
                 break;
@@ -279,6 +333,19 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case TokenType.UnsetCast:
             case TokenType.Tilde:
                 this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                break;
+
+            case TokenType.Comma:
+                if (parent.phraseType === PhraseType.ArrayInitialiserList) {
+                    this._nextFormatRule = FormatVisitor.singleSpaceOrNewlineIndentBefore;
+                } else if (
+                    this._isMultilineCommaDelimitedListStack.length > 0 &&
+                    this._isMultilineCommaDelimitedListStack[this._isMultilineCommaDelimitedListStack.length - 1]
+                ) {
+                    this._nextFormatRule = FormatVisitor.newlineIndentBefore;
+                } else {
+                    this._nextFormatRule = FormatVisitor.singleSpaceBefore;
+                }
                 break;
 
             default:
@@ -456,6 +523,31 @@ namespace FormatVisitor {
         }
 
         let expectedWs = createWhitespace(newlineCount, '\n') + createIndentText(indent + 1, formatOptions);
+        if (actualWs !== expectedWs) {
+            return lsp.TextEdit.replace(doc.tokenRange(this._previousToken), expectedWs);
+        }
+
+        return null;
+
+    }
+
+    export function singleSpaceOrNewlineIndentBefore(previous: Token, doc: ParsedDocument, formatOptions: lsp.FormattingOptions, indent: number): lsp.TextEdit {
+
+        if (previous.tokenType !== TokenType.Whitespace) {
+            return lsp.TextEdit.insert(this.doc.positionAtOffset(previous.offset + previous.length + 1), ' ');
+        }
+
+        let actualWs = doc.tokenText(previous);
+        if (actualWs === ' ') {
+            return null;
+        }
+
+        let newlineCount = countNewlines(actualWs);
+        if (!newlineCount) {
+            return lsp.TextEdit.replace(doc.tokenRange(previous), ' ');
+        }
+
+        let expectedWs = createWhitespace(newlineCount, '\n') + createIndentText(indent, formatOptions);
         if (actualWs !== expectedWs) {
             return lsp.TextEdit.replace(doc.tokenRange(this._previousToken), expectedWs);
         }
