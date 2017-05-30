@@ -102,10 +102,9 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
 
         let r = <lsp.Range>{
             start: this._textDocument.positionAtOffset(t.offset),
-            end: this._textDocument.positionAtOffset(t.offset + t.length - 1)
+            end: this._textDocument.positionAtOffset(t.offset + t.length)
         }
 
-        r.end.character++;
         return r;
     }
 
@@ -145,11 +144,9 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
 
         let range = <lsp.Range>{
             start: this._textDocument.positionAtOffset(tFirst.offset),
-            end: this._textDocument.positionAtOffset(tLast.offset + tLast.length - 1)
+            end: this._textDocument.positionAtOffset(tLast.offset + tLast.length)
         }
 
-        //end range char + 1 as cursor is outside of last offset
-        range.end.character++;
         return range;
 
     }
