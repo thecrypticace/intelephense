@@ -135,13 +135,9 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         switch ((<Token>node).tokenType) {
 
             case TokenType.Whitespace:
+            case TokenType.Comment:
                 this._nextFormatRule = rule;
                 return false;
-
-            case TokenType.Comment:
-
-                this._nextFormatRule = rule;
-                break;
 
             case TokenType.DocumentComment:
                 rule = FormatVisitor.newlineIndentBefore;
@@ -161,6 +157,9 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
             case TokenType.Semicolon:
             case TokenType.Comma:
+            case TokenType.Text:
+            case TokenType.OpenTag:
+            case TokenType.OpenTagEcho:
                 rule = FormatVisitor.noSpaceBefore;
                 break;
 
@@ -353,6 +352,8 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case TokenType.Backslash:
             case TokenType.OpenParenthesis:
             case TokenType.OpenBracket:
+            case TokenType.CurlyOpen:
+            case TokenType.DollarCurlyOpen:
                 this._nextFormatRule = FormatVisitor.noSpaceBefore;
                 break;
 
