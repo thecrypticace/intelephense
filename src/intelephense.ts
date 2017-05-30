@@ -13,9 +13,10 @@ import { Debounce, Unsubscribe } from './types';
 import { SignatureHelpProvider } from './signatureHelpProvider';
 import { DefinitionProvider } from './definitionProvider';
 import { PhraseType } from 'php7parser';
+import { FormatProvider } from './formatProvider';
 import * as lsp from 'vscode-languageserver-types';
 
-export {SymbolTableDto} from './symbolStore';
+export { SymbolTableDto } from './symbolStore';
 
 export namespace Intelephense {
 
@@ -28,6 +29,7 @@ export namespace Intelephense {
     let diagnosticsProvider = new DiagnosticsProvider();
     let signatureHelpProvider = new SignatureHelpProvider(symbolStore, documentStore);
     let definitionProvider = new DefinitionProvider(symbolStore, documentStore);
+    let formatProvider = new FormatProvider(documentStore);
     let unsubscribeMap: { [index: string]: Unsubscribe } = {};
 
     function unsubscribe(key: string) {
@@ -184,6 +186,11 @@ export namespace Intelephense {
 
     export function numberSymbolsKnown() {
         return symbolStore.symbolCount;
+    }
+
+    export function provideDocumentFormattingEdits(doc: lsp.TextDocumentIdentifier, formatOptions: lsp.FormattingOptions) {
+        flushParseDebounce(doc.uri);
+        return formatProvider.provideDocumentFormattingEdits(doc, formatOptions);
     }
 
     function flushParseDebounce(uri: string) {
