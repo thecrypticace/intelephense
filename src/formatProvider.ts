@@ -485,19 +485,6 @@ namespace FormatVisitor {
         return lsp.TextEdit.replace(doc.tokenRange(previous), expectedWs);
     }
 
-    export function newlineIndentPlusOneBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
-        if (previous.tokenType !== TokenType.Whitespace) {
-            return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length), '\n' + indentText + indentUnit);
-        }
-
-        let actualWs = doc.tokenText(previous);
-        let expectedWs = createWhitespace(Math.max(1, countNewlines(actualWs)), '\n') + indentText + indentUnit;
-        if (actualWs === expectedWs) {
-            return null;
-        }
-        return lsp.TextEdit.replace(doc.tokenRange(previous), expectedWs);
-    }
-
     export function doubleNewlineIndentBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
         if (previous.tokenType !== TokenType.Whitespace) {
             return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length), '\n\n' + indentText);
@@ -516,25 +503,6 @@ namespace FormatVisitor {
             return null;
         }
         return lsp.TextEdit.del(doc.tokenRange(previous));
-    }
-
-    export function noSpaceOrNewlineIndentBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
-        if (previous.tokenType !== TokenType.Whitespace) {
-            return null;
-        }
-
-        let actualWs = doc.tokenText(previous);
-        let newlineCount = countNewlines(actualWs);
-        if (!newlineCount) {
-            return lsp.TextEdit.del(doc.tokenRange(previous));
-        }
-
-        let expectedWs = createWhitespace(newlineCount, '\n') + indentText;
-        if (actualWs === expectedWs) {
-            return null;
-        }
-        return lsp.TextEdit.replace(doc.tokenRange(previous), expectedWs);
-
     }
 
     export function noSpaceOrNewlineIndentPlusOneBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
