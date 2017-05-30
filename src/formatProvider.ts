@@ -252,6 +252,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.ClosureUseList:
             case PhraseType.QualifiedNameList:
             case PhraseType.ArrayInitialiserList:
+                this._decrementIndent();
                 if (this._isMultilineCommaDelimitedListStack.pop()) {
                     this._nextFormatRule = FormatVisitor.newlineIndentBefore;
                 }
@@ -260,6 +261,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.ClassConstElementList:
             case PhraseType.ConstElementList:
             case PhraseType.PropertyElementList:
+                this._decrementIndent();
                 this._isMultilineCommaDelimitedListStack.pop();
                 return;
 
@@ -367,6 +369,11 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 }
                 break;
 
+            case TokenType.Arrow:
+            case TokenType.ColonColon:
+                this._nextFormatRule = FormatVisitor.noSpaceOrNewlineIndentPlusOneBefore;
+                break;
+
             default:
                 break;
 
@@ -433,6 +440,9 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.PrintIntrinsic:
             case PhraseType.UnsetIntrinsic:
             case PhraseType.ArrayCreationExpression:
+            case PhraseType.FunctionDeclarationHeader:
+            case PhraseType.MethodDeclarationHeader:
+            case PhraseType.ObjectCreationExpression:
                 return true;
             default:
                 return false;
