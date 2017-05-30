@@ -456,7 +456,7 @@ namespace FormatVisitor {
 
     export function singleSpaceBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
         if (previous.tokenType !== TokenType.Whitespace) {
-            return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length + 1), ' ');
+            return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length), ' ');
         }
 
         let actualWs = doc.tokenText(previous);
@@ -469,7 +469,7 @@ namespace FormatVisitor {
 
     export function newlineIndentBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
         if (previous.tokenType !== TokenType.Whitespace) {
-            return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length + 1), '\n' + indentText);
+            return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length), '\n' + indentText);
         }
 
         let actualWs = doc.tokenText(previous);
@@ -482,7 +482,7 @@ namespace FormatVisitor {
 
     export function newlineIndentPlusOneBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
         if (previous.tokenType !== TokenType.Whitespace) {
-            return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length + 1), '\n' + indentText + indentUnit);
+            return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length), '\n' + indentText + indentUnit);
         }
 
         let actualWs = doc.tokenText(previous);
@@ -495,7 +495,7 @@ namespace FormatVisitor {
 
     export function doubleNewlineIndentBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
         if (previous.tokenType !== TokenType.Whitespace) {
-            return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length + 1), '\n\n' + indentText);
+            return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length), '\n\n' + indentText);
         }
 
         let actualWs = doc.tokenText(previous);
@@ -554,7 +554,7 @@ namespace FormatVisitor {
     export function singleSpaceOrNewlineIndentPlusOneBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
 
         if (previous.tokenType !== TokenType.Whitespace) {
-            return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length + 1), ' ');
+            return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length), ' ');
         }
 
         let actualWs = doc.tokenText(previous);
@@ -579,7 +579,7 @@ namespace FormatVisitor {
     export function singleSpaceOrNewlineIndentBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
 
         if (previous.tokenType !== TokenType.Whitespace) {
-            return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length + 1), ' ');
+            return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length), ' ');
         }
 
         let actualWs = doc.tokenText(previous);
