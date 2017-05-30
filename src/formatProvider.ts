@@ -74,29 +74,11 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 return true;
 
             //comma delim lists
-            case PhraseType.QualifiedNameList:
-            case PhraseType.ClassConstElementList:
-            case PhraseType.ConstElementList:
-            case PhraseType.PropertyElementList:
-                this._incrementIndent();
-                if (
-                    (this._previousToken &&
-                        this._previousToken.tokenType === TokenType.Whitespace &&
-                        FormatVisitor.countNewlines(this.doc.tokenText(this._previousToken)) > 0) ||
-                    this._hasNewlineWhitespaceChild(<Phrase>node)
-                ) {
-                    this._nextFormatRule = FormatVisitor.newlineIndentBefore;
-                    this._isMultilineCommaDelimitedListStack.push(true);
-                } else {
-                    this._isMultilineCommaDelimitedListStack.push(false);
-                }
-                return true;
-
-            //comma delim lists inside parentheses
             case PhraseType.ParameterDeclarationList:
             case PhraseType.ArgumentExpressionList:
             case PhraseType.ClosureUseList:
             case PhraseType.ArrayInitialiserList:
+            case PhraseType.QualifiedNameList:
                 this._incrementIndent();
                 if (
                     (this._previousToken &&
@@ -108,7 +90,9 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                     this._isMultilineCommaDelimitedListStack.push(true);
                 } else {
                     this._isMultilineCommaDelimitedListStack.push(false);
-                    this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                    if ((<Phrase>node).phraseType !== PhraseType.QualifiedNameList) {
+                        this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                    }
                 }
                 return true;
 
@@ -117,7 +101,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 return true;
 
             case PhraseType.SimpleVariable:
-                if(parent.phraseType === PhraseType.EncapsulatedVariableList){
+                if (parent.phraseType === PhraseType.EncapsulatedVariableList) {
                     this._nextFormatRule = FormatVisitor.noSpaceBefore;
                 }
                 return true;
