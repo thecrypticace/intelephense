@@ -125,7 +125,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case undefined:
                 //tokens
                 break;
-                
+
             default:
                 return true;
         }
@@ -353,8 +353,12 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case TokenType.Backslash:
             case TokenType.OpenParenthesis:
             case TokenType.OpenBracket:
+                this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                break;
+
             case TokenType.CurlyOpen:
             case TokenType.DollarCurlyOpen:
+                this._incrementIndent();
                 this._nextFormatRule = FormatVisitor.noSpaceBefore;
                 break;
 
