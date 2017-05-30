@@ -43,6 +43,7 @@ export declare namespace ParsedDocument {
     function isFixedSimpleVariable(phrase: SimpleVariable): boolean;
     function isFixedScopedMemberName(phrase: ScopedMemberName): boolean;
     function stringyfyReplacer(k: any, v: any): any;
+    function firstPhraseOfType(type: PhraseType, nodes: (Phrase | Token)[]): Phrase;
 }
 export declare class ParsedDocumentStore {
     private _parsedDocumentChangeEvent;

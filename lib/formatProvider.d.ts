@@ -1,0 +1,7 @@
+import * as lsp from 'vscode-languageserver-types';
+import { ParsedDocumentStore } from './parsedDocument';
+export declare class FormatProvider {
+    docStore: ParsedDocumentStore;
+    constructor(docStore: ParsedDocumentStore);
+    provideDocumentFormattingEdits(doc: lsp.TextDocumentIdentifier, formatOptions: lsp.FormattingOptions): lsp.TextEdit[];
+}
