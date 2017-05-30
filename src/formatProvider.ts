@@ -128,6 +128,10 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         this._previousToken = node as Token;
         this._nextFormatRule = null;
 
+        if(!previous){
+            return false;
+        }
+
         switch ((<Token>node).tokenType) {
 
             case TokenType.Whitespace:
