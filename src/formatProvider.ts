@@ -374,6 +374,11 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 this._nextFormatRule = FormatVisitor.noSpaceOrNewlineIndentPlusOneBefore;
                 break;
 
+            case TokenType.OpenTag:
+            case TokenType.OpenTagEcho:
+                this._nextFormatRule = FormatVisitor.singleSpaceOrNewlineIndentBefore;
+                break;
+
             default:
                 break;
 
