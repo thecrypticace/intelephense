@@ -17,11 +17,11 @@ export class FormatProvider {
 
     constructor(public docStore: ParsedDocumentStore) { }
 
-    provideDocumentFormattingEdits(doc: lsp.TextDocumentIdentifier, formatOptions: lsp.FormattingOptions) : lsp.TextEdit[] {
+    provideDocumentFormattingEdits(doc: lsp.TextDocumentIdentifier, formatOptions: lsp.FormattingOptions): lsp.TextEdit[] {
 
         let parsedDoc = this.docStore.find(doc.uri);
 
-        if(!parsedDoc){
+        if (!parsedDoc) {
             return [];
         }
 
@@ -116,9 +116,16 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 this._nextFormatRule = FormatVisitor.noSpaceBefore;
                 return true;
 
+            case PhraseType.SimpleVariable:
+                if(parent.phraseType === PhraseType.EncapsulatedVariableList){
+                    this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                }
+                return true;
+
             case undefined:
                 //tokens
                 break;
+                
             default:
                 return true;
         }
@@ -128,7 +135,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         this._previousToken = node as Token;
         this._nextFormatRule = null;
 
-        if(!previous){
+        if (!previous) {
             return false;
         }
 
@@ -144,13 +151,13 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case TokenType.PlusPlus:
-                if(parent.phraseType === PhraseType.PostfixIncrementExpression){
+                if (parent.phraseType === PhraseType.PostfixIncrementExpression) {
                     rule = FormatVisitor.noSpaceBefore;
                 }
                 break;
 
             case TokenType.MinusMinus:
-                if(parent.phraseType === PhraseType.PostfixDecrementExpression){
+                if (parent.phraseType === PhraseType.PostfixDecrementExpression) {
                     rule = FormatVisitor.noSpaceBefore;
                 }
                 break;
@@ -160,6 +167,9 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case TokenType.Text:
             case TokenType.OpenTag:
             case TokenType.OpenTagEcho:
+            case TokenType.EncapsulatedAndWhitespace:
+            case TokenType.DollarCurlyOpen:
+            case TokenType.CurlyOpen:
                 rule = FormatVisitor.noSpaceBefore;
                 break;
 
@@ -198,15 +208,6 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case TokenType.CloseBracket:
             case TokenType.CloseParenthesis:
                 if (!rule) {
-                    rule = FormatVisitor.noSpaceBefore;
-                }
-                break;
-
-            case TokenType.EncapsulatedAndWhitespace:
-            case TokenType.VariableName:
-            case TokenType.DollarCurlyOpen:
-            case TokenType.CurlyOpen:
-                if(parent.phraseType === PhraseType.EncapsulatedVariableList){
                     rule = FormatVisitor.noSpaceBefore;
                 }
                 break;
