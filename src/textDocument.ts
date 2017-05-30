@@ -52,8 +52,8 @@ export class TextDocument {
         let compareFn = (x) => {
             return x - offset;
         };
-        let rank = search.rank(compareFn);
-        return Math.max(rank - 1, 0);
+        let result = search.search(compareFn);
+        return result.isExactMatch ? result.rank : Math.max(result.rank - 1, 0);
     }
 
     lineSubstring(offset:number){
