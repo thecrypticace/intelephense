@@ -253,6 +253,10 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 this._nextFormatRule = FormatVisitor.noSpaceBefore;
                 return;
 
+            case PhraseType.AnonymousFunctionCreationExpression:
+                this._nextFormatRule = null;
+                break;
+
             case undefined:
                 //tokens
                 break;
