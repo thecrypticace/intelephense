@@ -365,10 +365,16 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case TokenType.OpenTag:
-                if (this.doc.tokenText(<Token>node).substr(0, 5).toLowerCase() === '<?php') {
-                    this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                let tagText = this.doc.tokenText(<Token>node);
+                if (tagText.length > 2) {
+                    if (FormatVisitor.countNewlines(tagText) > 0) {
+                        this._nextFormatRule = FormatVisitor.indentBefore;
+                    } else {
+                        this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                    }
                     break;
                 }
+
             //fall through
             case TokenType.OpenTagEcho:
                 this._nextFormatRule = FormatVisitor.singleSpaceOrNewlineIndentBefore;
@@ -475,6 +481,22 @@ namespace FormatVisitor {
             return null;
         }
         return lsp.TextEdit.replace(doc.tokenRange(previous), expectedWs);
+    }
+
+    export function indentBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
+        if (previous.tokenType !== TokenType.Whitespace) {
+            return indentText ? lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length), indentText) : null;
+        }
+
+        if (!indentText) {
+            return lsp.TextEdit.del(doc.tokenRange(previous));
+        }
+
+        let actualWs = doc.tokenText(previous);
+        if (actualWs === indentText) {
+            return null;
+        }
+        return lsp.TextEdit.replace(doc.tokenRange(previous), indentText);
     }
 
     export function newlineIndentBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
