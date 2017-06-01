@@ -157,6 +157,17 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 rule = FormatVisitor.noSpaceBefore;
                 break;
 
+            case TokenType.Else:
+            case TokenType.ElseIf:
+                if (this._hasColonChild(parent)) {
+                    rule = FormatVisitor.singleSpaceBefore;
+                }
+                break;
+
+            case TokenType.Catch:
+                rule = FormatVisitor.singleSpaceBefore;
+                break;
+
             case TokenType.Arrow:
             case TokenType.ColonColon:
                 rule = FormatVisitor.noSpaceOrNewlineIndentPlusOneBefore;
