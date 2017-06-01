@@ -164,6 +164,12 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 }
                 break;
 
+            case TokenType.While:
+                if(parent.phraseType === PhraseType.DoStatement){
+                    rule = FormatVisitor.singleSpaceBefore;
+                }
+                break;
+
             case TokenType.Catch:
                 rule = FormatVisitor.singleSpaceBefore;
                 break;
