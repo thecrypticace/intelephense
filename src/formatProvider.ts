@@ -365,6 +365,11 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case TokenType.OpenTag:
+                if (this.doc.tokenText(<Token>node).substr(0, 5).toLowerCase() === '<?php') {
+                    this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                    break;
+                }
+            //fall through
             case TokenType.OpenTagEcho:
                 this._nextFormatRule = FormatVisitor.singleSpaceOrNewlineIndentBefore;
                 break;
