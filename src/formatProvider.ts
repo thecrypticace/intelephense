@@ -165,7 +165,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case TokenType.While:
-                if(parent.phraseType === PhraseType.DoStatement){
+                if (parent.phraseType === PhraseType.DoStatement) {
                     rule = FormatVisitor.singleSpaceBefore;
                 }
                 break;
@@ -308,7 +308,11 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case TokenType.Semicolon:
-                this._nextFormatRule = FormatVisitor.newlineIndentBefore;
+                if (parent.phraseType === PhraseType.ForStatement) {
+                    this._nextFormatRule = FormatVisitor.singleSpaceBefore;
+                } else {
+                    this._nextFormatRule = FormatVisitor.newlineIndentBefore;
+                }
                 break;
 
             case TokenType.Colon:
