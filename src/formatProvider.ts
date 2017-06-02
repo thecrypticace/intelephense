@@ -41,6 +41,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
     private _isMultilineCommaDelimitedListStack: boolean[];
     private _indentUnit: string;
     private _indentText = '';
+    private static _docBlockRegex = /(?:\r\n|\r|\n)[ \t]*\*/;
 
     constructor(
         public doc: ParsedDocument,
@@ -252,7 +253,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.ArgumentExpressionList:
             case PhraseType.ClosureUseList:
             case PhraseType.QualifiedNameList:
-            case PhraseType.ArrayInitialiserList:   
+            case PhraseType.ArrayInitialiserList:
                 if (this._isMultilineCommaDelimitedListStack.pop()) {
                     this._nextFormatRule = FormatVisitor.newlineIndentBefore;
                     this._decrementIndent();
@@ -286,6 +287,10 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
             case TokenType.DocumentComment:
                 this._nextFormatRule = FormatVisitor.newlineIndentBefore;
+                let edit = this._formatDocBlock(<Token>node);
+                if (edit) {
+                    this._edits.push(edit);
+                }
                 break;
 
             case TokenType.OpenBrace:
@@ -410,6 +415,12 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
         }
 
+    }
+
+    private _formatDocBlock(node: Token) {
+        let text = this.doc.tokenText(node);
+        let formatted = text.replace(FormatVisitor._docBlockRegex, '\n' + this._indentText + ' *');
+        return formatted !== text ? lsp.TextEdit.replace(this.doc.tokenRange(node), formatted) : null;
     }
 
     private _incrementIndent() {
