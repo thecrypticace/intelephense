@@ -79,7 +79,6 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.ClosureUseList:
             case PhraseType.ArrayInitialiserList:
             case PhraseType.QualifiedNameList:
-                this._incrementIndent();
                 if (
                     (this._previousToken &&
                         this._previousToken.tokenType === TokenType.Whitespace &&
@@ -88,6 +87,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 ) {
                     this._nextFormatRule = FormatVisitor.newlineIndentBefore;
                     this._isMultilineCommaDelimitedListStack.push(true);
+                    this._incrementIndent();
                 } else {
                     this._isMultilineCommaDelimitedListStack.push(false);
                     if ((<Phrase>node).phraseType !== PhraseType.QualifiedNameList) {
@@ -252,10 +252,10 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.ArgumentExpressionList:
             case PhraseType.ClosureUseList:
             case PhraseType.QualifiedNameList:
-            case PhraseType.ArrayInitialiserList:
-                this._decrementIndent();
+            case PhraseType.ArrayInitialiserList:   
                 if (this._isMultilineCommaDelimitedListStack.pop()) {
                     this._nextFormatRule = FormatVisitor.newlineIndentBefore;
+                    this._decrementIndent();
                 }
                 return;
 
