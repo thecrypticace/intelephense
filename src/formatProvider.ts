@@ -41,7 +41,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
     private _isMultilineCommaDelimitedListStack: boolean[];
     private _indentUnit: string;
     private _indentText = '';
-    private static _docBlockRegex = /(?:\r\n|\r|\n)[ \t]*\*/;
+    private static _docBlockRegex = /(?:\r\n|\r|\n)[ \t]*\*/g;
 
     constructor(
         public doc: ParsedDocument,
