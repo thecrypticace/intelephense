@@ -150,12 +150,19 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case TokenType.Semicolon:
             case TokenType.Comma:
             case TokenType.Text:
-            case TokenType.OpenTag:
-            case TokenType.OpenTagEcho:
             case TokenType.EncapsulatedAndWhitespace:
             case TokenType.DollarCurlyOpen:
             case TokenType.CurlyOpen:
                 rule = FormatVisitor.noSpaceBefore;
+                break;
+
+            case TokenType.OpenTag:
+            case TokenType.OpenTagEcho:
+                rule = FormatVisitor.noSpaceBefore;
+                this._indentText = FormatVisitor.createWhitespace(
+                    Math.ceil((this.doc.lineSubstring((<Token>node).offset).length - 1) / this._indentUnit.length),
+                    this._indentUnit
+                );
                 break;
 
             case TokenType.Else:

@@ -17,6 +17,7 @@ export declare class ParsedDocument implements Traversable<Phrase | Token> {
     readonly changeEvent: Event<ParsedDocumentChangeEventArgs>;
     find(predicate: Predicate<Phrase | Token>): Phrase;
     textBeforeOffset(offset: number, length: number): string;
+    lineSubstring(offset: number): string;
     wordAtOffset(offset: number): string;
     flush(): void;
     traverse(visitor: TreeVisitor<Phrase | Token>): TreeVisitor<Token | Phrase>;

@@ -53,13 +53,17 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         return this._changeEvent;
     }
 
-    find(predicate: Predicate<Phrase|Token>) {
+    find(predicate: Predicate<Phrase | Token>) {
         let traverser = new TreeTraverser([this._parseTree]);
         return traverser.find(predicate);
     }
 
     textBeforeOffset(offset: number, length: number) {
         return this._textDocument.textBeforeOffset(offset, length);
+    }
+
+    lineSubstring(offset: number) {
+        return this._textDocument.lineSubstring(offset);
     }
 
     wordAtOffset(offset: number) {
@@ -78,8 +82,8 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         return visitor;
     }
 
-    createTraverser(){
-        return new TreeTraverser<Phrase|Token>([this._parseTree]);
+    createTraverser() {
+        return new TreeTraverser<Phrase | Token>([this._parseTree]);
     }
 
     applyChanges(contentChanges: lsp.TextDocumentContentChangeEvent[]) {
@@ -248,20 +252,20 @@ export namespace ParsedDocument {
             t.offset + t.length - 1 >= offset;
     }
 
-    export function isOffsetInNode(offset, node:Phrase|Token){
+    export function isOffsetInNode(offset, node: Phrase | Token) {
 
-        if(!node || offset < 0){
+        if (!node || offset < 0) {
             return false;
         }
 
-        if(ParsedDocument.isToken(node)){
+        if (ParsedDocument.isToken(node)) {
             return ParsedDocument.isOffsetInToken(offset, <Token>node);
         }
 
         let tFirst = ParsedDocument.firstToken(node);
         let tLast = ParsedDocument.lastToken(node);
 
-        if(!tFirst || !tLast){
+        if (!tFirst || !tLast) {
             return false;
         }
 
@@ -299,12 +303,12 @@ export namespace ParsedDocument {
         return k && !isNumeric(k) && nodeKeys.indexOf(k) < 0 ? undefined : v;
     }
 
-    export function firstPhraseOfType(type:PhraseType, nodes:(Phrase|Token)[]){
+    export function firstPhraseOfType(type: PhraseType, nodes: (Phrase | Token)[]) {
 
-        let child:Phrase;
-        for(let n = 0, l = nodes.length; n < l; ++n ){
+        let child: Phrase;
+        for (let n = 0, l = nodes.length; n < l; ++n) {
             child = nodes[n] as Phrase;
-            if(child.phraseType === type){
+            if (child.phraseType === type) {
                 return child;
             }
         }
