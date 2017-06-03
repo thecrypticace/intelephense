@@ -4,4 +4,5 @@ export declare class FormatProvider {
     docStore: ParsedDocumentStore;
     constructor(docStore: ParsedDocumentStore);
     provideDocumentFormattingEdits(doc: lsp.TextDocumentIdentifier, formatOptions: lsp.FormattingOptions): lsp.TextEdit[];
+    provideDocumentRangeFormattingEdits(doc: lsp.TextDocumentIdentifier, range: lsp.Range, formatOptions: lsp.FormattingOptions): lsp.TextEdit[];
 }

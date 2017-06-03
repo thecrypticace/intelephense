@@ -31,6 +31,20 @@ export class FormatProvider {
 
     }
 
+    provideDocumentRangeFormattingEdits(doc: lsp.TextDocumentIdentifier, range: lsp.Range, formatOptions: lsp.FormattingOptions): lsp.TextEdit[] {
+
+        let parsedDoc = this.docStore.find(doc.uri);
+
+        if (!parsedDoc) {
+            return [];
+        }
+
+        let visitor = new FormatVisitor(parsedDoc, formatOptions, range);
+        parsedDoc.traverse(visitor);
+        return visitor.edits;
+
+    }
+
 }
 
 class FormatVisitor implements TreeVisitor<Phrase | Token> {
@@ -42,13 +56,25 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
     private _indentUnit: string;
     private _indentText = '';
     private static _docBlockRegex = /(?:\r\n|\r|\n)[ \t]*\*/g;
+    private _startOffset = -1;
+    private _endOffset = -1;
+    private _active = true;
+
+    haltTraverse: boolean;
 
     constructor(
         public doc: ParsedDocument,
-        public formatOptions: lsp.FormattingOptions) {
+        public formatOptions: lsp.FormattingOptions,
+        range?: lsp.Range) {
         this._edits = [];
         this._isMultilineCommaDelimitedListStack = [];
         this._indentUnit = formatOptions.insertSpaces ? FormatVisitor.createWhitespace(formatOptions.tabSize, ' ') : '\t';
+        if (range) {
+            this._startOffset = this.doc.offsetAtPosition(range.start);
+            this._endOffset = this.doc.offsetAtPosition(range.end);
+            this._active = false;
+        }
+
     }
 
     get edits() {
@@ -122,6 +148,10 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
         if (!previous) {
             return false;
+        }
+
+        if (!this._active && this._startOffset > -1 && ParsedDocument.isOffsetInToken(this._startOffset, <Token>node)) {
+            this._active = true;
         }
 
         switch ((<Token>node).tokenType) {
@@ -229,6 +259,10 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             rule = FormatVisitor.singleSpaceOrNewlineIndentPlusOneBefore;
         }
 
+        if(!this._active){
+            return false;
+        }
+
         let edit = rule(previous, this.doc, this._indentText, this._indentUnit);
         if (edit) {
             this._edits.push(edit);
@@ -294,6 +328,9 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
             case TokenType.DocumentComment:
                 this._nextFormatRule = FormatVisitor.newlineIndentBefore;
+                if(!this._active){
+                    break;
+                }
                 let edit = this._formatDocBlock(<Token>node);
                 if (edit) {
                     this._edits.push(edit);
@@ -420,6 +457,11 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             default:
                 break;
 
+        }
+
+        if(this._active && this._endOffset > -1 && ParsedDocument.isOffsetInToken(this._endOffset, <Token>node)) {
+            this.haltTraverse = true;
+            this._active = false;
         }
 
     }
