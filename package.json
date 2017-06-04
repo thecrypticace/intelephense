@@ -1,6 +1,6 @@
 {
   "name": "intelephense",
-  "version": "0.6.8",
+  "version": "0.6.10",
   "description": "PHP Static Code Analysis",
   "main": "./lib/intelephense.js",
   "types": "./lib/intelephense.d.ts",
@@ -22,7 +22,7 @@
     "url": "https://github.com/bmewburn/intelephense.git"
   },
   "dependencies": {
-    "php7parser": "^0.9.3",
+    "php7parser": "^0.9.5",
     "vscode-languageserver-types": "^3.2.0"
   },
   "devDependencies": {

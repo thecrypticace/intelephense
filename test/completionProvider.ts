@@ -116,6 +116,7 @@ var propertyTagSrc =
     class Foo {}
     $var = new Foo();
     $var->
+
 `;
 
 function setup(src: string) {
@@ -144,6 +145,22 @@ function isEqual(item: lsp.CompletionItem, label: string, kind: lsp.CompletionIt
 }
 
 describe('CompletionProvider', () => {
+
+    describe('Closure', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(closureSrc);
+        });
+
+        it('completions', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 6, character: 14 });
+            console.log(JSON.stringify(completions, null, 4));
+            //assert.equal(completions.items[0].label, 'Foo');
+            //assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Constructor);
+        });
+
+    });
 
     describe('Object creation', () => {
 
