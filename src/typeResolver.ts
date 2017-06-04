@@ -4,14 +4,14 @@
 
 'use strict';
 
-import {ParsedDocument} from './parsedDocument';
-import {NameResolver} from './nameResolver';
-import {SymbolStore} from './symbolStore';
-import {TypeString} from './typeString';
-import {SymbolKind, PhpSymbol, SymbolModifier} from './symbol';
-import {ParsedDocumentVisitor} from './parsedDocumentVisitor';
-import {PhpDocParser, PhpDoc, Tag, MethodTagParam} from './phpDoc';
-import {Location, Range} from 'vscode-languageserver-types';
+import { ParsedDocument } from './parsedDocument';
+import { NameResolver } from './nameResolver';
+import { SymbolStore } from './symbolStore';
+import { TypeString } from './typeString';
+import { SymbolKind, PhpSymbol, SymbolModifier } from './symbol';
+import { ParsedDocumentVisitor } from './parsedDocumentVisitor';
+import { PhpDocParser, PhpDoc, Tag, MethodTagParam } from './phpDoc';
+import { Location, Range } from 'vscode-languageserver-types';
 import {
     Phrase, PhraseType, Token, TokenType, NamespaceName, FunctionDeclarationHeader,
     ReturnType, TypeDeclaration, QualifiedName, ParameterDeclarationList,
@@ -28,13 +28,14 @@ import {
     MemberName, PropertyAccessExpression, ClassTypeDesignator, ScopedCallExpression,
     ScopedMemberName, ScopedPropertyAccessExpression, BinaryExpression, TernaryExpression,
     RelativeScope, ListIntrinsic, IfStatement, InstanceOfExpression, InstanceofTypeDesignator,
-    ArrayInitialiserList, ArrayElement, ForeachStatement, CatchClause, ArgumentExpressionList
+    ArrayInitialiserList, ArrayElement, ForeachStatement, CatchClause, ArgumentExpressionList,
+    CoalesceExpression
 } from 'php7parser';
 
 export class ExpressionTypeResolver {
 
     constructor(
-        public document:ParsedDocument,
+        public document: ParsedDocument,
         public nameResolver: NameResolver,
         public symbolStore: SymbolStore,
         public variableTable: VariableTable) {
@@ -81,6 +82,11 @@ export class ExpressionTypeResolver {
                 return new TypeString(this._namePhraseToFqn(<any>node, SymbolKind.Class));
             case PhraseType.RelativeScope:
                 return new TypeString(this.nameResolver.className);
+            case PhraseType.CoalesceExpression:
+                return new TypeString('')
+                    .merge(this.resolveExpression((<BinaryExpression>node).left))
+                    .merge(this.resolveExpression((<BinaryExpression>node).right));
+
             default:
                 return new TypeString('');
         }
@@ -273,7 +279,7 @@ export class VariableTypeResolver extends ParsedDocumentVisitor {
         public nameResolver: NameResolver,
         public symbolStore: SymbolStore,
         public variableTable: VariableTable) {
-            super(document, nameResolver);
+        super(document, nameResolver);
     }
 
     protected _preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
@@ -314,7 +320,7 @@ export class VariableTypeResolver extends ParsedDocumentVisitor {
             case PhraseType.ByRefAssignmentExpression:
                 if (ParsedDocument.isPhrase((<BinaryExpression>node).left, [PhraseType.SimpleVariable, PhraseType.ListIntrinsic])) {
                     this._assignmentExpression(<BinaryExpression>node);
-                    if(this._containsHaltOffset(<Phrase>node)){
+                    if (this._containsHaltOffset(<Phrase>node)) {
                         this.haltTraverse = true;
                     }
                     return false;
@@ -322,7 +328,7 @@ export class VariableTypeResolver extends ParsedDocumentVisitor {
                 return true;
             case PhraseType.InstanceOfExpression:
                 this._instanceOfExpression(<InstanceOfExpression>node);
-                if(this._containsHaltOffset(<Phrase>node)){
+                if (this._containsHaltOffset(<Phrase>node)) {
                     this.haltTraverse = true;
                 }
                 return false;
