@@ -193,6 +193,11 @@ export namespace Intelephense {
         return formatProvider.provideDocumentFormattingEdits(doc, formatOptions);
     }
 
+    export function provideDocumentRangeFormattingEdits(doc: lsp.TextDocumentIdentifier, range:lsp.Range, formatOptions: lsp.FormattingOptions) {
+        flushParseDebounce(doc.uri);
+        return formatProvider.provideDocumentRangeFormattingEdits(doc, range, formatOptions);
+    }
+
     function flushParseDebounce(uri: string) {
         let parsedDocument = documentStore.find(uri);
         if (parsedDocument) {

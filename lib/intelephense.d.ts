@@ -25,4 +25,5 @@ export declare namespace Intelephense {
     function numberDocumentsKnown(): number;
     function numberSymbolsKnown(): number;
     function provideDocumentFormattingEdits(doc: lsp.TextDocumentIdentifier, formatOptions: lsp.FormattingOptions): lsp.TextEdit[];
+    function provideDocumentRangeFormattingEdits(doc: lsp.TextDocumentIdentifier, range: lsp.Range, formatOptions: lsp.FormattingOptions): lsp.TextEdit[];
 }
