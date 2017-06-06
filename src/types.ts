@@ -369,12 +369,13 @@ export class CountVisitor<T> implements TreeVisitor<T> {
     }
 }
 
-/*
+
 class MultiVisitor<T> implements TreeVisitor<T> {
 
-    private _visitors: [TreeVisitor<T>, Tree<T>][];
+    private _visitors: [TreeVisitor<T>, TreeLike][];
 
-    constructor(visitors: TreeVisitor<T>[] = []) {
+    constructor(visitors: TreeVisitor<T>[]) {
+        this._visitors = [];
         for (let n = 0; n < visitors.length; ++n) {
             this.add(visitors[n]);
         }
@@ -384,63 +385,33 @@ class MultiVisitor<T> implements TreeVisitor<T> {
         this._visitors.push([v, null]);
     }
 
-    preOrder(t) {
-        let v: [TreeVisitor<T>, Tree<T>];
+    preorder(node: T, spine: T[]) {
+        let v: [TreeVisitor<T>, TreeLike];
+        let descend: boolean;
         for (let n = 0; n < this._visitors.length; ++n) {
             v = this._visitors[n];
-            if (!v[1]) {
-                v[0].preOrder(t);
+            if (!v[1] && v[0].preorder && !v[0].preorder(node, spine)) {
+                v[1] = node;
             }
         }
+        return true;
     }
 
-    inOrder(t, afterChildIndex) {
-        let v: [TreeVisitor<T>, Tree<T>];
+    postorder(node: T, spine: T[]) {
+        let v: [TreeVisitor<T>, TreeLike];
         for (let n = 0; n < this._visitors.length; ++n) {
             v = this._visitors[n];
-            if (!v[1]) {
-                v[0].inOrder(t, afterChildIndex);
-            }
-        }
-    }
-
-    postOrder(t) {
-        let v: [TreeVisitor<T>, Tree<T>];
-        for (let n = 0; n < this._visitors.length; ++n) {
-            v = this._visitors[n];
-            if (v[1] === t) {
+            if (v[1] === node) {
                 v[1] = null;
             }
-            if (!v[1]) {
-                v[0].postOrder(t);
+            if (!v[1] && v[0].postorder) {
+                v[0].postorder(node, spine);
             }
         }
     }
-
-    shouldDescend(t) {
-
-        let v: [TreeVisitor<T>, Tree<T>];
-        let descend = false;
-
-        for (let n = 0; n < this._visitors.length; ++n) {
-            v = this._visitors[n];
-            if (v[1]) {
-                continue;
-            }
-            if (v[0].shouldDescend(t)) {
-                descend = true;
-            } else {
-                v[1] = t;
-            }
-        }
-
-        return descend;
-
-    }
-
 
 }
-*/
+
 
 export class BinarySearch<T> {
 
