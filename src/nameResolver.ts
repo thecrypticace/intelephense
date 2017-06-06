@@ -71,7 +71,12 @@ export class NameResolver {
         }
     }
 
-    private _matchImportedSymbol(text: string, kind: SymbolKind) {
+    /**
+     * 
+     * @param text unqualified name
+     * @param kind 
+     */
+    matchImportedSymbol(text: string, kind: SymbolKind) {
         let s: PhpSymbol;
         for (let n = 0, l = this.rules.length; n < l; ++n) {
             s = this.rules[n];
@@ -83,12 +88,12 @@ export class NameResolver {
     }
 
     private _resolveQualified(name: string, pos: number) {
-        let s = this._matchImportedSymbol(name.slice(0, pos), SymbolKind.Class);
+        let s = this.matchImportedSymbol(name.slice(0, pos), SymbolKind.Class);
         return s ? s.associated[0].name + name.slice(pos) : this.resolveRelative(name);
     }
 
     private _resolveUnqualified(name: string, kind: SymbolKind) {
-        let s = this._matchImportedSymbol(name, kind);
+        let s = this.matchImportedSymbol(name, kind);
         return s ? s.associated[0].name : this.resolveRelative(name);
     }
 

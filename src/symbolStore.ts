@@ -176,13 +176,19 @@ export class SymbolStore {
     }
 
     /**
-     * As per match but returns first item in result that matches text exactly
+     * As per match but returns first item in result that matches full text
+     * the match is case sensitive for constants and variables and insensitive for 
+     * classes, traits, interfaces, functions, methods
      * @param text 
-     * @param kindMask 
+     * @param filter 
      */
     find(text: string, filter?: Predicate<PhpSymbol>) {
+        let lcText = text.toLowerCase();
+        let kindMask = SymbolKind.Constant | SymbolKind.Variable;
         let exactMatchFn = (x: PhpSymbol) => {
-            return (!filter || filter(x)) && x.name === text;
+            return (!filter || filter(x)) && 
+                (((x.kind & kindMask) > 0 && x.name === text) || 
+                !(x.kind & kindMask) && x.name === lcText);
         };
         return this.match(text, exactMatchFn).shift();
     }
@@ -190,6 +196,7 @@ export class SymbolStore {
     /**
      * Matches any indexed symbol by name or partial name with optional additional filter
      * Parameters and variables that are not file scoped are not indexed.
+     * case insensitive
      */
     match(text: string, filter?: Predicate<PhpSymbol>, fuzzy?: boolean) {
 
