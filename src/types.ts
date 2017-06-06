@@ -374,6 +374,8 @@ export class MultiVisitor<T> implements TreeVisitor<T> {
 
     protected _visitors: [TreeVisitor<T>, TreeLike][];
 
+    haltTraverse = false;
+
     constructor(visitors: TreeVisitor<T>[]) {
         this._visitors = [];
         for (let n = 0; n < visitors.length; ++n) {
@@ -393,6 +395,10 @@ export class MultiVisitor<T> implements TreeVisitor<T> {
             if (!v[1] && v[0].preorder && !v[0].preorder(node, spine)) {
                 v[1] = node;
             }
+            if (v[0].haltTraverse) {
+                this.haltTraverse = true;
+                break;
+            }
         }
         return true;
     }
@@ -406,6 +412,10 @@ export class MultiVisitor<T> implements TreeVisitor<T> {
             }
             if (!v[1] && v[0].postorder) {
                 v[0].postorder(node, spine);
+            }
+            if (v[0].haltTraverse) {
+                this.haltTraverse = true;
+                break;
             }
         }
     }

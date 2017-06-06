@@ -8,8 +8,9 @@ import { ParsedDocument } from './parsedDocument';
 import { NameResolver } from './nameResolver';
 import { SymbolStore } from './symbolStore';
 import { TypeString } from './typeString';
+import { TreeVisitor, MultiVisitor } from './types';
 import { SymbolKind, PhpSymbol, SymbolModifier } from './symbol';
-import { ParsedDocumentVisitor } from './parsedDocumentVisitor';
+import { NameResolverVisitor } from './nameResolverVisitor';
 import { PhpDocParser, PhpDoc, Tag, MethodTagParam } from './phpDoc';
 import { Location, Range } from 'vscode-languageserver-types';
 import {
@@ -272,17 +273,50 @@ export class ExpressionTypeResolver {
 
 }
 
-export class VariableTypeResolver extends ParsedDocumentVisitor {
+export class VariableTypeResolver extends MultiVisitor<Phrase | Token> {
+
+    private _nameResolverVisitor:NameResolverVisitor;
+    private _variableTypeVisitor:VariableTypeVisitor;
+
+    constructor(
+        nameResolverVisitor: NameResolverVisitor,
+        variableTypeVisitor: VariableTypeVisitor
+    ) {
+        super([nameResolverVisitor, variableTypeVisitor]);
+        this._nameResolverVisitor = nameResolverVisitor;
+        this._variableTypeVisitor = variableTypeVisitor;
+    }
+
+    set haltAtOffset(offset:number){
+        this._variableTypeVisitor.haltAtOffset = offset;
+    }
+
+    get variableTable(){
+        return this._variableTypeVisitor.variableTable;
+    }
+
+    static create(document: ParsedDocument, nameResolver: NameResolver, symbolStore: SymbolStore, variableTable: VariableTable) {
+        return new VariableTypeResolver(
+            new NameResolverVisitor(document, nameResolver),
+            new VariableTypeVisitor(document, nameResolver, symbolStore, variableTable)
+        );
+    }
+
+}
+
+export class VariableTypeVisitor implements TreeVisitor<Phrase | Token> {
+
+    haltTraverse = false;
+    haltAtOffset = -1;
 
     constructor(
         public document: ParsedDocument,
         public nameResolver: NameResolver,
         public symbolStore: SymbolStore,
         public variableTable: VariableTable) {
-        super(document, nameResolver);
     }
 
-    protected _preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+    preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
         switch ((<Phrase>node).phraseType) {
             case PhraseType.FunctionDeclaration:
@@ -320,7 +354,7 @@ export class VariableTypeResolver extends ParsedDocumentVisitor {
             case PhraseType.ByRefAssignmentExpression:
                 if (ParsedDocument.isPhrase((<BinaryExpression>node).left, [PhraseType.SimpleVariable, PhraseType.ListIntrinsic])) {
                     this._assignmentExpression(<BinaryExpression>node);
-                    if (this._containsHaltOffset(<Phrase>node)) {
+                    if (this.haltAtOffset > -1 && ParsedDocument.isOffsetInNode(this.haltAtOffset, node)) {
                         this.haltTraverse = true;
                     }
                     return false;
@@ -328,7 +362,7 @@ export class VariableTypeResolver extends ParsedDocumentVisitor {
                 return true;
             case PhraseType.InstanceOfExpression:
                 this._instanceOfExpression(<InstanceOfExpression>node);
-                if (this._containsHaltOffset(<Phrase>node)) {
+                if (this.haltAtOffset > -1 && ParsedDocument.isOffsetInNode(this.haltAtOffset, node)) {
                     this.haltTraverse = true;
                 }
                 return false;
@@ -347,7 +381,7 @@ export class VariableTypeResolver extends ParsedDocumentVisitor {
 
     }
 
-    protected _postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+    postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
         switch ((<Phrase>node).phraseType) {
             case PhraseType.IfStatement:
@@ -392,6 +426,25 @@ export class VariableTypeResolver extends ParsedDocumentVisitor {
         return new TypeString(fqns.join('|'));
     }
 
+    private _namePhraseToFqn(node: Phrase, kind: SymbolKind) {
+        if (!node) {
+            return '';
+        }
+
+        let text = this.document.nodeText((<QualifiedName>node).name, [TokenType.Comment, TokenType.Whitespace]);
+
+        switch (node.phraseType) {
+            case PhraseType.QualifiedName:
+                return this.nameResolver.resolveNotFullyQualified(text, kind);
+            case PhraseType.RelativeQualifiedName:
+                return this.nameResolver.resolveRelative(text);
+            case PhraseType.FullyQualifiedName:
+                return text;
+            default:
+                return '';
+        }
+    }
+
     private _catchClause(node: CatchClause) {
         this.variableTable.setType(this.document.tokenText(node.variable), this._qualifiedNameList(node.nameList));
     }
@@ -428,6 +481,10 @@ export class VariableTypeResolver extends ParsedDocumentVisitor {
                     this.variableTable.setType(varTag.name, new TypeString(varTag.typeString).nameResolve(this.nameResolver));
                 }
             }
+        }
+
+        if(this.haltAtOffset > -1 && ParsedDocument.isOffsetInToken(this.haltAtOffset, t)){
+            this.haltTraverse = true;
         }
 
     }

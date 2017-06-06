@@ -106,7 +106,7 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
     ) {
     }
 
-    protected _preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+    preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
         let s: PhpSymbol;
 
@@ -351,7 +351,7 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
 
     }
 
-    protected _postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+    postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
         switch ((<Phrase>node).phraseType) {
             case PhraseType.FunctionDeclaration:

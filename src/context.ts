@@ -303,7 +303,7 @@ export class Context {
 
     get variableTable() {
         if (!this._variableTable) {
-            let varTypeResolver = new VariableTypeResolver(this.document, this.nameResolver, this.symbolStore, new VariableTable());
+            let varTypeResolver = VariableTypeResolver.create(this.document, this.nameResolver, this.symbolStore, new VariableTable());
             varTypeResolver.haltAtOffset = this.token.offset;
             let t = this.createTraverser();
             let scope = t.ancestor(this._isAbsoluteScopePhrase);
