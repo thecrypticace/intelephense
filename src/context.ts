@@ -8,10 +8,10 @@ import { PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
 import { SymbolStore, SymbolTable } from './symbolStore';
 import { ExpressionTypeResolver, VariableTable, VariableTypeResolver } from './typeResolver';
 import { NameResolver } from './nameResolver';
-import { TreeTraverser, Predicate } from './types';
+import { TreeVisitor, TreeTraverser, Predicate, MultiVisitor } from './types';
 import { TypeString } from './typeString';
 import { ParsedDocument } from './parsedDocument';
-import { ParsedDocumentVisitor } from './parsedDocumentVisitor';
+import { NameResolverVisitor } from './nameResolverVisitor';
 import { Position, TextEdit, Range } from 'vscode-languageserver-types';
 import {
     Phrase, Token, PhraseType, NamespaceDefinition, ClassDeclaration,
@@ -20,18 +20,60 @@ import {
 } from 'php7parser';
 import * as util from './util';
 
-class ContextVisitor extends ParsedDocumentVisitor {
+class ContextResolver extends MultiVisitor<Phrase | Token> {
+
+    private _nameResolverVisitor: NameResolverVisitor;
+    private _contextVisitor: ContextVisitor;
+
+    constructor(nameResolverVisitor: NameResolverVisitor, contextVisitor: ContextVisitor) {
+        super([nameResolverVisitor, contextVisitor]);
+        this._nameResolverVisitor = nameResolverVisitor;
+        this._contextVisitor = contextVisitor;
+    }
+
+    get nameResolver() {
+        return this._nameResolverVisitor.nameResolver;
+    }
+
+    get spine() {
+        return this._contextVisitor.spine;
+    }
+
+    get openingInlineText() {
+        return this._contextVisitor.openingInlineText;
+    }
+
+    get lastNamespaceUseDeclaration() {
+        return this._contextVisitor.lastNamespaceUseDeclaration;
+    }
+
+    get namespaceDefinition() {
+        return this._contextVisitor.namespaceDefinition;
+    }
+
+    static create(document: ParsedDocument, nameResolver: NameResolver, offset: number) {
+        return new ContextResolver(
+            new NameResolverVisitor(document, nameResolver),
+            new ContextVisitor(document, nameResolver, offset)
+        );
+    }
+
+}
+
+class ContextVisitor implements TreeVisitor<Phrase | Token> {
 
     private _spine: (Phrase | Token)[];
     private _openingInlineText: InlineText;
     private _lastNamespaceUseDeclaration: NamespaceUseDeclaration;
     private _namespaceDefinition: NamespaceDefinition;
 
+    haltTraverse = false;
+    haltAtOffset = -1;
+
     constructor(
         public document: ParsedDocument,
         public nameResolver: NameResolver,
         offset: number) {
-        super(document, nameResolver);
         this.haltAtOffset = offset;
     }
 
@@ -51,13 +93,7 @@ class ContextVisitor extends ParsedDocumentVisitor {
         return this._namespaceDefinition;
     }
 
-    protected _preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
-
-        if (this.haltTraverse) {
-            this._spine = spine.slice(0);
-            this._spine.push(node);
-            return false;
-        }
+    preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
         switch ((<Phrase>node).phraseType) {
             case PhraseType.InlineText:
@@ -74,6 +110,15 @@ class ContextVisitor extends ParsedDocumentVisitor {
                 this._lastNamespaceUseDeclaration = node as NamespaceUseDeclaration;
                 break;
 
+            case undefined:
+                //tokens
+                if (this.haltAtOffset > -1 && ParsedDocument.isOffsetInToken(this.haltAtOffset, <Token>node)) {
+                    this.haltTraverse = true;
+                    this._spine = spine.slice(0);
+                    this._spine.push(node);
+                    return false;
+                }
+
         }
 
 
@@ -81,7 +126,7 @@ class ContextVisitor extends ParsedDocumentVisitor {
 
     }
 
-    protected _postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+    postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
         if (this.haltTraverse) {
             return;
@@ -127,12 +172,12 @@ export class Context {
     ) {
 
         this._offset = document.offsetAtPosition(position) - 1;
-        let contextVisitor = new ContextVisitor(this.document, new NameResolver(), this._offset);
+        let contextVisitor = ContextResolver.create(this.document, new NameResolver(), this._offset);
         document.traverse(contextVisitor);
         this._parseTreeSpine = contextVisitor.spine;
         this._openingInlineText = contextVisitor.openingInlineText;
         this._nameResolver = contextVisitor.nameResolver;
-
+        this._lastNamespaceUseDeclaration = contextVisitor.lastNamespaceUseDeclaration;
     }
 
     get uri() {
@@ -180,7 +225,7 @@ export class Context {
      * If a non-aliased declaration will cause duplicate symbols then this returns null
      * @param fqn 
      */
-    createUseDeclarationTextEdit(fqn: string, kind?:SymbolKind) {
+    createUseDeclarationTextEdit(fqn: string, kind?: SymbolKind) {
 
         let text: string;
         let nodeRange: Range;
@@ -206,7 +251,7 @@ export class Context {
         }
 
         let kindText = '';
-        switch(kind){
+        switch (kind) {
             case SymbolKind.Function:
                 kindText = 'function ';
                 break;
@@ -307,7 +352,7 @@ export class Context {
             varTypeResolver.haltAtOffset = this.token.offset;
             let t = this.createTraverser();
             let scope = t.ancestor(this._isAbsoluteScopePhrase);
-            if(!scope){
+            if (!scope) {
                 scope = this._parseTreeSpine[0] as Phrase;
             }
             let traverser = new TreeTraverser([scope]);
