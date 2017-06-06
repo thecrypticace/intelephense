@@ -315,6 +315,21 @@ export namespace ParsedDocument {
         return null;
     }
 
+    export function isNamePhrase(node:Phrase|Token) {
+        if(!node){
+            return false;
+        }
+
+        switch((<Phrase>node).phraseType){
+            case PhraseType.QualifiedName:
+            case PhraseType.RelativeQualifiedName:
+            case PhraseType.FullyQualifiedName:
+                return true;
+            default:
+                return false;
+        }
+    }
+
 }
 
 export class ParsedDocumentStore {

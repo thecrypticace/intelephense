@@ -31,6 +31,10 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
         this._references = [];
     }
 
+    get references() {
+        return this._references;
+    }
+
     postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
         let parent = spine[spine.length - 1] as Phrase;
@@ -64,7 +68,10 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.ScopedMemberName:
 
                 break;
+                
+            default:
 
+                break;
 
         }
 
