@@ -370,9 +370,9 @@ export class CountVisitor<T> implements TreeVisitor<T> {
 }
 
 
-class MultiVisitor<T> implements TreeVisitor<T> {
+export class MultiVisitor<T> implements TreeVisitor<T> {
 
-    private _visitors: [TreeVisitor<T>, TreeLike][];
+    protected _visitors: [TreeVisitor<T>, TreeLike][];
 
     constructor(visitors: TreeVisitor<T>[]) {
         this._visitors = [];

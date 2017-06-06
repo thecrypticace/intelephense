@@ -79,7 +79,7 @@ export class SymbolTable {
 
     static create(parsedDocument: ParsedDocument, externalOnly?: boolean) {
 
-        let symbolReader = new SymbolReader(
+        let symbolReader = SymbolReader.create(
             parsedDocument,
             new NameResolver(),
             [{ kind: SymbolKind.None, name: '', children: [] }]

@@ -328,7 +328,7 @@ export namespace ParsedDocument {
             default:
                 return false;
         }
-    }
+    } 
 
 }
 

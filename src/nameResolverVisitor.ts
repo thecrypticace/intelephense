@@ -150,10 +150,6 @@ export class NameResolverVisitor implements TreeVisitor<Phrase | Token> {
         }
     }
 
-    protected _namespaceUseDeclaration(node: NamespaceUseDeclaration): [SymbolKind, string] {
-        return [this._tokenToSymbolKind(node.kind), this.document.nodeText(node.prefix)];
-    }
-
     /**
      * Resolves name node to FQN
      * @param node 
