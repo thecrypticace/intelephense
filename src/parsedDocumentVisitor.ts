@@ -19,24 +19,10 @@ import {
 } from 'php7parser';
 import { TreeTraverser, TreeVisitor } from './types';
 
-/**
- * Base class for parsed document visitors.
- * This class comes equipped with a name resolver that will collect namespace definition
- * and use declaration symbols (or come prepopulated with them) for use in resolving fully qualified names
- * 
- * Don't return false when visiting namespace definitions and namespace use declarations -- name resolving will be buggy
- * 
- * If not descending into children and wishinf to halt make sure to use _containsHaltOffset
- * _preorder still runs on the token containing the haltOffset.
- * 
- */
-export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Token> {
+export class NameResolverVisitor implements TreeVisitor<Phrase | Token> {
 
     private _namespaceUseDeclarationKind: SymbolKind;
     private _namespaceUseDeclarationPrefix: string;
-
-    haltTraverse = false;
-    haltAtOffset = -1;
 
     constructor(
         public document: ParsedDocument,
@@ -46,19 +32,15 @@ export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Toke
 
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
-        if(this.haltTraverse){
-            return false;
-        }
-
         switch ((<Phrase>node).phraseType) {
 
             case PhraseType.NamespaceDefinition:
-                this.nameResolver.namespace = this._namespaceNamePhraseToString((<NamespaceDefinition>node).name);
+                this.nameResolver.namespace = this.document.nodeText((<NamespaceDefinition>node).name);
                 break;
 
             case PhraseType.NamespaceUseDeclaration:
                 this._namespaceUseDeclarationKind = this._tokenToSymbolKind((<NamespaceUseDeclaration>node).kind);
-                this._namespaceUseDeclarationPrefix = this._namespaceNamePhraseToString((<NamespaceUseDeclaration>node).prefix);
+                this._namespaceUseDeclarationPrefix = this.document.nodeText((<NamespaceUseDeclaration>node).prefix);
                 break;
 
             case PhraseType.NamespaceUseClause:
@@ -77,26 +59,15 @@ export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Toke
                 this.nameResolver.pushClassName(this._classDeclarationHeader(<ClassDeclarationHeader>node));
                 break;
 
-            case undefined:
-                //tokens
-                if(ParsedDocument.isOffsetInToken(this.haltAtOffset, <Token>node)){
-                    this.haltTraverse = true;
-                }
-                break;
-
             default:
                 break;
         }
 
-        return this._preorder(node, spine);
+        return true;
 
     }
 
     postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
-
-        if (this.haltTraverse) {
-            return;
-        }
 
         switch ((<Phrase>node).phraseType) {
             case PhraseType.NamespaceDefinition:
@@ -104,25 +75,26 @@ export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Toke
                     this.nameResolver.namespace = '';
                 }
                 break;
+
             case PhraseType.NamespaceUseDeclaration:
                 this._namespaceUseDeclarationKind = 0;
                 this._namespaceUseDeclarationPrefix = '';
                 break;
+
             case PhraseType.ClassDeclaration:
             case PhraseType.AnonymousClassDeclaration:
                 this.nameResolver.popClassName();
                 break;
+
             default:
                 break;
         }
-
-        return this._postorder(node, spine);
 
     }
 
     private _classDeclarationHeader(node: ClassDeclarationHeader) {
         let names: [string, string] = [
-            this.nameResolver.resolveRelative(this._namespaceNamePhraseToString(node.name)),
+            this.nameResolver.resolveRelative(this.document.tokenText(node.name)),
             ''
         ];
 
@@ -135,7 +107,7 @@ export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Toke
 
     private _anonymousClassDeclaration(node: AnonymousClassDeclaration) {
         let names: [string, string] = [
-            this._createAnonymousName(node),
+            this.document.createAnonymousName(node),
             ''
         ];
 
@@ -148,7 +120,7 @@ export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Toke
 
     private _namespaceUseClause(node: NamespaceUseClause, kind: SymbolKind, prefix: string) {
 
-        let fqn = this.nameResolver.concatNamespaceName(prefix, this._namespaceNamePhraseToString(node.name));
+        let fqn = this.nameResolver.concatNamespaceName(prefix, this.document.nodeText(node.name));
 
         if (!kind) {
             kind = SymbolKind.Class;
@@ -156,7 +128,7 @@ export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Toke
 
         return <PhpSymbol>{
             kind: kind,
-            name: node.aliasingClause ? this._nodeText(node.aliasingClause.alias) : PhpSymbol.notFqn(fqn),
+            name: node.aliasingClause ? this.document.nodeText(node.aliasingClause.alias) : PhpSymbol.notFqn(fqn),
             associated: [{ kind: kind, name: fqn }]
         };
 
@@ -179,30 +151,7 @@ export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Toke
     }
 
     protected _namespaceUseDeclaration(node: NamespaceUseDeclaration): [SymbolKind, string] {
-        return [this._tokenToSymbolKind(node.kind), this._namespaceNamePhraseToString(node.prefix)];
-    }
-
-    protected abstract _preorder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
-    protected abstract _postorder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
-
-    protected _containsHaltOffset(node: Phrase | Token) {
-        return ParsedDocument.isOffsetInNode(this.haltAtOffset, node);
-    }
-
-    protected _nodeText(node: Phrase | Token, ignore?: TokenType[]) {
-        return this.document.nodeText(node, ignore);
-    }
-
-    protected _nodeRange(node: Phrase | Token) {
-        return this.document.nodeRange(node);
-    }
-
-    protected _nodeLocation(node: Phrase | Token) {
-        return this.document.nodeLocation(node);
-    }
-
-    protected _createAnonymousName(node: Phrase) {
-        return this.document.createAnonymousName(node);
+        return [this._tokenToSymbolKind(node.kind), this.document.nodeText(node.prefix)];
     }
 
     /**
@@ -215,27 +164,18 @@ export abstract class ParsedDocumentVisitor implements TreeVisitor<Phrase | Toke
             return '';
         }
 
+        let text = this.document.nodeText((<QualifiedName>node).name, [TokenType.Comment, TokenType.Whitespace]);
+
         switch (node.phraseType) {
             case PhraseType.QualifiedName:
-                return this.nameResolver.resolveNotFullyQualified(this._namespaceNamePhraseToString((<QualifiedName>node).name), kind);
+                return this.nameResolver.resolveNotFullyQualified(text, kind);
             case PhraseType.RelativeQualifiedName:
-                return this.nameResolver.resolveRelative(this._namespaceNamePhraseToString((<RelativeQualifiedName>node).name));
+                return this.nameResolver.resolveRelative(text);
             case PhraseType.FullyQualifiedName:
-                return this._namespaceNamePhraseToString((<FullyQualifiedName>node).name);
-            case PhraseType.NamespaceName:
-                return this._namespaceNamePhraseToString(<NamespaceName>node);
+                return text;
             default:
                 return '';
         }
     }
 
-    protected _namespaceNamePhraseToString(node: Phrase | Token) {
-
-        if (!ParsedDocument.isPhrase(node, [PhraseType.NamespaceName])) {
-            return '';
-        }
-
-        return this.document.nodeText(node, [TokenType.Comment, TokenType.Whitespace]);
-
-    }
 }
