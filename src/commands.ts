@@ -9,6 +9,7 @@ import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Context } from './context';
 import { SymbolStore } from './symbolStore';
 import { SymbolKind } from './symbol';
+import { ReferenceVisitor } from './references';
 
 export class ImportSymbolCommand {
 
@@ -25,6 +26,8 @@ export class ImportSymbolCommand {
         if (!doc) {
             return edits;
         }
+
+
 
         let context = new Context(this.symbolStore, doc, position);
         let traverser = context.createTraverser();
