@@ -16,6 +16,7 @@ import { NameResolver } from './nameResolver';
 import { Predicate } from './types';
 import { NameResolverVisitor } from './nameResolverVisitor';
 import { VariableTypeVisitor, VariableTable } from './typeResolver';
+import { ParseTreeHelper } from './parseTreeHelper';
 import * as lsp from 'vscode-languageserver-types';
 
 export class ReferenceReader extends MultiVisitor<Phrase | Token> {
@@ -23,8 +24,8 @@ export class ReferenceReader extends MultiVisitor<Phrase | Token> {
     constructor(
         public nameResolverVisitor: NameResolverVisitor,
         public variableTypeVisitor: VariableTypeVisitor,
-        public referenceVisitor:ReferenceVisitor
-        ) {
+        public referenceVisitor: ReferenceVisitor
+    ) {
         super([
             nameResolverVisitor,
             variableTypeVisitor,
@@ -71,19 +72,19 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
         switch ((<Phrase>node).phraseType) {
             case PhraseType.FullyQualifiedName:
                 this._transformerStack.push(
-                    new FullyQualifiedNameTransformer(this.symbolStore, this.doc.nodeRange(node), this.nodeToNameSymbolKind(parent))
+                    new FullyQualifiedNameTransformer(this.symbolStore, this.doc.nodeRange(node), ParseTreeHelper.phraseToReferencesSymbolKind(parent))
                 );
                 return true;
 
             case PhraseType.RelativeQualifiedName:
                 this._transformerStack.push(
-                    new RelativeQualifiedNameTransformer(this.symbolStore, this.doc.nodeRange(node), this.nameResolver, this.nodeToNameSymbolKind(parent))
+                    new RelativeQualifiedNameTransformer(this.symbolStore, this.doc.nodeRange(node), this.nameResolver, ParseTreeHelper.phraseToReferencesSymbolKind(parent))
                 );
                 return true;
 
             case PhraseType.QualifiedName:
                 this._transformerStack.push(
-                    new QualifiedNameTransformer(this.symbolStore, this.doc.nodeRange(node), this.nameResolver, this.nodeToNameSymbolKind(parent))
+                    new QualifiedNameTransformer(this.symbolStore, this.doc.nodeRange(node), this.nameResolver, ParseTreeHelper.phraseToReferencesSymbolKind(parent))
                 );
                 return true;
 
@@ -107,17 +108,17 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
         let parent = spine[spine.length - 1] as Phrase;
         let transformer = (<Phrase>node).phraseType ? this._transformerStack.pop() : null;
         let parentTransformer = this._transformerStack.length ? this._transformerStack[this._transformerStack.length - 1] : null;
-        let transform:any;
+        let transform: any;
 
         switch ((<Phrase>node).phraseType) {
             case PhraseType.QualifiedName:
             case PhraseType.RelativeQualifiedName:
             case PhraseType.FullyQualifiedName:
-                if((transform = transformer.transform() as Reference)){
+                if ((transform = transformer.transform() as Reference)) {
                     this._references.push(transform);
                 }
 
-                if(parentTransformer) {
+                if (parentTransformer) {
                     parentTransformer.push(transform, node);
                 }
                 break;
@@ -137,21 +138,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
     }
 
-    private nodeToNameSymbolKind(node: Phrase) {
 
-        if (!node) {
-            return SymbolKind.Class;
-        }
-
-        switch (node.phraseType) {
-            case PhraseType.ConstantAccessExpression:
-                return SymbolKind.Constant;
-            case PhraseType.FunctionCallExpression:
-                return SymbolKind.Function;
-            default:
-                return SymbolKind.Class;
-        }
-    }
 
 }
 
@@ -272,10 +259,6 @@ export class DocumentReferences {
     constructor(uri: string, references: Reference[]) {
         this._uri
         this._references = [];
-    }
-
-    add(ref: Reference) {
-        this._references.push(ref);
     }
 
     match(predicate: Predicate<Reference>) {

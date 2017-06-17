@@ -9,7 +9,10 @@ import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Context } from './context';
 import { SymbolStore } from './symbolStore';
 import { SymbolKind } from './symbol';
-import { ReferenceVisitor } from './references';
+import { ReferenceReader } from './references';
+import { NameResolver } from './nameResolver';
+import { VariableTable } from './typeResolver';
+import { ParseTreeHelper } from './parseTreeHelper';
 
 export class ImportSymbolCommand {
 
@@ -27,8 +30,6 @@ export class ImportSymbolCommand {
             return edits;
         }
 
-
-
         let context = new Context(this.symbolStore, doc, position);
         let traverser = context.createTraverser();
         let qName = traverser.ancestor(ParsedDocument.isNamePhrase);
@@ -39,6 +40,14 @@ export class ImportSymbolCommand {
 
         let qNameParent = traverser.parent();
         let kind = SymbolKind.Class;
+
+
+        let referenceReader = ReferenceReader.create(doc, new NameResolver(), this.symbolStore, new VariableTable());
+        doc.traverse(referenceReader);
+        let references = referenceReader.references;
+
+
+        
 
     }
 
