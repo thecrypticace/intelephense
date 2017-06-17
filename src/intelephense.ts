@@ -15,8 +15,10 @@ import { DefinitionProvider } from './definitionProvider';
 import { PhraseType } from 'php7parser';
 import { FormatProvider } from './formatProvider';
 import * as lsp from 'vscode-languageserver-types';
+import { ImportSymbolTextEdits, importSymbol as importSymbolCommand } from './commands';
 
 export { SymbolTableDto } from './symbolStore';
+export { ImportSymbolTextEdits } from './commands';
 
 export namespace Intelephense {
 
@@ -174,6 +176,10 @@ export namespace Intelephense {
         forgotten = table.count;
         symbolStore.remove(table.uri);
         return forgotten;
+    }
+
+    export function importSymbol(textDocument:lsp.TextDocumentItem, position:lsp.Position) {
+        return importSymbolCommand(symbolStore, documentStore, textDocument, position);
     }
 
     export function numberDocumentsOpen() {

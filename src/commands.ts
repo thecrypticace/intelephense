@@ -14,41 +14,43 @@ import { NameResolver } from './nameResolver';
 import { VariableTable } from './typeResolver';
 import { ParseTreeHelper } from './parseTreeHelper';
 
-export class ImportSymbolCommand {
+export interface ImportSymbolTextEdits {
+    edits: lsp.TextEdit[];
+    /**
+     * If true an alias is required and is expected to be appended to each text edit
+     */
+    aliasRequired?: boolean;
+}
 
-    constructor(
-        public docStore: ParsedDocumentStore,
-        public symbolStore: SymbolStore
-    ) { }
+export function importSymbol(
+    symbolStore: SymbolStore,
+    documentStore: ParsedDocumentStore,
+    textDocument: lsp.TextDocumentIdentifier,
+    position: lsp.Position
+): ImportSymbolTextEdits {
 
-    execute(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): lsp.TextEdit[] {
+    let edits: lsp.TextEdit[] = [];
+    let doc = documentStore.find(textDocument.uri);
 
-        let edits: lsp.TextEdit[] = [];
-        let doc = this.docStore.find(textDocument.uri);
-
-        if (!doc) {
-            return edits;
-        }
-
-        let context = new Context(this.symbolStore, doc, position);
-        let traverser = context.createTraverser();
-        let qName = traverser.ancestor(ParsedDocument.isNamePhrase);
-
-        if (!qName) {
-            return edits;
-        }
-
-        let qNameParent = traverser.parent();
-        let kind = SymbolKind.Class;
-
-
-        let referenceReader = ReferenceReader.create(doc, new NameResolver(), this.symbolStore, new VariableTable());
-        doc.traverse(referenceReader);
-        let references = referenceReader.references;
-
-
-        
-
+    if (!doc) {
+        return { edits: edits };
     }
+
+    let context = new Context(this.symbolStore, doc, position);
+    let traverser = context.createTraverser();
+    let qName = traverser.ancestor(ParsedDocument.isNamePhrase);
+
+    if (!qName) {
+        return { edits: edits };
+    }
+
+    let qNameParent = traverser.parent();
+    let kind = SymbolKind.Class;
+
+
+    let referenceReader = ReferenceReader.create(doc, new NameResolver(), this.symbolStore, new VariableTable());
+    doc.traverse(referenceReader);
+    let references = referenceReader.references;
+
 
 }
