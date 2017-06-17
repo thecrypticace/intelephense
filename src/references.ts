@@ -14,18 +14,42 @@ import { SymbolStore } from './symbolStore';
 import { ParsedDocument } from './parsedDocument';
 import { NameResolver } from './nameResolver';
 import { Predicate } from './types';
+import { NameResolverVisitor } from './nameResolverVisitor';
+import { VariableTypeVisitor, VariableTable } from './typeResolver';
 import * as lsp from 'vscode-languageserver-types';
 
 export class ReferenceReader extends MultiVisitor<Phrase | Token> {
 
+    constructor(
+        public nameResolverVisitor: NameResolverVisitor,
+        public variableTypeVisitor: VariableTypeVisitor,
+        public referenceVisitor:ReferenceVisitor
+        ) {
+        super([
+            nameResolverVisitor,
+            variableTypeVisitor,
+            referenceVisitor
+        ]);
+    }
 
+    get references() {
+        return this.referenceVisitor.references;
+    }
+
+    static create(document: ParsedDocument, nameResolver: NameResolver, symbolStore: SymbolStore, variableTable: VariableTable) {
+        return new ReferenceReader(
+            new NameResolverVisitor(document, nameResolver),
+            new VariableTypeVisitor(document, nameResolver, symbolStore, variableTable),
+            new ReferenceVisitor(document, nameResolver, symbolStore)
+        );
+    }
 
 }
 
 export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
     private _references: Reference[];
-    private _contextStack: any[];
+    private _transformerStack: PhraseTransformer[];
 
     constructor(
         public doc: ParsedDocument,
@@ -33,47 +57,75 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
         public symbolStore: SymbolStore
     ) {
         this._references = [];
-        this._contextStack = [];
+        this._transformerStack = [];
     }
 
     get references() {
-        return this._references;
+        return new DocumentReferences(this.doc.uri, this._references);
     }
 
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+
+        let parent = spine[spine.length - 1] as Phrase;
+
+        switch ((<Phrase>node).phraseType) {
+            case PhraseType.FullyQualifiedName:
+                this._transformerStack.push(
+                    new FullyQualifiedNameTransformer(this.symbolStore, this.doc.nodeRange(node), this.nodeToNameSymbolKind(parent))
+                );
+                return true;
+
+            case PhraseType.RelativeQualifiedName:
+                this._transformerStack.push(
+                    new RelativeQualifiedNameTransformer(this.symbolStore, this.doc.nodeRange(node), this.nameResolver, this.nodeToNameSymbolKind(parent))
+                );
+                return true;
+
+            case PhraseType.QualifiedName:
+                this._transformerStack.push(
+                    new QualifiedNameTransformer(this.symbolStore, this.doc.nodeRange(node), this.nameResolver, this.nodeToNameSymbolKind(parent))
+                );
+                return true;
+
+            case PhraseType.NamespaceName:
+                this._transformerStack.push(null);
+                return false;
+
+            case undefined:
+                //tokens
+                return false;
+
+            default:
+                this._transformerStack.push(null);
+                return true;
+        }
 
     }
 
     postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
         let parent = spine[spine.length - 1] as Phrase;
-        let context = this._contextStack.pop();
-        let parentContext = (this._contextStack.length ? this._contextStack[this._contextStack.length - 1] : null) as any[];
+        let transformer = (<Phrase>node).phraseType ? this._transformerStack.pop() : null;
+        let parentTransformer = this._transformerStack.length ? this._transformerStack[this._transformerStack.length - 1] : null;
+        let transform:any;
 
         switch ((<Phrase>node).phraseType) {
             case PhraseType.QualifiedName:
-
             case PhraseType.RelativeQualifiedName:
             case PhraseType.FullyQualifiedName:
+                if((transform = transformer.transform() as Reference)){
+                    this._references.push(transform);
+                }
 
-                break;
-
-            case PhraseType.NamespaceName:
-                if (parentContext) {
-                    parentContext.push(this.doc.nodeText(node));
+                if(parentTransformer) {
+                    parentTransformer.push(transform, node);
                 }
                 break;
 
-            case PhraseType.PropertyAccessExpression:
-
-                break;
-
-            case PhraseType.MethodCallExpression:
-
-                break;
-
-            case PhraseType.ScopedMemberName:
-
+            case PhraseType.NamespaceName:
+                if (parentTransformer) {
+                    parentTransformer.push(this.doc.nodeText(node), node);
+                }
                 break;
 
             default:
@@ -85,38 +137,12 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
     }
 
-    private qualifiedName(node: Phrase, parent: Phrase, context: any[]) {
-        let kind = this.referenceNameSymbolKind(parent);
-        let text = context.pop();
-        let ref: Reference = {
-            range: this.doc.nodeRange(node),
-            symbol: null
-        };
+    private nodeToNameSymbolKind(node: Phrase) {
 
-        if (!text) {
-            return null;
+        if (!node) {
+            return SymbolKind.Class;
         }
 
-        if (
-            text.indexOf('\\') < 0 &&
-            (ref.symbol = this.nameResolver.matchImportedSymbol(text, kind))
-        ) {
-            //reference the import rule
-            return ref;
-        }
-
-        //reference the actual symbol 
-        text = this.nameResolver.resolveNotFullyQualified(text, kind);
-        let pred: Predicate<PhpSymbol> = (x) => {
-            return x.kind === kind;
-        };
-
-        ref.symbol = this.symbolStore.find(text, pred);
-        return ref.symbol ? ref : null;
-
-    }
-
-    private referenceNameSymbolKind(node: Phrase) {
         switch (node.phraseType) {
             case PhraseType.ConstantAccessExpression:
                 return SymbolKind.Constant;
@@ -127,63 +153,30 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
         }
     }
 
-    private _qualifiedName(node: QualifiedName, parent: Phrase) {
-        let kind = SymbolKind.Class;
-        if (parent.phraseType === PhraseType.ConstantAccessExpression) {
-            kind = SymbolKind.Constant;
-        } else if (parent.phraseType === PhraseType.FunctionCallExpression) {
-            kind = SymbolKind.Function;
-        }
-
-        let ref: Reference = {
-            range: this.doc.nodeRange(node),
-            symbol: null
-        };
-
-        let text = this.doc.nodeText(node.name, [TokenType.Whitespace, TokenType.Comment]);
-
-        if (
-            node.phraseType === PhraseType.QualifiedName &&
-            text.indexOf('\\') < 0 &&
-            (ref.symbol = this.nameResolver.matchImportedSymbol(text, kind))
-        ) {
-            //reference the import rule
-            return ref;
-        }
-
-        //reference the actual symbol 
-        if (node.phraseType === PhraseType.QualifiedName) {
-            text = this.nameResolver.resolveNotFullyQualified(text, kind);
-        } else if (node.phraseType === PhraseType.RelativeQualifiedName) {
-            text = this.nameResolver.resolveRelative(text);
-        }
-
-        let pred: Predicate<PhpSymbol> = (x) => {
-            return x.kind === kind;
-        };
-        ref.symbol = this.symbolStore.find(text, pred);
-
-        if (ref.symbol) {
-            this._references.push(ref);
-            return ref;
-        }
-
-        return null;
-
-    }
-
-
 }
 
-class FullyQualifiedNameTransform implements PhraseTransform {
+class FullyQualifiedNameTransformer implements PhraseTransformer {
 
     protected _name: string;
+    protected _kindPredicate: Predicate<PhpSymbol>;
 
     constructor(
         public symbolStore: SymbolStore,
         public range: lsp.Range,
         public kind?: SymbolKind
-    ) { }
+    ) {
+        switch (kind) {
+            case SymbolKind.Function:
+                this._kindPredicate = this.isFunction;
+                break;
+            case SymbolKind.Constant:
+                this._kindPredicate = this.isConstant;
+                break;
+            default:
+                this._kindPredicate = this.isTraitInterfaceClass;
+                break;
+        }
+    }
 
     push(value: any, node: Phrase | Token) {
         if ((<Phrase>node).phraseType === PhraseType.NamespaceName) {
@@ -199,12 +192,7 @@ class FullyQualifiedNameTransform implements PhraseTransform {
             return null;
         }
 
-        let k = this.kind;
-        let p = (x: PhpSymbol) => {
-            return (x.kind & k) > 0;
-        }
-
-        let matches = this.symbolStore.match(this._name, p);
+        let matches = this.symbolStore.match(this._name, this._kindPredicate);
 
         if (matches.length > 0) {
             return <Reference>{
@@ -220,9 +208,21 @@ class FullyQualifiedNameTransform implements PhraseTransform {
         return this._name;
     }
 
+    protected isFunction(x: PhpSymbol) {
+        return x.kind === SymbolKind.Function;
+    }
+
+    protected isConstant(x: PhpSymbol) {
+        return x.kind === SymbolKind.Constant;
+    }
+
+    protected isTraitInterfaceClass(x: PhpSymbol) {
+        return (x.kind & (SymbolKind.Class | SymbolKind.Trait | SymbolKind.Interface)) > 0;
+    }
+
 }
 
-class RelativeQualifiedNameTransform extends FullyQualifiedNameTransform {
+class RelativeQualifiedNameTransformer extends FullyQualifiedNameTransformer {
     constructor(
         public symbolStore: SymbolStore,
         public range: lsp.Range,
@@ -237,7 +237,7 @@ class RelativeQualifiedNameTransform extends FullyQualifiedNameTransform {
     }
 }
 
-class QualifiedNameTransform extends FullyQualifiedNameTransform {
+class QualifiedNameTransformer extends FullyQualifiedNameTransformer {
 
     constructor(
         public symbolStore: SymbolStore,
@@ -253,7 +253,7 @@ class QualifiedNameTransform extends FullyQualifiedNameTransform {
     }
 }
 
-interface PhraseTransform {
+interface PhraseTransformer {
     push(value: any, node: Phrase | Token);
     transform(): any;
 }
