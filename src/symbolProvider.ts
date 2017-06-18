@@ -44,12 +44,13 @@ export class SymbolProvider {
      * @param query 
      */
     provideWorkspaceSymbols(query: string) {
+        const maxItems = 100;
         let matches = this.symbolStore.match(query, null, true);
         let symbolInformationList: lsp.SymbolInformation[] = [];
 
         let s: PhpSymbol;
 
-        for (let n = 0, l = matches.length; n < l; ++n) {
+        for (let n = 0, l = matches.length; n < l && n < maxItems; ++n) {
             s = matches[n];
             if (this.workspaceSymbolFilter(s)) {
                 symbolInformationList.push(this.toDocumentSymbolInformation(s));
