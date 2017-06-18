@@ -13,11 +13,12 @@ import { SymbolKind, PhpSymbol } from './symbol';
 import { SymbolStore } from './symbolStore';
 import { ParsedDocument } from './parsedDocument';
 import { NameResolver } from './nameResolver';
-import { Predicate } from './types';
+import { Predicate, BinarySearch, BinarySearchResult } from './types';
 import { NameResolverVisitor } from './nameResolverVisitor';
 import { VariableTypeVisitor, VariableTable } from './typeResolver';
 import { ParseTreeHelper } from './parseTreeHelper';
 import * as lsp from 'vscode-languageserver-types';
+import { isInRange } from './util';
 
 export class ReferenceReader extends MultiVisitor<Phrase | Token> {
 
@@ -255,13 +256,15 @@ export class DocumentReferences {
 
     private _references: Reference[];
     private _uri: string;
+    private _search:BinarySearch<Reference>;
 
     constructor(uri: string, references: Reference[]) {
         this._uri
         this._references = [];
+        this._search = new BinarySearch(this._references);
     }
 
-    match(predicate: Predicate<Reference>) {
+    filter(predicate: Predicate<Reference>) {
         let matches: Reference[] = [];
         let ref: Reference;
         for (let n = 0, l = this._references.length; n < l; ++n) {
@@ -271,6 +274,16 @@ export class DocumentReferences {
             }
         }
         return matches;
+    }
+
+    referenceAtPosition(position:lsp.Position) {
+
+        let fn = (x:Reference) => {
+            return isInRange(position, x.range.start, x.range.end);
+        }
+
+        return this._search.find(fn);
+
     }
 
 }
