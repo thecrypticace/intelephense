@@ -50,7 +50,7 @@ export class SymbolProvider {
 
         let s: PhpSymbol;
 
-        for (let n = 0, l = matches.length; n < l && n < maxItems; ++n) {
+        for (let n = 0, l = matches.length; n < l && symbolInformationList.length < maxItems; ++n) {
             s = matches[n];
             if (this.workspaceSymbolFilter(s)) {
                 symbolInformationList.push(this.toDocumentSymbolInformation(s));
