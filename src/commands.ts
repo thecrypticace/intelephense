@@ -133,7 +133,7 @@ export function importSymbol(
     }
 
     return {
-        edits: edits,
+        edits: edits.reverse(),
         aliasRequired: aliasRequired
     };
 
