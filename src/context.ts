@@ -178,6 +178,7 @@ export class Context {
         this._openingInlineText = contextVisitor.openingInlineText;
         this._nameResolver = contextVisitor.nameResolver;
         this._lastNamespaceUseDeclaration = contextVisitor.lastNamespaceUseDeclaration;
+        this._namespaceDefinition = contextVisitor.namespaceDefinition;
     }
 
     get uri() {
@@ -220,51 +221,16 @@ export class Context {
         return this._nameResolver.namespace;
     }
 
-    /**
-     * Only supports non-aliased declarations
-     * If a non-aliased declaration will cause duplicate symbols then this returns null
-     * @param fqn 
-     */
-    createUseDeclarationTextEdit(fqn: string, kind?: SymbolKind) {
+    get lastNamespaceUseDeclaration() {
+        return this._lastNamespaceUseDeclaration;
+    }
 
-        let text: string;
-        let nodeRange: Range;
-        let hasRule: Predicate<PhpSymbol> = (x) => {
-            return PhpSymbol.notFqn(fqn) === x.name;
-        };
+    get namespaceDefinition() {
+        return this._namespaceDefinition;
+    }
 
-        if (this._nameResolver.rules.find(hasRule)) {
-            return null;
-        }
-
-        if (this._lastNamespaceUseDeclaration) {
-            nodeRange = this.document.nodeRange(this._lastNamespaceUseDeclaration);
-            text = '\n' + util.whitespace(nodeRange.start.character);
-        } else if (this._namespaceDefinition && !this._namespaceDefinition.statementList) {
-            nodeRange = this.document.nodeRange(this._namespaceDefinition);
-            text = '\n\n' + util.whitespace(nodeRange.start.character);
-        } else if (this._openingInlineText) {
-            nodeRange = this.document.nodeRange(this._openingInlineText);
-            text = '\n\n' + util.whitespace(nodeRange.start.character);
-        } else {
-            return TextEdit.insert({ line: 0, character: 0 }, text);
-        }
-
-        let kindText = '';
-        switch (kind) {
-            case SymbolKind.Function:
-                kindText = 'function ';
-                break;
-            case SymbolKind.Constant:
-                kindText = 'const ';
-                break;
-            default:
-                break;
-        }
-
-        text += `use ${kindText}${fqn};`;
-        return TextEdit.insert(nodeRange.end, text);
-
+    get openingInlineText() {
+        return this._openingInlineText;
     }
 
     get classDeclarationPhrase() {

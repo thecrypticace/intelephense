@@ -14,8 +14,9 @@ import { NameResolver } from './nameResolver';
 import { NameResolverVisitor } from './nameResolverVisitor';
 import { VariableTable } from './typeResolver';
 import { ParseTreeHelper } from './parseTreeHelper';
-import { Phrase } from 'php7parser';
+import { Phrase, PhraseType } from 'php7parser';
 import { MultiVisitor } from './types';
+import * as util from './util';
 
 export interface ImportSymbolTextEdits {
     edits: lsp.TextEdit[];
@@ -57,29 +58,83 @@ export function importSymbol(
         return { edits: edits };
     }
 
-    let filterFn = (x:Reference) => {
+    let filterFn = (x: Reference) => {
         return x.symbol === refAtPos.symbol;
     };
 
     let filteredReferences = references.filter(filterFn);
     let context = new Context(this.symbolStore, doc, position);
     nameResolver = context.nameResolver;
-    
-    let existingRule = nameResolver.rules.find((x)=>{
-        let assoc = x.associated.find((s)=>{
-            return s.kind === (<PhpSymbol>refAtPos.symbol).kind && s.name === (<PhpSymbol>refAtPos.symbol).name;
+
+    let existingRule = nameResolver.rules.find((x) => {
+        let assoc = x.associated.find((z) => {
+            return z.kind === (<PhpSymbol>refAtPos.symbol).kind && z.name === (<PhpSymbol>refAtPos.symbol).name;
         });
         return assoc !== undefined;
     });
 
     let aliasRequired = false;
     let name = PhpSymbol.notFqn((<PhpSymbol>refAtPos.symbol).name);
+    let lcName = name.toLowerCase();
 
-    if(!existingRule) {
+    if (!existingRule) {
         //is an alias needed?
-        nameResolver.rules.
+        aliasRequired = nameResolver.rules.find((x) => {
+            return x.name.toLowerCase() === lcName;
+        }) !== undefined;
 
+        //import rule text edit
+        let appendAfterRange: lsp.Range;
+        let editText = '';
+
+        if (context.lastNamespaceUseDeclaration) {
+            appendAfterRange = this.document.nodeRange(context.lastNamespaceUseDeclaration);
+            editText = '\n' + util.whitespace(appendAfterRange.start.character);
+        } else if (context.namespaceDefinition && !ParsedDocument.firstPhraseOfType(PhraseType.StatementList, context.namespaceDefinition.children)) {
+            appendAfterRange = this.document.nodeRange(context.namespaceDefinition);
+            editText = '\n\n' + util.whitespace(appendAfterRange.start.character);
+        } else if (context.openingInlineText) {
+            appendAfterRange = this.document.nodeRange(context.openingInlineText);
+            editText = '\n' + util.whitespace(appendAfterRange.start.character);
+        }
+
+        editText += 'use';
+
+        switch ((<PhpSymbol>refAtPos.symbol).kind) {
+            case SymbolKind.Function:
+                editText += ' function';
+                break;
+            case SymbolKind.Constant:
+                editText = ' const';
+                break;
+            default:
+                break;
+        }
+
+        editText += ' ' + (<PhpSymbol>refAtPos.symbol).name;
+
+        if (aliasRequired) {
+            editText += ' as ';
+        }
+
+        if (appendAfterRange) {
+            edits.push(lsp.TextEdit.insert(appendAfterRange.end, editText));
+        }
 
     }
+
+    let ref: Reference;
+    if (aliasRequired) {
+        name = '';
+    }
+    for (let n = 0, l = filteredReferences.length; n < l; ++n) {
+        ref = filteredReferences[n];
+        edits.push(lsp.TextEdit.replace(ref.range, name));
+    }
+
+    return {
+        edits: edits,
+        aliasRequired: aliasRequired
+    };
 
 }
