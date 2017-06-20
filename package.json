@@ -1,6 +1,6 @@
 {
   "name": "intelephense",
-  "version": "0.6.10",
+  "version": "0.7.0",
   "description": "PHP Static Code Analysis",
   "main": "./lib/intelephense.js",
   "types": "./lib/intelephense.d.ts",
@@ -22,15 +22,15 @@
     "url": "https://github.com/bmewburn/intelephense.git"
   },
   "dependencies": {
-    "php7parser": "^0.9.5",
-    "vscode-languageserver-types": "^3.2.0"
+    "php7parser": "^0.9.6",
+    "vscode-languageserver-types": "^3.3.0"
   },
   "devDependencies": {
     "@types/chai": "^3.4.35",
     "@types/mocha": "^2.2.40",
     "chai": "^3.5.0",
     "mocha": "^3.2.0",
-    "typescript": "^2.3.2",
+    "typescript": "^2.3.4",
     "ts-node":"^3.0.2"
   }
 }
