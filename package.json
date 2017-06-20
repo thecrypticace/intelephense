@@ -11,7 +11,14 @@
   "author": "Ben Mewburn <ben@mewburn.id.au>",
   "license": "ISC",
   "keywords": [
-    "php","intellisense","completion","signature","diagnostics","format","autocomplete","symbols"
+    "php",
+    "intellisense",
+    "completion",
+    "signature",
+    "diagnostics",
+    "format",
+    "autocomplete",
+    "symbols"
   ],
   "bugs": {
     "url": "https://github.com/bmewburn/intelephense/issues"
@@ -31,6 +38,6 @@
     "chai": "^3.5.0",
     "mocha": "^3.2.0",
     "typescript": "^2.3.4",
-    "ts-node":"^3.0.2"
+    "ts-node": "^3.0.2"
   }
 }

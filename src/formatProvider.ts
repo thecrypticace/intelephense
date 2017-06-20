@@ -301,13 +301,6 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 }
                 return;
 
-            case PhraseType.ClassConstElementList:
-            case PhraseType.ConstElementList:
-            case PhraseType.PropertyElementList:
-                this._decrementIndent();
-                this._isMultilineCommaDelimitedListStack.pop();
-                return;
-
             case PhraseType.EncapsulatedVariableList:
                 this._nextFormatRule = FormatVisitor.noSpaceBefore;
                 return;
