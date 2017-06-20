@@ -15,7 +15,12 @@ export declare class NameResolver {
     resolveRelative(relativeName: string): string;
     resolveNotFullyQualified(notFqn: string, kind?: SymbolKind): string;
     concatNamespaceName(prefix: string, suffix: string): string;
-    private _matchImportedSymbol(text, kind);
+    /**
+     *
+     * @param text unqualified name
+     * @param kind
+     */
+    matchImportedSymbol(text: string, kind: SymbolKind): PhpSymbol;
     private _resolveQualified(name, pos);
     private _resolveUnqualified(name, kind);
 }

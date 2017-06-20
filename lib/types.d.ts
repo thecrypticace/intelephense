@@ -75,6 +75,14 @@ export declare class CountVisitor<T> implements TreeVisitor<T> {
     readonly count: number;
     preorder(t: T, spine: T[]): boolean;
 }
+export declare class MultiVisitor<T> implements TreeVisitor<T> {
+    protected _visitors: [TreeVisitor<T>, TreeLike][];
+    haltTraverse: boolean;
+    constructor(visitors: TreeVisitor<T>[]);
+    add(v: TreeVisitor<T>): void;
+    preorder(node: T, spine: T[]): boolean;
+    postorder(node: T, spine: T[]): void;
+}
 export declare class BinarySearch<T> {
     private _sortedArray;
     constructor(sortedArray: T[]);

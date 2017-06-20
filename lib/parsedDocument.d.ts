@@ -45,6 +45,7 @@ export declare namespace ParsedDocument {
     function isFixedScopedMemberName(phrase: ScopedMemberName): boolean;
     function stringyfyReplacer(k: any, v: any): any;
     function firstPhraseOfType(type: PhraseType, nodes: (Phrase | Token)[]): Phrase;
+    function isNamePhrase(node: Phrase | Token): boolean;
 }
 export declare class ParsedDocumentStore {
     private _parsedDocumentChangeEvent;

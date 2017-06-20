@@ -5,8 +5,8 @@ import { NameResolver } from './nameResolver';
 import { TreeTraverser } from './types';
 import { TypeString } from './typeString';
 import { ParsedDocument } from './parsedDocument';
-import { Position, TextEdit } from 'vscode-languageserver-types';
-import { Phrase, Token, ClassDeclaration, TokenType } from 'php7parser';
+import { Position } from 'vscode-languageserver-types';
+import { Phrase, Token, NamespaceDefinition, ClassDeclaration, TokenType, NamespaceUseDeclaration, InlineText } from 'php7parser';
 export declare class Context {
     symbolStore: SymbolStore;
     document: ParsedDocument;
@@ -34,12 +34,9 @@ export declare class Context {
     readonly className: string;
     readonly classBaseName: string;
     readonly namespace: string;
-    /**
-     * Only supports non-aliased declarations
-     * If a non-aliased declaration will cause duplicate symbols then this returns null
-     * @param fqn
-     */
-    createUseDeclarationTextEdit(fqn: string, kind?: SymbolKind): TextEdit;
+    readonly lastNamespaceUseDeclaration: NamespaceUseDeclaration;
+    readonly namespaceDefinition: NamespaceDefinition;
+    readonly openingInlineText: InlineText;
     readonly classDeclarationPhrase: ClassDeclaration;
     readonly classSymbol: PhpSymbol;
     readonly classBaseSymbol: PhpSymbol;

@@ -34,14 +34,17 @@ export declare class SymbolStore {
     add(symbolTable: SymbolTable): void;
     remove(uri: string): void;
     /**
-     * As per match but returns first item in result that matches text exactly
+     * As per match but returns first item in result that matches full text
+     * the match is case sensitive for constants and variables and insensitive for
+     * classes, traits, interfaces, functions, methods
      * @param text
-     * @param kindMask
+     * @param filter
      */
     find(text: string, filter?: Predicate<PhpSymbol>): PhpSymbol;
     /**
      * Matches any indexed symbol by name or partial name with optional additional filter
      * Parameters and variables that are not file scoped are not indexed.
+     * case insensitive
      */
     match(text: string, filter?: Predicate<PhpSymbol>, fuzzy?: boolean): PhpSymbol[];
     private _classOrInterfaceFilter(s);

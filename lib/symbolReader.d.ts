@@ -1,11 +1,20 @@
-import { ParsedDocumentVisitor } from './parsedDocumentVisitor';
+import { NameResolverVisitor } from './nameResolverVisitor';
+import { TreeVisitor, MultiVisitor } from './types';
 import { ParsedDocument } from './parsedDocument';
 import { Phrase, Token, FunctionDeclarationHeader, TypeDeclaration, ParameterDeclaration, ConstElement, FunctionDeclaration, ClassDeclaration, ClassDeclarationHeader, ClassBaseClause, ClassInterfaceClause, QualifiedNameList, InterfaceDeclaration, InterfaceDeclarationHeader, InterfaceBaseClause, TraitDeclaration, TraitDeclarationHeader, ClassConstDeclaration, ClassConstElement, Identifier, MethodDeclaration, MethodDeclarationHeader, PropertyDeclaration, PropertyElement, MemberModifierList, NamespaceDefinition, NamespaceUseClause, AnonymousClassDeclaration, AnonymousFunctionCreationExpression, AnonymousFunctionUseVariable, TraitUseClause, SimpleVariable, FunctionCallExpression, ArgumentExpressionList } from 'php7parser';
 import { PhpDoc, Tag, MethodTagParam } from './phpDoc';
 import { PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
 import { NameResolver } from './nameResolver';
 import { Location } from 'vscode-languageserver-types';
-export declare class SymbolReader extends ParsedDocumentVisitor {
+export declare class SymbolReader extends MultiVisitor<Phrase | Token> {
+    private _symbolVisitor;
+    constructor(nameResolverVisitor: NameResolverVisitor, symbolVisitor: SymbolVisitor);
+    externalOnly: boolean;
+    readonly spine: PhpSymbol[];
+    static create(document: ParsedDocument, nameResolver: NameResolver, spine: PhpSymbol[]): SymbolReader;
+}
+export declare class SymbolVisitor implements TreeVisitor<Phrase | Token> {
+    document: ParsedDocument;
     nameResolver: NameResolver;
     spine: PhpSymbol[];
     private static _varAncestors;
@@ -19,8 +28,9 @@ export declare class SymbolReader extends ParsedDocumentVisitor {
     propertyDeclarationModifier: SymbolModifier;
     externalOnly: boolean;
     constructor(document: ParsedDocument, nameResolver: NameResolver, spine: PhpSymbol[]);
-    protected _preorder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
-    protected _postorder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
+    preorder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
+    postorder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
+    private _tokenToSymbolKind(t);
     private _shouldReadVar(spine);
     private _top();
     private _variableExists(name);
@@ -33,6 +43,7 @@ export declare class SymbolReader extends ParsedDocumentVisitor {
     functionDeclarationHeader(s: PhpSymbol, node: FunctionDeclarationHeader): PhpSymbol;
     parameterDeclaration(node: ParameterDeclaration, phpDoc: PhpDoc): PhpSymbol;
     typeDeclaration(node: TypeDeclaration): string;
+    private _namePhraseToFqn(node, kind);
     constElement(node: ConstElement, phpDoc: PhpDoc): PhpSymbol;
     classConstantDeclaration(node: ClassConstDeclaration): SymbolModifier;
     classConstElement(modifiers: SymbolModifier, node: ClassConstElement, phpDoc: PhpDoc): PhpSymbol;

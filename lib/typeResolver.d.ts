@@ -2,8 +2,9 @@ import { ParsedDocument } from './parsedDocument';
 import { NameResolver } from './nameResolver';
 import { SymbolStore } from './symbolStore';
 import { TypeString } from './typeString';
+import { TreeVisitor, MultiVisitor } from './types';
 import { SymbolKind, PhpSymbol, SymbolModifier } from './symbol';
-import { ParsedDocumentVisitor } from './parsedDocumentVisitor';
+import { NameResolverVisitor } from './nameResolverVisitor';
 import { Phrase, Token, SimpleVariable, ObjectCreationExpression, SubscriptExpression, FunctionCallExpression, MemberName, PropertyAccessExpression, ClassTypeDesignator, ScopedCallExpression, ScopedMemberName, ScopedPropertyAccessExpression, TernaryExpression } from 'php7parser';
 export declare class ExpressionTypeResolver {
     document: ParsedDocument;
@@ -26,15 +27,26 @@ export declare class ExpressionTypeResolver {
     mergeTypes(symbols: PhpSymbol[]): TypeString;
     protected _namePhraseToFqn(node: Phrase, kind: SymbolKind): string;
 }
-export declare class VariableTypeResolver extends ParsedDocumentVisitor {
+export declare class VariableTypeResolver extends MultiVisitor<Phrase | Token> {
+    private _nameResolverVisitor;
+    private _variableTypeVisitor;
+    constructor(nameResolverVisitor: NameResolverVisitor, variableTypeVisitor: VariableTypeVisitor);
+    haltAtOffset: number;
+    readonly variableTable: VariableTable;
+    static create(document: ParsedDocument, nameResolver: NameResolver, symbolStore: SymbolStore, variableTable: VariableTable): VariableTypeResolver;
+}
+export declare class VariableTypeVisitor implements TreeVisitor<Phrase | Token> {
     document: ParsedDocument;
     nameResolver: NameResolver;
     symbolStore: SymbolStore;
     variableTable: VariableTable;
+    haltTraverse: boolean;
+    haltAtOffset: number;
     constructor(document: ParsedDocument, nameResolver: NameResolver, symbolStore: SymbolStore, variableTable: VariableTable);
-    protected _preorder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
-    protected _postorder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
+    preorder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
+    postorder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
     private _qualifiedNameList(node);
+    private _namePhraseToFqn(node, kind);
     private _catchClause(node);
     private _listIntrinsic(node);
     private _token(t);
