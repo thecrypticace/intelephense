@@ -11,7 +11,7 @@
   "author": "Ben Mewburn <ben@mewburn.id.au>",
   "license": "ISC",
   "keywords": [
-    "php","php7","intellisense","completion","signature","diagnostics","definition","autocomplete","analysis"
+    "php","intellisense","completion","signature","diagnostics","format","autocomplete","symbols"
   ],
   "bugs": {
     "url": "https://github.com/bmewburn/intelephense/issues"
