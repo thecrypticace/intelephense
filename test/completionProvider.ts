@@ -346,7 +346,7 @@ describe('CompletionProvider', () => {
             assert.equal(completions.items[0].label, 'Foo');
             assert.equal(completions.items[0].insertText, 'Bar\\Foo');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Class);
-            console.log(JSON.stringify(completions, null, 4));
+            //console.log(JSON.stringify(completions, null, 4));
         });
 
     });
