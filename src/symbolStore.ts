@@ -188,7 +188,7 @@ export class SymbolStore {
         let exactMatchFn = (x: PhpSymbol) => {
             return (!filter || filter(x)) && 
                 (((x.kind & kindMask) > 0 && x.name === text) || 
-                !(x.kind & kindMask) && x.name === lcText);
+                (!(x.kind & kindMask) && x.name.toLowerCase() === lcText));
         };
         return this.match(text, exactMatchFn).shift();
     }

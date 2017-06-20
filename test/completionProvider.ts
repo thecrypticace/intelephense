@@ -195,7 +195,7 @@ describe('CompletionProvider', () => {
 
         before(function () {
             completionProvider = setup(scopedAccessSrc);
-            //console.log(JSON.stringify(symbolStore, null, 4));
+            //console.log(JSON.stringify(completionProvider.symbolStore, null, 4));
         });
 
         it('::', function () {
