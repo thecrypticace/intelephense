@@ -1,5 +1,23 @@
 # Change Log
 
+## [0.7.0] - TBA
+#### Added
+* PSR2 compatible, lossless document and range formatting.
+* Exposed method to add symbols to index
+* Add use declaration command.
+* Indexing of constants declared with define(). 
+
+#### Changes
+* Various completion suggestion improvements and fixes.
+
+#### Fixed
+* Complex string parsing
+* null coalesce expr type resolution
+* Cleaned up built-in symbol definitions
+
+#### Dependencies
+* php7parser 0.9.7
+
 ## [0.6.10] - 2017-04-30
 #### Fixed
 * Error on variable completion inside anon. functions
