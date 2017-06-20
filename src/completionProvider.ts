@@ -337,18 +337,6 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
 
         }
 
-        if (this.config.enableAutoUseDeclarations &&
-            !(s.modifiers & SymbolModifier.Use) &&
-            namePhraseType === PhraseType.QualifiedName &&
-            item.insertText.lastIndexOf('\\') > 0) {
-
-            let useTextEdit = context.createUseDeclarationTextEdit(s.name);
-            if (useTextEdit) {
-                item.additionalTextEdits = [useTextEdit];
-                item.insertText = item.label;
-            }
-
-        }
         return item;
 
     }
@@ -453,19 +441,6 @@ class ClassTypeDesignatorCompletion extends AbstractNameCompletion {
             item.detail = s.associated[0].name;
         } else {
             item.detail = s.name;
-        }
-
-        if (this.config.enableAutoUseDeclarations &&
-            !(s.modifiers & SymbolModifier.Use) &&
-            namePhraseType === PhraseType.QualifiedName &&
-            item.insertText.lastIndexOf('\\') > 0) {
-
-            let useTextEdit = context.createUseDeclarationTextEdit(s.name);
-            if (useTextEdit) {
-                item.additionalTextEdits = [useTextEdit];
-                item.insertText = item.label;
-            }
-
         }
 
         return item;
