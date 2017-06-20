@@ -108,13 +108,17 @@ function toMethodCompletionItem(s: PhpSymbol) {
 }
 
 function toClassConstantCompletionItem(s: PhpSymbol) {
-    return <lsp.CompletionItem>{
+    let item = <lsp.CompletionItem>{
         kind: lsp.CompletionItemKind.Value, //@todo use Constant
         label: s.name,
         documentation: s.description,
-        detail: '= ' + s.value
     };
 
+    if(s.value) {
+        item.detail = '= ' + s.value;
+    }
+
+    return item;
 }
 
 
@@ -317,7 +321,9 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
 
             case SymbolKind.Constant:
                 item.kind = lsp.CompletionItemKind.Value;
-                item.detail = '= ' + s.value;
+                if(s.value) {
+                    item.detail = s.value;
+                }
                 break;
 
             case SymbolKind.Function:
