@@ -76,11 +76,11 @@ function symbolKindToLspSymbolKind(kind: SymbolKind) {
 
     switch (kind) {
         case SymbolKind.Class:
-            return lsp.SymbolKind.Class;
+            return lsp.CompletionItemKind.Class;
         case SymbolKind.Function:
-            return lsp.SymbolKind.Function;
+            return lsp.CompletionItemKind.Function;
         case SymbolKind.Constant:
-            return lsp.SymbolKind.Constant;
+            return lsp.CompletionItemKind.Value;
         case SymbolKind.Interface:
             return lsp.CompletionItemKind.Interface;
         case SymbolKind.Namespace:
