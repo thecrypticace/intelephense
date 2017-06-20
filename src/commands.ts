@@ -49,7 +49,9 @@ export function importSymbol(
 
     doc.traverse(visitor);
     let references = referenceVisitor.references;
+    //console.log(JSON.stringify(references, null, 4));
     let refAtPos = references.referenceAtPosition(position);
+    //console.log(JSON.stringify(refAtPos, null, 4));
 
     if (
         !refAtPos ||
@@ -63,7 +65,7 @@ export function importSymbol(
     };
 
     let filteredReferences = references.filter(filterFn);
-    let context = new Context(this.symbolStore, doc, position);
+    let context = new Context(symbolStore, doc, position);
     nameResolver = context.nameResolver;
 
     let existingRule = nameResolver.rules.find((x) => {
@@ -88,13 +90,13 @@ export function importSymbol(
         let editText = '';
 
         if (context.lastNamespaceUseDeclaration) {
-            appendAfterRange = this.document.nodeRange(context.lastNamespaceUseDeclaration);
+            appendAfterRange = doc.nodeRange(context.lastNamespaceUseDeclaration);
             editText = '\n' + util.whitespace(appendAfterRange.start.character);
         } else if (context.namespaceDefinition && !ParsedDocument.firstPhraseOfType(PhraseType.StatementList, context.namespaceDefinition.children)) {
-            appendAfterRange = this.document.nodeRange(context.namespaceDefinition);
+            appendAfterRange = doc.nodeRange(context.namespaceDefinition);
             editText = '\n\n' + util.whitespace(appendAfterRange.start.character);
         } else if (context.openingInlineText) {
-            appendAfterRange = this.document.nodeRange(context.openingInlineText);
+            appendAfterRange = doc.nodeRange(context.openingInlineText);
             editText = '\n' + util.whitespace(appendAfterRange.start.character);
         }
 

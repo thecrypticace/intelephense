@@ -259,8 +259,8 @@ export class DocumentReferences {
     private _search:BinarySearch<Reference>;
 
     constructor(uri: string, references: Reference[]) {
-        this._uri
-        this._references = [];
+        this._uri = uri;
+        this._references = references;
         this._search = new BinarySearch(this._references);
     }
 
