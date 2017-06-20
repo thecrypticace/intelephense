@@ -23,7 +23,7 @@ export declare namespace Intelephense {
     function addSymbols(symbolTableDto: SymbolTableDto): void;
     function discover(textDocument: lsp.TextDocumentItem): SymbolTableDto;
     function forget(uri: string): number;
-    function importSymbol(textDocument: lsp.TextDocumentItem, position: lsp.Position): ImportSymbolTextEdits;
+    function importSymbol(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): ImportSymbolTextEdits;
     function numberDocumentsOpen(): number;
     function numberDocumentsKnown(): number;
     function numberSymbolsKnown(): number;

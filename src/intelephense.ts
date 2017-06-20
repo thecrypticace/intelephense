@@ -178,7 +178,7 @@ export namespace Intelephense {
         return forgotten;
     }
 
-    export function importSymbol(textDocument:lsp.TextDocumentItem, position:lsp.Position) {
+    export function importSymbol(textDocument:lsp.TextDocumentIdentifier, position:lsp.Position) {
         flushParseDebounce(textDocument.uri);
         return importSymbolCommand(symbolStore, documentStore, textDocument, position);
     }
