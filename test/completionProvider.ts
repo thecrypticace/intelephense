@@ -119,6 +119,17 @@ var propertyTagSrc =
 
 `;
 
+var closureSrc = 
+`<?php
+    class Foo {
+        function fooFn(){}
+    }
+    $var = new Foo();
+    $fn = function() use ($var){
+        $var->
+    };
+`;
+
 function setup(src: string) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
