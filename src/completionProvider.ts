@@ -175,8 +175,7 @@ function tokenToSymbolKind(t: Token) {
 }
 
 export interface CompletionProviderConfig {
-    maxItems: number,
-    enableAutoUseDeclarations: boolean
+    maxItems: number
 }
 
 export class CompletionProvider {
@@ -184,7 +183,7 @@ export class CompletionProvider {
     private _maxItems: number;
     private _strategies: CompletionStrategy[];
     private _config: CompletionProviderConfig;
-    private static _defaultConfig: CompletionProviderConfig = { maxItems: 100, enableAutoUseDeclarations: false };
+    private static _defaultConfig: CompletionProviderConfig = { maxItems: 100 };
 
     constructor(
         public symbolStore: SymbolStore,

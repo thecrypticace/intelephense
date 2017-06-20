@@ -3,7 +3,6 @@ import { ParsedDocumentStore } from './parsedDocument';
 import * as lsp from 'vscode-languageserver-types';
 export interface CompletionProviderConfig {
     maxItems: number;
-    enableAutoUseDeclarations: boolean;
 }
 export declare class CompletionProvider {
     symbolStore: SymbolStore;
