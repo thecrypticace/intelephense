@@ -2,9 +2,7 @@ import { SymbolTableDto } from './symbolStore';
 import { CompletionProviderConfig } from './completionProvider';
 import { PublishDiagnosticsEventArgs } from './diagnosticsProvider';
 import * as lsp from 'vscode-languageserver-types';
-import { ImportSymbolTextEdits } from './commands';
 export { SymbolTableDto } from './symbolStore';
-export { ImportSymbolTextEdits } from './commands';
 export declare namespace Intelephense {
     function onDiagnosticsStart(fn: (uri: string) => void): void;
     function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void): void;
@@ -23,7 +21,7 @@ export declare namespace Intelephense {
     function addSymbols(symbolTableDto: SymbolTableDto): void;
     function discover(textDocument: lsp.TextDocumentItem): SymbolTableDto;
     function forget(uri: string): number;
-    function importSymbol(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): ImportSymbolTextEdits;
+    function importSymbol(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position, alias?: string): lsp.TextEdit[];
     function numberDocumentsOpen(): number;
     function numberDocumentsKnown(): number;
     function numberSymbolsKnown(): number;

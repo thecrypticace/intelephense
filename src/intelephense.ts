@@ -15,10 +15,9 @@ import { DefinitionProvider } from './definitionProvider';
 import { PhraseType } from 'php7parser';
 import { FormatProvider } from './formatProvider';
 import * as lsp from 'vscode-languageserver-types';
-import { ImportSymbolTextEdits, importSymbol as importSymbolCommand } from './commands';
+import { importSymbol as importSymbolCommand } from './commands';
 
 export { SymbolTableDto } from './symbolStore';
-export { ImportSymbolTextEdits } from './commands';
 
 export namespace Intelephense {
 
@@ -178,9 +177,9 @@ export namespace Intelephense {
         return forgotten;
     }
 
-    export function importSymbol(textDocument:lsp.TextDocumentIdentifier, position:lsp.Position) {
+    export function importSymbol(textDocument:lsp.TextDocumentIdentifier, position:lsp.Position, alias?:string) {
         flushParseDebounce(textDocument.uri);
-        return importSymbolCommand(symbolStore, documentStore, textDocument, position);
+        return importSymbolCommand(symbolStore, documentStore, textDocument, position, alias);
     }
 
     export function numberDocumentsOpen() {

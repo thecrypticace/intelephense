@@ -18,26 +18,19 @@ import { Phrase, PhraseType } from 'php7parser';
 import { MultiVisitor } from './types';
 import * as util from './util';
 
-export interface ImportSymbolTextEdits {
-    edits: lsp.TextEdit[];
-    /**
-     * If true an alias is required and is expected to be appended to each TextEdit.newText
-     */
-    aliasRequired?: boolean;
-}
-
 export function importSymbol(
     symbolStore: SymbolStore,
     documentStore: ParsedDocumentStore,
     textDocument: lsp.TextDocumentIdentifier,
-    position: lsp.Position
-): ImportSymbolTextEdits {
+    position: lsp.Position,
+    alias?: string
+): lsp.TextEdit[] {
 
     let edits: lsp.TextEdit[] = [];
     let doc = documentStore.find(textDocument.uri);
 
     if (!doc) {
-        return { edits: edits };
+        return edits;
     }
 
     let nameResolver = new NameResolver();
@@ -57,7 +50,7 @@ export function importSymbol(
         !refAtPos ||
         !((<PhpSymbol>refAtPos.symbol).kind & (SymbolKind.Class | SymbolKind.Interface | SymbolKind.Constant | SymbolKind.Function))
     ) {
-        return { edits: edits };
+        return edits;
     }
 
     let filterFn = (x: Reference) => {
@@ -75,68 +68,58 @@ export function importSymbol(
         return assoc !== undefined;
     });
 
-    let aliasRequired = false;
-    let name = PhpSymbol.notFqn((<PhpSymbol>refAtPos.symbol).name);
-    let lcName = name.toLowerCase();
+    let importText = 'use';
+
+    switch ((<PhpSymbol>refAtPos.symbol).kind) {
+        case SymbolKind.Function:
+            importText += ' function';
+            break;
+        case SymbolKind.Constant:
+            importText = ' const';
+            break;
+        default:
+            break;
+    }
+
+    importText += ' ' + (<PhpSymbol>refAtPos.symbol).name;
+
+    if (alias) {
+        importText += ' as ' + alias;
+    }
+
+    importText += ';';
 
     if (!existingRule) {
-        //is an alias needed?
-        aliasRequired = nameResolver.rules.find((x) => {
-            return x.name.toLowerCase() === lcName;
-        }) !== undefined;
 
-        //import rule text edit
         let appendAfterRange: lsp.Range;
-        let editText = '';
 
+        //placement of use decl fallback
         if (context.lastNamespaceUseDeclaration) {
             appendAfterRange = doc.nodeRange(context.lastNamespaceUseDeclaration);
-            editText = '\n' + util.whitespace(appendAfterRange.start.character);
+            importText = '\n' + util.whitespace(appendAfterRange.start.character) + importText;
         } else if (context.namespaceDefinition && !ParsedDocument.firstPhraseOfType(PhraseType.StatementList, context.namespaceDefinition.children)) {
             appendAfterRange = doc.nodeRange(context.namespaceDefinition);
-            editText = '\n\n' + util.whitespace(appendAfterRange.start.character);
+            importText = '\n\n' + util.whitespace(appendAfterRange.start.character) + importText;
         } else if (context.openingInlineText) {
             appendAfterRange = doc.nodeRange(context.openingInlineText);
-            editText = '\n' + util.whitespace(appendAfterRange.start.character);
-        }
-
-        editText += 'use';
-
-        switch ((<PhpSymbol>refAtPos.symbol).kind) {
-            case SymbolKind.Function:
-                editText += ' function';
-                break;
-            case SymbolKind.Constant:
-                editText = ' const';
-                break;
-            default:
-                break;
-        }
-
-        editText += ' ' + (<PhpSymbol>refAtPos.symbol).name;
-
-        if (aliasRequired) {
-            editText += ' as ';
+            importText = '\n' + util.whitespace(appendAfterRange.start.character) + importText;
         }
 
         if (appendAfterRange) {
-            edits.push(lsp.TextEdit.insert(appendAfterRange.end, editText));
+            edits.push(lsp.TextEdit.insert(appendAfterRange.end, importText));
+        } else {
+            return edits;
         }
 
+    } else {
+        edits.push(lsp.TextEdit.replace(existingRule.location.range, importText));
     }
 
-    let ref: Reference;
-    if (aliasRequired) {
-        name = '';
-    }
+    let name = alias ? alias : PhpSymbol.notFqn((<PhpSymbol>refAtPos.symbol).name);
     for (let n = 0, l = filteredReferences.length; n < l; ++n) {
-        ref = filteredReferences[n];
-        edits.push(lsp.TextEdit.replace(ref.range, name));
+        edits.push(lsp.TextEdit.replace(filteredReferences[n].range, name));
     }
 
-    return {
-        edits: edits.reverse(),
-        aliasRequired: aliasRequired
-    };
+    return edits.reverse();
 
 }
