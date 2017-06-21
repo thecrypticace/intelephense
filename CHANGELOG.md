@@ -11,7 +11,7 @@
 * Complex string parsing
 * null coalesce expr type resolution
 * Cleaned up built-in symbol definitions
-* location inaccuracies
+* symbol location inaccuracies
 * missing completion keywords
 * duplicate completion items when a use declaration is available
 

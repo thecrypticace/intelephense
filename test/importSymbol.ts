@@ -31,7 +31,7 @@ describe('importSymbol', () => {
 
     it('Should return text edits when a symbol can be imported', () => {
 
-        let edits = importSymbol(symbolStore, docStore, {uri:'doc2'}, {line: 2, character:27});
+        let edits = importSymbol(symbolStore, docStore, 'doc2', {line: 2, character:27});
         console.log(JSON.stringify(edits, null, 4));
 
     });

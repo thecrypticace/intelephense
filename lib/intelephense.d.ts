@@ -21,7 +21,7 @@ export declare namespace Intelephense {
     function addSymbols(symbolTableDto: SymbolTableDto): void;
     function discover(textDocument: lsp.TextDocumentItem): SymbolTableDto;
     function forget(uri: string): number;
-    function importSymbol(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position, alias?: string): lsp.TextEdit[];
+    function importSymbol(uri: string, position: lsp.Position, alias?: string): lsp.TextEdit[];
     function numberDocumentsOpen(): number;
     function numberDocumentsKnown(): number;
     function numberSymbolsKnown(): number;

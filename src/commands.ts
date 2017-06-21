@@ -21,13 +21,13 @@ import * as util from './util';
 export function importSymbol(
     symbolStore: SymbolStore,
     documentStore: ParsedDocumentStore,
-    textDocument: lsp.TextDocumentIdentifier,
+    uri: string,
     position: lsp.Position,
     alias?: string
 ): lsp.TextEdit[] {
 
     let edits: lsp.TextEdit[] = [];
-    let doc = documentStore.find(textDocument.uri);
+    let doc = documentStore.find(uri);
 
     if (!doc) {
         return edits;
