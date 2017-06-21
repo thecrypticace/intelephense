@@ -3,17 +3,17 @@
 ## [0.7.0] - TBA
 #### Added
 * PSR2 compatible, lossless document and range formatting.
-* Exposed method to add symbols to index
+* Exposed methods to add and remove symbols, enabling client caching.
 * Add use declaration command.
 * Indexing of constants declared with define(). 
-
-#### Changes
-* Various completion suggestion improvements and fixes.
 
 #### Fixed
 * Complex string parsing
 * null coalesce expr type resolution
 * Cleaned up built-in symbol definitions
+* location inaccuracies
+* missing completion keywords
+* duplicate completion items when a use declaration is available
 
 #### Dependencies
 * php7parser 0.9.7
