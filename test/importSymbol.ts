@@ -28,12 +28,41 @@ describe('importSymbol', () => {
     symbolStore.add(SymbolTable.create(doc1));
     symbolStore.add(SymbolTable.create(doc2));
 
+    let expected = [
+        {
+            range: {
+                start: {
+                    line: 2,
+                    character: 19
+                },
+                end: {
+                    line: 2,
+                    character: 27
+                }
+            },
+            newText: "Bar"
+        },
+        {
+            range: {
+                start: {
+                    line: 1,
+                    character: 22
+                },
+                end: {
+                    line: 1,
+                    character: 22
+                }
+            },
+            newText: "\n\n        use Foo\\Bar;"
+        }
+    ];
+
 
     it('Should return text edits when a symbol can be imported', () => {
 
-        let edits = importSymbol(symbolStore, docStore, 'doc2', {line: 2, character:27});
-        console.log(JSON.stringify(edits, null, 4));
-
+        let edits = importSymbol(symbolStore, docStore, 'doc2', { line: 2, character: 27 });
+        //console.log(JSON.stringify(edits, null, 4));
+        assert.deepEqual(edits, expected);
     });
 
 });
