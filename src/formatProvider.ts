@@ -83,7 +83,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
-        let parent = spine[spine.length - 1] as Phrase;
+        let parent = spine.length ? <Phrase>spine[spine.length - 1] : <Phrase>{ phraseType: PhraseType.Unknown, children: [] };
 
         switch ((<Phrase>node).phraseType) {
 
@@ -177,6 +177,12 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 }
                 break;
 
+            case TokenType.Backslash:
+                if (parent.phraseType === PhraseType.NamespaceName) {
+                    rule = FormatVisitor.noSpaceBefore;
+                }
+                break;
+
             case TokenType.Semicolon:
             case TokenType.Comma:
             case TokenType.Text:
@@ -259,7 +265,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             rule = FormatVisitor.singleSpaceOrNewlineIndentPlusOneBefore;
         }
 
-        if(!this._active){
+        if (!this._active) {
             return false;
         }
 
@@ -321,7 +327,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
             case TokenType.DocumentComment:
                 this._nextFormatRule = FormatVisitor.newlineIndentBefore;
-                if(!this._active){
+                if (!this._active) {
                     break;
                 }
                 let edit = this._formatDocBlock(<Token>node);
@@ -452,7 +458,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
         }
 
-        if(this._active && this._endOffset > -1 && ParsedDocument.isOffsetInToken(this._endOffset, <Token>node)) {
+        if (this._active && this._endOffset > -1 && ParsedDocument.isOffsetInToken(this._endOffset, <Token>node)) {
             this.haltTraverse = true;
             this._active = false;
         }
