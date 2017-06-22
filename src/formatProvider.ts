@@ -52,7 +52,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
     private _edits: lsp.TextEdit[];
     private _previousToken: Token;
     private _nextFormatRule: FormatRule;
-    private _isMultilineCommaDelimitedListStack: boolean[];
+    private _forceMultilineCommaDelimitedListStack: boolean[];
     private _indentUnit: string;
     private _indentText = '';
     private static _docBlockRegex = /(?:\r\n|\r|\n)[ \t]*\*/g;
@@ -67,7 +67,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         public formatOptions: lsp.FormattingOptions,
         range?: lsp.Range) {
         this._edits = [];
-        this._isMultilineCommaDelimitedListStack = [];
+        this._forceMultilineCommaDelimitedListStack = [];
         this._indentUnit = formatOptions.insertSpaces ? FormatVisitor.createWhitespace(formatOptions.tabSize, ' ') : '\t';
         if (range) {
             this._startOffset = this.doc.offsetAtPosition(range.start);
@@ -113,14 +113,22 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                     this._hasNewlineWhitespaceChild(<Phrase>node)
                 ) {
                     this._nextFormatRule = FormatVisitor.newlineIndentBefore;
-                    this._isMultilineCommaDelimitedListStack.push(true);
+                    this._forceMultilineCommaDelimitedListStack.push(true);
                     this._incrementIndent();
                 } else {
-                    this._isMultilineCommaDelimitedListStack.push(false);
+                    this._forceMultilineCommaDelimitedListStack.push(false);
                     if ((<Phrase>node).phraseType !== PhraseType.QualifiedNameList) {
                         this._nextFormatRule = FormatVisitor.noSpaceBefore;
                     }
                 }
+                return true;
+
+            case PhraseType.ConstElementList:
+            case PhraseType.PropertyElementList:
+            case PhraseType.ClassConstElementList:
+            case PhraseType.StaticVariableDeclarationList:
+            case PhraseType.VariableNameList:
+                this._forceMultilineCommaDelimitedListStack.push(false);
                 return true;
 
             case PhraseType.EncapsulatedVariableList:
@@ -301,10 +309,18 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.ClosureUseList:
             case PhraseType.QualifiedNameList:
             case PhraseType.ArrayInitialiserList:
-                if (this._isMultilineCommaDelimitedListStack.pop()) {
+                if (this._forceMultilineCommaDelimitedListStack.pop()) {
                     this._nextFormatRule = FormatVisitor.newlineIndentBefore;
                     this._decrementIndent();
                 }
+                return;
+
+            case PhraseType.ConstElementList:
+            case PhraseType.PropertyElementList:
+            case PhraseType.ClassConstElementList:
+            case PhraseType.StaticVariableDeclarationList:
+            case PhraseType.VariableNameList:
+                this._forceMultilineCommaDelimitedListStack.pop();
                 return;
 
             case PhraseType.EncapsulatedVariableList:
@@ -423,12 +439,12 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 if (parent.phraseType === PhraseType.ArrayInitialiserList) {
                     this._nextFormatRule = FormatVisitor.singleSpaceOrNewlineIndentBefore;
                 } else if (
-                    this._isMultilineCommaDelimitedListStack.length > 0 &&
-                    this._isMultilineCommaDelimitedListStack[this._isMultilineCommaDelimitedListStack.length - 1]
+                    this._forceMultilineCommaDelimitedListStack.length > 0 &&
+                    this._forceMultilineCommaDelimitedListStack[this._forceMultilineCommaDelimitedListStack.length - 1]
                 ) {
                     this._nextFormatRule = FormatVisitor.newlineIndentBefore;
                 } else {
-                    this._nextFormatRule = FormatVisitor.singleSpaceBefore;
+                    this._nextFormatRule = FormatVisitor.singleSpaceOrNewlineIndentBefore;
                 }
                 break;
 
