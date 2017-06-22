@@ -130,6 +130,19 @@ var closureSrc =
     };
 `;
 
+var importSrc1 =
+`<?php
+    namespace Foo;
+    class Bar {}
+`;
+
+var importSrc2 = 
+`<?php
+    namespace Baz;
+    use Foo\\Bar as Fuz;
+    $obj = new F
+`;
+
 function setup(src: string) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -416,6 +429,27 @@ describe('CompletionProvider', () => {
             assert.equal(completions.items[0].label, 'Baz');
             assert.equal(completions.items[0].insertText, 'Bar\\Baz');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Class);
+        });
+
+    });
+
+    describe('Imports', () => {
+
+        let symbolStore = new SymbolStore();
+        let parsedDocumentStore = new ParsedDocumentStore();
+        let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore);
+        let doc = new ParsedDocument('doc1', importSrc1);
+        let doc2 = new ParsedDocument('doc2', importSrc2);
+        parsedDocumentStore.add(doc);
+        symbolStore.add(SymbolTable.create(doc));
+        parsedDocumentStore.add(doc2);
+        symbolStore.add(SymbolTable.create(doc2));
+
+        it('should provide import aliases', ()=>{
+
+            let completions =completionProvider.provideCompletions('doc2', { line: 3, character: 16 });
+            console.log(JSON.stringify(completions, null, 4));
+
         });
 
     });
