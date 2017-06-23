@@ -5,6 +5,7 @@ import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument'
 export declare class SymbolTable {
     uri: string;
     root: PhpSymbol;
+    indexable: boolean;
     constructor(uri: string, root: PhpSymbol);
     readonly symbols: PhpSymbol[];
     readonly count: number;
@@ -32,7 +33,7 @@ export declare class SymbolStore {
     readonly tableCount: number;
     readonly symbolCount: number;
     add(symbolTable: SymbolTable): void;
-    remove(uri: string): void;
+    remove(uri: string): SymbolTable;
     /**
      * As per match but returns first item in result that matches full text
      * the match is case sensitive for constants and variables and insensitive for

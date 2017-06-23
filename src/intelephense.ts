@@ -87,7 +87,10 @@ export namespace Intelephense {
         documentStore.add(parsedDocument);
         let symbolTable = SymbolTable.create(parsedDocument);
         //must remove before adding as entry may exist already from workspace discovery
-        symbolStore.remove(symbolTable.uri);
+        let existingTable = symbolStore.remove(symbolTable.uri);
+        if(existingTable && existingTable.indexable) {
+            symbolTable.indexable = true;
+        }
         symbolStore.add(symbolTable);
         diagnosticsProvider.add(parsedDocument);
 
@@ -135,12 +138,19 @@ export namespace Intelephense {
 
     export function addSymbols(symbolTableDto: SymbolTableDto) {
 
-        if (documentStore.has(symbolTableDto.uri)) {
-            //if doc is open dont add symbols
+        let existingTable = symbolStore.getSymbolTable(symbolTableDto.uri);
+        if(documentStore.has(symbolTableDto.uri) && existingTable) {
+            //already tracking doc but make sure it's indexed
+            if(!existingTable.indexable) {
+                symbolStore.remove(existingTable.uri);
+                existingTable.indexable = true;
+                symbolStore.add(existingTable);
+            }
             return;
         }
 
         let table = SymbolTable.fromDto(symbolTableDto);
+        table.indexable = true;
         symbolStore.remove(table.uri);
         symbolStore.add(table);
 
@@ -151,14 +161,20 @@ export namespace Intelephense {
         let uri = textDocument.uri;
 
         if (documentStore.has(uri)) {
-            //if document is in doc store/opened then dont rediscover.
+            //if document is in doc store/opened then dont rediscover but make sure symbols are indexed
             let symbolTable = symbolStore.getSymbolTable(uri);
+            if(!symbolTable.indexable){
+                symbolStore.remove(symbolTable.uri);
+                symbolTable.indexable = true;
+                symbolStore.add(symbolTable);
+            }
             return symbolTable ? symbolTable.toDto() : null;
         }
 
         let text = textDocument.text;
         let parsedDocument = new ParsedDocument(uri, text);
         let symbolTable = SymbolTable.create(parsedDocument, true);
+        symbolTable.indexable = true;
         symbolStore.remove(uri);
         symbolStore.add(symbolTable);
         return symbolTable.toDto();
