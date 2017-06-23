@@ -22,6 +22,7 @@ export { SymbolTableDto } from './symbolStore';
 export namespace Intelephense {
 
     const phpLanguageId = 'php';
+    const htmlLanguageId = 'html';
 
     let documentStore = new ParsedDocumentStore();
     let symbolStore = new SymbolStore();
@@ -79,7 +80,7 @@ export namespace Intelephense {
 
     export function openDocument(textDocument: lsp.TextDocumentItem) {
 
-        if (textDocument.languageId !== phpLanguageId || documentStore.has(textDocument.uri)) {
+        if ((textDocument.languageId !== phpLanguageId && textDocument.languageId !== htmlLanguageId) || documentStore.has(textDocument.uri)) {
             return;
         }
 
