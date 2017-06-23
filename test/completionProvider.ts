@@ -68,28 +68,28 @@ var nsUse =
 `;
 
 var classBaseSrc =
-`<?php
+    `<?php
     class Foo {}
     interface FooInterface {}
     class Bar extends F
 `;
 
-var implementsSrc = 
-`<?php
+var implementsSrc =
+    `<?php
     class Foo {}
     interface FooInterface {}
     class Bar extends Foo implements F 
 `;
 
 var interfaceBaseSrc =
-`<?php
+    `<?php
     class Baz {}
     interface Bar {}
     interface Foo extends B
 `;
 
-var groupUseSrc = 
-`<?php
+var groupUseSrc =
+    `<?php
     namespace Foo\\Bar
     use Foo\\{
         B
@@ -99,7 +99,7 @@ var groupUseSrc =
 `;
 
 var methodTagSrc =
-`<?php
+    `<?php
     /**
      * @method int bar()
      */
@@ -108,8 +108,8 @@ var methodTagSrc =
      $var->
 `;
 
-var propertyTagSrc = 
-`<?php
+var propertyTagSrc =
+    `<?php
     /**
      * @property int $prop
      */
@@ -119,8 +119,8 @@ var propertyTagSrc =
 
 `;
 
-var closureSrc = 
-`<?php
+var closureSrc =
+    `<?php
     class Foo {
         function fooFn(){}
     }
@@ -131,13 +131,13 @@ var closureSrc =
 `;
 
 var importSrc1 =
-`<?php
+    `<?php
     namespace Foo;
     class Bar {}
 `;
 
-var importSrc2 = 
-`<?php
+var importSrc2 =
+    `<?php
     namespace Baz;
     use Foo\\Bar as Fuz;
     $obj = new F
@@ -275,7 +275,7 @@ describe('CompletionProvider', () => {
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
         });
 
-        it('@method', function(){
+        it('@method', function () {
             let provider = setup(methodTagSrc);
             let completions = provider.provideCompletions('test', { line: 6, character: 11 });
             assert.equal(completions.items.length, 1);
@@ -284,7 +284,7 @@ describe('CompletionProvider', () => {
 
         });
 
-        it('@property', function(){
+        it('@property', function () {
             let provider = setup(propertyTagSrc);
             let completions = provider.provideCompletions('test', { line: 6, character: 10 });
             assert.equal(completions.items.length, 1);
@@ -308,7 +308,7 @@ describe('CompletionProvider', () => {
             assert.equal(completions.items.length, 1);
             assert.equal(completions.items[0].label, '$baz');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Variable);
-           
+
         });
 
         it('Parameters', function () {
@@ -445,11 +445,24 @@ describe('CompletionProvider', () => {
         parsedDocumentStore.add(doc2);
         symbolStore.add(SymbolTable.create(doc2));
 
-        it('should provide import aliases', ()=>{
+        let expected = <lsp.CompletionList>{
+            items: [
+                {
+                    kind: lsp.CompletionItemKind.Constructor,
+                    label: "Fuz",
+                    insertText: "Fuz",
+                    detail: "Foo\\Bar",
+                    documentation:undefined
+                }
+            ],
+            isIncomplete: false
+        }
 
-            let completions =completionProvider.provideCompletions('doc2', { line: 3, character: 16 });
-            console.log(JSON.stringify(completions, null, 4));
+        it('should provide import aliases', () => {
 
+            let completions = completionProvider.provideCompletions('doc2', { line: 3, character: 16 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.deepEqual(completions, expected);
         });
 
     });

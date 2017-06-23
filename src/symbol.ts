@@ -115,6 +115,26 @@ export namespace PhpSymbol {
         return text.slice(pos);
     }
 
+    /**
+     * Shallow clone
+     * @param s 
+     */
+    export function clone(s: PhpSymbol): PhpSymbol {
+        return {
+            kind: s.kind,
+            name: s.name,
+            children: s.children,
+            location: s.location,
+            modifiers: s.modifiers,
+            associated: s.associated,
+            type: s.type,
+            typeSource: s.typeSource,
+            description: s.description,
+            scope: s.scope,
+            value: s.value
+        };
+    }
+
 }
 
 export const enum TypeSource {
@@ -334,7 +354,7 @@ export class SymbolIndex {
         return Array.from(keys);
     }
 
-    private _hasLength(text:string){
+    private _hasLength(text: string) {
         return text.length > 0;
     }
 

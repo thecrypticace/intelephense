@@ -47,6 +47,11 @@ export declare namespace PhpSymbol {
     function signatureString(s: PhpSymbol): string;
     function hasParameters(s: PhpSymbol): boolean;
     function notFqn(text: string): string;
+    /**
+     * Shallow clone
+     * @param s
+     */
+    function clone(s: PhpSymbol): PhpSymbol;
 }
 export declare const enum TypeSource {
     None = 0,

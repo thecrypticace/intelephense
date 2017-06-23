@@ -266,21 +266,25 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
             return noCompletionResponse;
         }
 
-        Array.prototype.push.apply(items, keywordCompletionItems(this._getKeywords(context), text));
-
         let pred = this._symbolFilter;
         if (namePhrase && namePhrase.phraseType === PhraseType.RelativeQualifiedName) {
+            //symbols share current namespace
             text = text.slice(10); //namespace\
             let ns = context.namespace;
+            let sf = this._symbolFilter;
             pred = (x) => {
-                return this._symbolFilter && x.name.indexOf(ns) === 0;
+                return sf(x) && x.name.indexOf(ns) === 0;
             };
         }
 
-        let matches = this._mergeUseDeclarations(
-            context.symbolStore.match(text, pred, true),
-            context.nameResolver.rules.filter(pred)
-        );
+        let matches = context.symbolStore.match(text, pred, true);
+        if (namePhrase && namePhrase.phraseType === PhraseType.QualifiedName) {
+            //keywords and imports
+             Array.prototype.push.apply(items, keywordCompletionItems(this._getKeywords(context), text));
+             let imports = this._importedSymbols(context, pred, text);
+             matches = this._mergeSymbols(matches, imports);
+        }
+
         let limit = Math.min(matches.length, this.config.maxItems - items.length);
         let isIncomplete = matches.length > this.config.maxItems - items.length;
 
@@ -296,6 +300,36 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
     }
 
     protected abstract _getKeywords(context: Context): string[];
+
+    protected _importedSymbols(context:Context, pred:Predicate<PhpSymbol>, text:string) {
+
+        let filteredRules:PhpSymbol[] = [];
+        let r:PhpSymbol;
+        let rules = context.nameResolver.rules;
+        for(let n =0, l = rules.length; n < l; ++n) {
+            r = rules[n];
+            if(r.associated && r.associated.length > 0 && util.fuzzyStringMatch(text, r.name)) {
+                filteredRules.push(r);
+            }
+        }
+
+        //lookup associated symbol
+        let s:PhpSymbol;
+        let merged:PhpSymbol;
+        let imported:PhpSymbol[] = [];
+        for(let n = 0, l = filteredRules.length; n < l; ++n) {
+            r = filteredRules[n];
+            s = context.symbolStore.find(r.associated[0].name, pred);
+            if(s){
+                merged = PhpSymbol.clone(s);
+                merged.associated = r.associated;
+                merged.modifiers |= SymbolModifier.Use;
+                merged.name = r.name;
+                imported.push(merged);
+            }
+        }
+        return imported;
+    }
 
     protected _toCompletionItem(s: PhpSymbol, context: Context, namePhraseType: PhraseType): lsp.CompletionItem {
 
@@ -363,37 +397,24 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
 
     protected abstract _symbolFilter(s: PhpSymbol): boolean;
 
-    protected _mergeUseDeclarations(matches: PhpSymbol[], useDeclarations: PhpSymbol[]) {
+    protected _mergeSymbols(matches: PhpSymbol[], imports: PhpSymbol[]) {
 
-        let merged: PhpSymbol[] = [];
+        let merged: PhpSymbol[] = imports.slice(0);
         let map: { [index: string]: PhpSymbol } = {};
-        let useDecl: PhpSymbol;
+        let imported: PhpSymbol;
         let s: PhpSymbol;
 
-        for (let n = 0, l = useDeclarations.length; n < l; ++n) {
-            useDecl = useDeclarations[n];
-            if (useDecl.associated && useDecl.associated.length) {
-                map[useDecl.associated[0].name] = useDecl;
+        for (let n = 0, l = imports.length; n < l; ++n) {
+            imported = imports[n];
+            if (imported.associated && imported.associated.length) {
+                map[imported.associated[0].name] = imported;
             }
         }
 
         for (let n = 0, l = matches.length; n < l; ++n) {
             s = matches[n];
-            useDecl = map[s.name];
-            if (useDecl !== undefined && s.kind === useDecl.kind) {
-                merged.push({
-                    kind: s.kind,
-                    name: useDecl.name,
-                    description: s.description,
-                    scope: s.scope,
-                    children: s.children,
-                    modifiers: useDecl.modifiers,
-                    associated: useDecl.associated,
-                    type: s.type,
-                    value: s.value,
-                    typeSource: s.typeSource
-                });
-            } else {
+            imported = map[s.name];
+            if (!imported) {
                 merged.push(s);
             }
         }
