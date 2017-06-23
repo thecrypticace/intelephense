@@ -68,28 +68,37 @@ export function importSymbol(
         return assoc !== undefined;
     });
 
-    let importText = 'use';
-
-    switch ((<PhpSymbol>refAtPos.symbol).kind) {
-        case SymbolKind.Function:
-            importText += ' function';
-            break;
-        case SymbolKind.Constant:
-            importText = ' const';
-            break;
-        default:
-            break;
+    let name: string;
+    if (existingRule) {
+        name = existingRule.name;
+    } else if (alias) {
+        name = alias;
+    } else {
+        name = PhpSymbol.notFqn((<PhpSymbol>refAtPos.symbol).name);
     }
-
-    importText += ' ' + (<PhpSymbol>refAtPos.symbol).name;
-
-    if (alias) {
-        importText += ' as ' + alias;
-    }
-
-    importText += ';';
 
     if (!existingRule) {
+
+        let importText = 'use';
+
+        switch ((<PhpSymbol>refAtPos.symbol).kind) {
+            case SymbolKind.Function:
+                importText += ' function';
+                break;
+            case SymbolKind.Constant:
+                importText = ' const';
+                break;
+            default:
+                break;
+        }
+
+        importText += ' ' + (<PhpSymbol>refAtPos.symbol).name;
+
+        if (alias) {
+            importText += ' as ' + alias;
+        }
+
+        importText += ';';
 
         let appendAfterRange: lsp.Range;
 
@@ -111,11 +120,8 @@ export function importSymbol(
             return edits;
         }
 
-    } else {
-        edits.push(lsp.TextEdit.replace(existingRule.location.range, importText));
     }
 
-    let name = alias ? alias : PhpSymbol.notFqn((<PhpSymbol>refAtPos.symbol).name);
     for (let n = 0, l = filteredReferences.length; n < l; ++n) {
         edits.push(lsp.TextEdit.replace(filteredReferences[n].range, name));
     }
