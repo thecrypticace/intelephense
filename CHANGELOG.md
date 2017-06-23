@@ -7,13 +7,15 @@
 * Add use declaration command.
 * Indexing of constants declared with define(). 
 
+#### Changed
+* Improved completions when a use declaration is available.
+
 #### Fixed
 * Complex string parsing
 * null coalesce expr type resolution
 * Cleaned up built-in symbol definitions
 * symbol location inaccuracies
 * missing completion keywords
-* duplicate completion items when a use declaration is available
 
 #### Dependencies
 * php7parser 0.9.7
