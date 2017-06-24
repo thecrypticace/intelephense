@@ -18,7 +18,7 @@
 * missing completion keywords
 
 #### Dependencies
-* php7parser 0.9.7
+* php7parser 0.9.8
 
 ## [0.6.10] - 2017-04-30
 #### Fixed
