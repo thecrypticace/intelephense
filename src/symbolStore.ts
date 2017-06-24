@@ -15,8 +15,6 @@ import { NameResolver } from './nameResolver';
 
 export class SymbolTable {
 
-    indexable = false;
-
     constructor(
         public uri: string,
         public root: PhpSymbol
@@ -142,12 +140,8 @@ export class SymbolStore {
     }
 
     onParsedDocumentChange = (args: ParsedDocumentChangeEventArgs) => {
-        let table = this.remove(args.parsedDocument.uri);
-        let newTable = SymbolTable.create(args.parsedDocument);
-        if(table.indexable) {
-            newTable.indexable = true;
-        }
-        this.add(newTable);
+        this.remove(args.parsedDocument.uri);
+        this.add(SymbolTable.create(args.parsedDocument));
     };
 
     getSymbolTable(uri: string) {
@@ -167,9 +161,7 @@ export class SymbolStore {
             throw new Error(`Duplicate key ${symbolTable.uri}`);
         }
         this._map[symbolTable.uri] = symbolTable;
-        if(symbolTable.indexable) {
-            this._index.addMany(this._indexSymbols(symbolTable.root));
-        }
+        this._index.addMany(this._indexSymbols(symbolTable.root));
         this._symbolCount += symbolTable.count;
     }
 
@@ -178,12 +170,9 @@ export class SymbolStore {
         if (!symbolTable) {
             return;
         }
-        if(symbolTable.indexable){
-            this._index.removeMany(this._indexSymbols(symbolTable.root));
-        }
+        this._index.removeMany(this._indexSymbols(symbolTable.root));
         this._symbolCount -= symbolTable.count;
         delete this._map[uri];
-        return symbolTable;
     }
 
     /**
