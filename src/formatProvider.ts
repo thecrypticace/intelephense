@@ -124,11 +124,22 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 return true;
 
             case PhraseType.ConstElementList:
-            case PhraseType.PropertyElementList:
             case PhraseType.ClassConstElementList:
+            case PhraseType.PropertyElementList:
             case PhraseType.StaticVariableDeclarationList:
             case PhraseType.VariableNameList:
-                this._isMultilineCommaDelimitedListStack.push(false);
+                if (
+                    (this._previousToken &&
+                        this._previousToken.tokenType === TokenType.Whitespace &&
+                        FormatVisitor.countNewlines(this.doc.tokenText(this._previousToken)) > 0) ||
+                    this._hasNewlineWhitespaceChild(<Phrase>node)
+                ) {
+                    this._isMultilineCommaDelimitedListStack.push(true);
+                    this._incrementIndent();
+                } else {
+                    this._isMultilineCommaDelimitedListStack.push(false);
+                }
+                this._nextFormatRule = FormatVisitor.singleSpaceOrNewlineIndentBefore;
                 return true;
 
             case PhraseType.EncapsulatedVariableList:
@@ -320,7 +331,9 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.ClassConstElementList:
             case PhraseType.StaticVariableDeclarationList:
             case PhraseType.VariableNameList:
-                this._isMultilineCommaDelimitedListStack.pop();
+                if(this._isMultilineCommaDelimitedListStack.pop()) {
+                    this._decrementIndent();
+                }
                 return;
 
             case PhraseType.EncapsulatedVariableList:
@@ -436,16 +449,21 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case TokenType.Comma:
-                if (parent.phraseType === PhraseType.ArrayInitialiserList) {
+                if (
+                    parent.phraseType === PhraseType.ArrayInitialiserList ||
+                    parent.phraseType === PhraseType.ConstElementList ||
+                    parent.phraseType === PhraseType.ClassConstElementList ||
+                    parent.phraseType === PhraseType.PropertyElementList ||
+                    parent.phraseType === PhraseType.StaticVariableDeclarationList ||
+                    parent.phraseType === PhraseType.VariableNameList
+                ) {
                     this._nextFormatRule = FormatVisitor.singleSpaceOrNewlineIndentBefore;
                 } else if (
                     this._isMultilineCommaDelimitedListStack.length > 0 &&
                     this._isMultilineCommaDelimitedListStack[this._isMultilineCommaDelimitedListStack.length - 1]
                 ) {
                     this._nextFormatRule = FormatVisitor.newlineIndentBefore;
-                } else {
-                    this._nextFormatRule = FormatVisitor.singleSpaceOrNewlineIndentPlusOneBefore;
-                }
+                } 
                 break;
 
             case TokenType.Arrow:
