@@ -1,6 +1,10 @@
 # Change Log
 
-## [0.7.0] - TBA
+## [0.7.1] - 2017-06-25
+#### Fixed
+* Crash when reading anonymous classes 
+
+## [0.7.0] - 2017-06-24
 #### Added
 * PSR2 compatible, lossless document and range formatting.
 * Exposed methods to add and remove symbols, enabling client caching.
