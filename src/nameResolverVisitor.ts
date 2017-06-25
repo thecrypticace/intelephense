@@ -32,6 +32,8 @@ export class NameResolverVisitor implements TreeVisitor<Phrase | Token> {
 
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
+        let parent = spine.length ? <Phrase>spine[spine.length - 1] : <Phrase>{phraseType:PhraseType.Unknown, children:[]};
+
         switch ((<Phrase>node).phraseType) {
 
             case PhraseType.NamespaceDefinition:
@@ -52,7 +54,7 @@ export class NameResolverVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case PhraseType.AnonymousClassDeclarationHeader:
-                this.nameResolver.pushClassName(this._anonymousClassDeclaration(<AnonymousClassDeclaration>node));
+                this.nameResolver.pushClassName(this._anonymousClassDeclarationHeader(<AnonymousClassDeclarationHeader>node,  parent));
                 break;
 
             case PhraseType.ClassDeclarationHeader:
@@ -105,14 +107,14 @@ export class NameResolverVisitor implements TreeVisitor<Phrase | Token> {
         return names;
     }
 
-    private _anonymousClassDeclaration(node: AnonymousClassDeclaration) {
+    private _anonymousClassDeclarationHeader(node: AnonymousClassDeclarationHeader, parent:Phrase) {
         let names: [string, string] = [
-            this.document.createAnonymousName(node),
+            this.document.createAnonymousName(parent),
             ''
         ];
 
-        if (node.header.baseClause) {
-            names[1] = this._namePhraseToFqn(node.header.baseClause.name, SymbolKind.Class);
+        if (node.baseClause) {
+            names[1] = this._namePhraseToFqn(node.baseClause.name, SymbolKind.Class);
         }
 
         return names;

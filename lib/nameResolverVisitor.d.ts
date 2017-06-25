@@ -12,7 +12,7 @@ export declare class NameResolverVisitor implements TreeVisitor<Phrase | Token> 
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
     postorder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
     private _classDeclarationHeader(node);
-    private _anonymousClassDeclaration(node);
+    private _anonymousClassDeclarationHeader(node, parent);
     private _namespaceUseClause(node, kind, prefix);
     protected _tokenToSymbolKind(t: Token): SymbolKind;
     /**

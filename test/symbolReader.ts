@@ -10,7 +10,7 @@ function symbolReaderOutput(src: string) {
 
     let parsedDoc = new ParsedDocument('test', src);
     let symbolTree: PhpSymbol = { kind: SymbolKind.None, name: '' };
-    let sr = new SymbolReader(parsedDoc, new NameResolver(), [symbolTree]);
+    let sr = SymbolReader.create(parsedDoc, new NameResolver(), [symbolTree]);
     parsedDoc.traverse(sr);
     return symbolTree;
 
@@ -18,7 +18,7 @@ function symbolReaderOutput(src: string) {
 
 describe('SymbolReader', () => {
 
-    it('define', function(){
+    it('define', function () {
 
         let src = `<?php
             define('FOO', 1);
@@ -31,26 +31,26 @@ describe('SymbolReader', () => {
 
     });
 
-    it('@method tags', function(){
+    it('@method tags', function () {
         let src = `<?php
             /**
              * @method int fn(string $p) method description
              */
             class Foo { }`;
 
-            let symbols = symbolReaderOutput(src);
-            let method = symbols.children[0].children[0];
-            let param = method.children[0];
+        let symbols = symbolReaderOutput(src);
+        let method = symbols.children[0].children[0];
+        let param = method.children[0];
 
-            assert.equal(method.kind, SymbolKind.Method);
-            assert.equal(method.modifiers, SymbolModifier.Magic);
-            assert.equal(method.name, 'fn');
-            assert.equal(method.type.toString(), 'int');
-            assert.equal(param.kind, SymbolKind.Parameter);
-            assert.equal(param.name, '$p');
-            assert.equal(param.type.toString(), 'string');
+        assert.equal(method.kind, SymbolKind.Method);
+        assert.equal(method.modifiers, SymbolModifier.Magic);
+        assert.equal(method.name, 'fn');
+        assert.equal(method.type.toString(), 'int');
+        assert.equal(param.kind, SymbolKind.Parameter);
+        assert.equal(param.name, '$p');
+        assert.equal(param.type.toString(), 'string');
 
-            //console.log(JSON.stringify(symbols, null, 4));
+        //console.log(JSON.stringify(symbols, null, 4));
     });
 
 
@@ -110,6 +110,35 @@ describe('SymbolReader', () => {
         `;
 
         let output = symbolReaderOutput(src);
+        //console.log(JSON.stringify(output, null, 4));
+
+    });
+
+    it('anon classes', () => {
+        let src = `
+        <?php
+            $c = new class {};
+        `;
+        let output = symbolReaderOutput(src);
+        let expect = <PhpSymbol>{
+            kind: 1,
+            name: "#anonymous#test#36",
+            modifiers: 512,
+            location: {
+                uri: "test",
+                range: {
+                    start: {
+                        line: 2,
+                        character: 21
+                    },
+                    end: {
+                        line: 2,
+                        character: 29
+                    }
+                }
+            }
+        };
+        assert.deepEqual(output.children[1], expect);
         //console.log(JSON.stringify(output, null, 4));
 
     });
