@@ -48,6 +48,10 @@ export class SignatureHelpProvider {
 
     private _createSignatureHelp(fn: PhpSymbol, argNumber: number) {
 
+        if(!fn.children) {
+            return null;
+        }
+
         let params = fn.children.filter((x) => {
             return x.kind === SymbolKind.Parameter;
         });
