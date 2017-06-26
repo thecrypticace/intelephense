@@ -41,18 +41,22 @@ export const enum SymbolModifier {
     Use = 1 << 12
 }
 
+export interface PhpSymbolDoc {
+    description?:string;
+    type?:TypeString;
+}
+
 export interface PhpSymbol {
     kind: SymbolKind;
     name: string;
     location?: Location;
     modifiers?: SymbolModifier;
-    description?: string;
+    doc?: PhpSymbolDoc;
     type?: TypeString;
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
     scope?: string;
     value?: string;
-    typeSource?: TypeSource;
 }
 
 
