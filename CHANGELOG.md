@@ -1,8 +1,13 @@
 # Change Log
 
+## [0.7.2] - TBA
+#### Fixed
+* Error on signature help for function with no params
+* Newlines being repeatedly appended after comments when formatting
+
 ## [0.7.1] - 2017-06-25
 #### Fixed
-* Crash when reading anonymous classes 
+* Error when reading anonymous classes 
 
 ## [0.7.0] - 2017-06-24
 #### Added
