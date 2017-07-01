@@ -43,7 +43,16 @@ export const enum SymbolModifier {
 
 export interface PhpSymbolDoc {
     description?:string;
-    type?:TypeString;
+    type?:string;
+}
+
+export namespace PhpSymbolDoc {
+    export function create(description?:string, type?: string) : PhpSymbolDoc {
+        return {
+            description : description ? description : '',
+            type : type ? type : ''
+        };
+    }
 }
 
 export interface PhpSymbol {
@@ -52,7 +61,7 @@ export interface PhpSymbol {
     location?: Location;
     modifiers?: SymbolModifier;
     doc?: PhpSymbolDoc;
-    type?: TypeString;
+    type?: string;
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
     scope?: string;
@@ -76,6 +85,7 @@ export namespace PhpSymbol {
         let paramStrings: String[] = [];
         let param: PhpSymbol;
         let parts: string[];
+        let paramType:string;
 
         for (let n = 0, l = params.length; n < l; ++n) {
             param = params[n];
@@ -85,8 +95,9 @@ export namespace PhpSymbol {
                 parts.push(',');
             }
 
-            if (param.type && !param.type.isEmpty()) {
-                parts.push(param.type.toString());
+            paramType = PhpSymbol.type(param);
+            if (paramType) {
+                parts.push(paramType);
             }
 
             parts.push(param.name);
@@ -100,8 +111,9 @@ export namespace PhpSymbol {
         }
 
         let sig = `(${paramStrings.join('')})`;
-        if (s.type && !s.type.isEmpty()) {
-            sig += `: ${s.type}`;
+        let sType = PhpSymbol.type(s);
+        if (sType) {
+            sig += `: ${sType}`;
         }
         return sig;
 
@@ -136,6 +148,17 @@ export namespace PhpSymbol {
             scope: s.scope,
             value: s.value
         };
+    }
+
+    export function type(s:PhpSymbol){
+        if(s.type){
+            return s.type;
+        } else if(s.doc && s.doc.type) {
+            return s.doc.type;
+        } else {
+            return '';
+        }
+
     }
 
 }

@@ -1,7 +1,6 @@
 import { ParsedDocument } from './parsedDocument';
 import { NameResolver } from './nameResolver';
 import { SymbolStore } from './symbolStore';
-import { TypeString } from './typeString';
 import { TreeVisitor, MultiVisitor } from './types';
 import { SymbolKind, PhpSymbol, SymbolModifier } from './symbol';
 import { NameResolverVisitor } from './nameResolverVisitor';
@@ -12,19 +11,19 @@ export declare class ExpressionTypeResolver {
     symbolStore: SymbolStore;
     variableTable: VariableTable;
     constructor(document: ParsedDocument, nameResolver: NameResolver, symbolStore: SymbolStore, variableTable: VariableTable);
-    resolveExpression(node: Phrase | Token): TypeString;
-    ternaryExpression(node: TernaryExpression): TypeString;
-    scopedMemberAccessExpression(node: ScopedPropertyAccessExpression | ScopedCallExpression, kind: SymbolKind): TypeString;
+    resolveExpression(node: Phrase | Token): string;
+    ternaryExpression(node: TernaryExpression): string;
+    scopedMemberAccessExpression(node: ScopedPropertyAccessExpression | ScopedCallExpression, kind: SymbolKind): string;
     lookupMemberOnTypes(typeNames: string[], kind: SymbolKind, memberName: string, modifierMask: SymbolModifier, notModifierMask: SymbolModifier): PhpSymbol[];
     scopedMemberName(node: ScopedMemberName): string;
-    classTypeDesignator(node: ClassTypeDesignator): TypeString;
-    objectCreationExpression(node: ObjectCreationExpression): TypeString;
-    simpleVariable(node: SimpleVariable): TypeString;
-    subscriptExpression(node: SubscriptExpression): TypeString;
-    functionCallExpression(node: FunctionCallExpression): TypeString;
+    classTypeDesignator(node: ClassTypeDesignator): string;
+    objectCreationExpression(node: ObjectCreationExpression): string;
+    simpleVariable(node: SimpleVariable): string;
+    subscriptExpression(node: SubscriptExpression): string;
+    functionCallExpression(node: FunctionCallExpression): string;
     memberName(node: MemberName): string;
-    instanceMemberAccessExpression(node: PropertyAccessExpression, kind: SymbolKind): TypeString;
-    mergeTypes(symbols: PhpSymbol[]): TypeString;
+    instanceMemberAccessExpression(node: PropertyAccessExpression, kind: SymbolKind): string;
+    mergeTypes(symbols: PhpSymbol[]): string;
     protected _namePhraseToFqn(node: Phrase, kind: SymbolKind): string;
 }
 export declare class VariableTypeResolver extends MultiVisitor<Phrase | Token> {
@@ -64,8 +63,8 @@ export declare class VariableTypeVisitor implements TreeVisitor<Phrase | Token> 
 export declare class VariableTable {
     private _typeVariableSetStack;
     constructor();
-    setType(varName: string, type: TypeString): void;
-    setTypeMany(varNames: string[], type: TypeString): void;
+    setType(varName: string, type: string): void;
+    setTypeMany(varNames: string[], type: string): void;
     pushScope(carry?: string[]): void;
     popScope(): void;
     pushBranch(): void;
@@ -75,7 +74,7 @@ export declare class VariableTable {
      * each variable can be any of types discovered in branches after this.
      */
     pruneBranches(): void;
-    getType(varName: string, className?: string): TypeString;
+    getType(varName: string, className?: string): string;
     private _mergeSets(a, b);
     private _top();
 }

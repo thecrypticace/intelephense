@@ -3,7 +3,6 @@ import { SymbolStore, SymbolTable } from './symbolStore';
 import { ExpressionTypeResolver, VariableTable } from './typeResolver';
 import { NameResolver } from './nameResolver';
 import { TreeTraverser } from './types';
-import { TypeString } from './typeString';
 import { ParsedDocument } from './parsedDocument';
 import { Position } from 'vscode-languageserver-types';
 import { Phrase, Token, NamespaceDefinition, ClassDeclaration, TokenType, NamespaceUseDeclaration, InlineText } from 'php7parser';
@@ -49,7 +48,7 @@ export declare class Context {
     tokenText(t: Token): string;
     nodeText(node: Phrase | Token, ignore?: TokenType[]): string;
     resolveFqn(phrase: Phrase, kind: SymbolKind): string;
-    resolveExpressionType(expr: Phrase): TypeString;
+    resolveExpressionType(expr: Phrase): string;
     createTraverser(): TreeTraverser<Token | Phrase>;
     createExpressionTypeResolver(): ExpressionTypeResolver;
     private _isAbsoluteScopePhrase(p);

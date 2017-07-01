@@ -7,101 +7,115 @@
 import {NameResolver} from './nameResolver';
 import * as util from './util';
 
-export class TypeString {
+export namespace TypeString {
 
-    private static _classNamePattern: RegExp = /[$\\a-zA-Z_\x7f-\xff][\\a-zA-Z0-9_\x7f-\xff]*/g;
+    const classNamePattern: RegExp = /[$\\a-zA-Z_\x7f-\xff][\\a-zA-Z0-9_\x7f-\xff]*/g;
 
-    private static _keywords: string[] = [
+    const keywords: string[] = [
         'string', 'integer', 'int', 'boolean', 'bool', 'float',
         'double', 'object', 'mixed', 'array', 'resource',
         'void', 'null', 'false', 'true', 'self', 'static',
-        'callable', '$this'
+        'callable', '$this', 'real'
     ];
 
-    private _parts: string[];
+    export function atomicClassArray(typeString:string) {
 
-    constructor(text: string) {
-        this._parts = text ? this._chunk(text) : [];
-    }
+        if(!typeString) {
+            return [];
+        }
 
-    isEmpty() {
-        return this._parts.length < 1;
-    }
+        let classes: string[] = [];
+        let types = chunk(typeString);
+        let type: string;
 
-    atomicClassArray() {
-
-        let parts: string[] = [];
-        let part: string;
-
-        for (let n = 0; n < this._parts.length; ++n) {
-            part = this._parts[n];
-            if (part[part.length - 1] !== ']' && TypeString._keywords.indexOf(part) < 0) {
-                parts.push(part);
+        for (let n = 0; n < types.length; ++n) {
+            type = types[n];
+            if (type[type.length - 1] !== ']' && keywords.indexOf(type.toLowerCase()) < 0) {
+                classes.push(type);
             }
         }
 
-        return parts;
+        return classes;
 
     }
 
-    arrayDereference() {
+    export function arrayDereference(typeString:string) {
 
-        let parts: string[] = [];
-        let part: string;
+        if(!typeString) {
+            return '';
+        }
 
-        for (let n = 0; n < this._parts.length; ++n) {
-            part = this._parts[n];
+        let dereferenced: string[] = [];
+        let types = chunk(typeString);
+        let type: string;
 
-            if (part.slice(-2) === '[]') {
-                part = part.slice(0, -2);
-                if (part.slice(-1) === ')') {
-                    part = part.slice(1, -1);
-                    Array.prototype.push.apply(parts, this._chunk(part));
-                    parts = this._unique(parts);
+        for (let n = 0; n < types.length; ++n) {
+            type = types[n];
+
+            if (type.slice(-2) === '[]') {
+                type = type.slice(0, -2);
+                if (type.slice(-1) === ')') {
+                    type = type.slice(1, -1);
+                    Array.prototype.push.apply(dereferenced, chunk(type));
                 } else {
-                    parts.push(part);
+                    dereferenced.push(type);
                 }
-
             }
 
         }
 
-        let typeString = new TypeString(null);
-        typeString._parts = parts;
-        return typeString;
+        dereferenced = unique(dereferenced);
+        return dereferenced.join('|');
 
     }
 
-    array() {
+    export function array(typeString:string) {
+        if(!typeString) {
+            return '';
+        }
+
         let text: string;
-        if (this._parts.length > 1) {
-            text = '(' + this.toString() + ')[]';
+        let types = chunk(typeString);
+        if (types.length > 1) {
+            text = '(' + types.join('|') + ')[]';
         } else {
-            text = this._parts[0] + '[]';
+            text = types[0] + '[]';
         }
-        return new TypeString(text);
+        return text;
     }
 
-    merge(type: string | TypeString) {
+    export function merge(a: string, b:string) {
 
-        if (!type) {
-            return this;
+        if(!a && !b){
+            return '';
         }
 
-        let parts = util.isString(type) ? this._chunk(<string>type) : (<TypeString>type)._parts;
-        Array.prototype.push.apply(parts, this._parts);
-        let newTypeString = new TypeString(null);
-        newTypeString._parts = this._unique(parts);
-        return newTypeString;
+        if (!a) {
+            return b;
+        }
+
+        if(!b) {
+            return a;
+        }
+
+        let types = chunk(a);
+        Array.prototype.push.apply(types, chunk(b));
+        return unique(types).join('|');
     }
 
-    nameResolve(nameResolver: NameResolver) {
+    export function nameResolve(typeString:string, nameResolver: NameResolver) {
+
+        if(!typeString) {
+            return '';
+        }
 
         let replacer = (match, offset, text) => {
 
-            if (match === 'self' || match === '$this' || match === 'static') {
+            let lcMatch = match.toLowerCase();
+
+            if (lcMatch === 'self' || lcMatch === '$this' || lcMatch === 'static') {
                 return nameResolver.className;
-            } else if (TypeString._keywords.indexOf(match) >= 0) {
+            } else if (keywords.indexOf(lcMatch) >= 0) {
                 return match;
             } else if (match[0] === '\\') {
                 return match.slice(1);
@@ -111,26 +125,15 @@ export class TypeString {
 
         };
 
-        return new TypeString(this._parts.join('|').replace(TypeString._classNamePattern, replacer));
+        return typeString.replace(classNamePattern, replacer);
     }
 
-    toString() {
-        return this._parts.join('|');
+    function unique(parts: string[]) {
+        let set = new Set<string>(parts);
+        return Array.from(set);
     }
 
-    private _unique(parts: string[]) {
-        let map: { [index: string]: string } = {};
-        let part: string;
-
-        for (let n = 0; n < parts.length; ++n) {
-            part = parts[n];
-            map[part] = part;
-        }
-
-        return Object.keys(map);
-    }
-
-    private _chunk(typeString: string) {
+    function chunk(typeString: string) {
 
         let n = 0;
         let parentheses = 0;

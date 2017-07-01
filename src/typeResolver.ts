@@ -43,10 +43,10 @@ export class ExpressionTypeResolver {
 
     }
 
-    resolveExpression(node: Phrase | Token): TypeString {
+    resolveExpression(node: Phrase | Token): string {
 
         if (!node) {
-            return new TypeString('');
+            return '';
         }
 
         switch ((<Phrase>node).phraseType) {
@@ -76,29 +76,31 @@ export class ExpressionTypeResolver {
             case PhraseType.InstanceofTypeDesignator:
                 return this.classTypeDesignator(<any>node);
             case PhraseType.AnonymousClassDeclaration:
-                return new TypeString(this.document.createAnonymousName(<AnonymousClassDeclaration>node));
+                return this.document.createAnonymousName(<AnonymousClassDeclaration>node);
             case PhraseType.QualifiedName:
             case PhraseType.FullyQualifiedName:
             case PhraseType.RelativeQualifiedName:
-                return new TypeString(this._namePhraseToFqn(<any>node, SymbolKind.Class));
+                return this._namePhraseToFqn(<any>node, SymbolKind.Class);
             case PhraseType.RelativeScope:
-                return new TypeString(this.nameResolver.className);
+                return this.nameResolver.className;
             case PhraseType.CoalesceExpression:
-                return new TypeString('')
-                    .merge(this.resolveExpression((<BinaryExpression>node).left))
-                    .merge(this.resolveExpression((<BinaryExpression>node).right));
+                return TypeString.merge(
+                    this.resolveExpression((<BinaryExpression>node).left),
+                    this.resolveExpression((<BinaryExpression>node).right)
+                );
 
             default:
-                return new TypeString('');
+                return '';
         }
 
     }
 
     ternaryExpression(node: TernaryExpression) {
 
-        return new TypeString('')
-            .merge(this.resolveExpression(node.trueExpr))
-            .merge(this.resolveExpression(node.falseExpr));
+        return TypeString.merge(
+            this.resolveExpression(node.trueExpr),
+            this.resolveExpression(node.falseExpr)
+        );
 
     }
 
@@ -107,11 +109,11 @@ export class ExpressionTypeResolver {
         let memberName = this.scopedMemberName(node.memberName);
         let scopeTypeString = this.resolveExpression(node.scope);
 
-        if (!scopeTypeString || scopeTypeString.isEmpty() || !memberName) {
-            return new TypeString('');
+        if (!scopeTypeString || !memberName) {
+            return '';
         }
 
-        let typeNames = scopeTypeString.atomicClassArray();
+        let typeNames = TypeString.atomicClassArray(scopeTypeString);
         let symbols = this.lookupMemberOnTypes(typeNames, kind, memberName, SymbolModifier.Static, 0);
         return this.mergeTypes(symbols);
 
@@ -167,11 +169,11 @@ export class ExpressionTypeResolver {
     classTypeDesignator(node: ClassTypeDesignator) {
         if (node && ParsedDocument.isPhrase(node.type,
             [PhraseType.QualifiedName, PhraseType.FullyQualifiedName, PhraseType.RelativeQualifiedName])) {
-            return new TypeString(this._namePhraseToFqn(<any>node.type, SymbolKind.Class));
+            return this._namePhraseToFqn(<any>node.type, SymbolKind.Class);
         } else if (node && ParsedDocument.isPhrase(node.type, [PhraseType.RelativeScope])) {
-            return new TypeString(this.nameResolver.className);
+            return this.nameResolver.className;
         } else {
-            return new TypeString('');
+            return '';
         }
 
     }
@@ -179,11 +181,11 @@ export class ExpressionTypeResolver {
     objectCreationExpression(node: ObjectCreationExpression) {
 
         if (ParsedDocument.isPhrase(node.type, [PhraseType.AnonymousClassDeclaration])) {
-            return new TypeString(this.document.createAnonymousName(node));
+            return this.document.createAnonymousName(node);
         } else if (ParsedDocument.isPhrase(node.type, [PhraseType.ClassTypeDesignator])) {
             return this.classTypeDesignator(<ClassTypeDesignator>node.type);
         } else {
-            return new TypeString('');
+            return '';
         }
 
     }
@@ -193,12 +195,12 @@ export class ExpressionTypeResolver {
             return this.variableTable.getType(this.document.tokenText(<Token>node.name), this.nameResolver.className);
         }
 
-        return new TypeString('');
+        return '';
     }
 
     subscriptExpression(node: SubscriptExpression) {
         let type = this.resolveExpression(node.dereferencable);
-        return type ? type.arrayDereference() : new TypeString('');
+        return TypeString.arrayDereference(type);
     }
 
     functionCallExpression(node: FunctionCallExpression) {
@@ -206,12 +208,12 @@ export class ExpressionTypeResolver {
         let qName = <Phrase>node.callableExpr;
         if (!ParsedDocument.isPhrase(qName,
             [PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName])) {
-            return new TypeString('');
+            return '';
         }
 
         let functionName = this._namePhraseToFqn(<any>qName, SymbolKind.Function)
         let symbol = this.symbolStore.find(functionName, (x) => { return x.kind === SymbolKind.Function });
-        return symbol && symbol.type ? symbol.type : new TypeString('');
+        return symbol && symbol.type ? symbol.type : '';
 
     }
 
@@ -228,25 +230,25 @@ export class ExpressionTypeResolver {
         let type = this.resolveExpression(node.variable);
 
         if (!memberName || !type) {
-            return new TypeString('');
+            return '';
         }
 
         if (kind === SymbolKind.Property) {
             memberName = '$' + memberName;
         }
 
-        let symbols = this.lookupMemberOnTypes(type.atomicClassArray(), kind, memberName, 0, SymbolModifier.Static);
+        let symbols = this.lookupMemberOnTypes(TypeString.atomicClassArray(type), kind, memberName, 0, SymbolModifier.Static);
         return this.mergeTypes(symbols);
 
     }
 
     mergeTypes(symbols: PhpSymbol[]) {
 
-        let type = new TypeString('');
+        let type = '';
         let symbol: PhpSymbol;
 
         for (let n = 0, l = symbols.length; n < l; ++n) {
-            type = type.merge(symbols[n].type);
+            type = TypeString.merge(type, symbols[n].type);
         }
 
         return type;
@@ -275,8 +277,8 @@ export class ExpressionTypeResolver {
 
 export class VariableTypeResolver extends MultiVisitor<Phrase | Token> {
 
-    private _nameResolverVisitor:NameResolverVisitor;
-    private _variableTypeVisitor:VariableTypeVisitor;
+    private _nameResolverVisitor: NameResolverVisitor;
+    private _variableTypeVisitor: VariableTypeVisitor;
 
     constructor(
         nameResolverVisitor: NameResolverVisitor,
@@ -287,11 +289,11 @@ export class VariableTypeResolver extends MultiVisitor<Phrase | Token> {
         this._variableTypeVisitor = variableTypeVisitor;
     }
 
-    set haltAtOffset(offset:number){
+    set haltAtOffset(offset: number) {
         this._variableTypeVisitor.haltAtOffset = offset;
     }
 
-    get variableTable(){
+    get variableTable() {
         return this._variableTypeVisitor.variableTable;
     }
 
@@ -423,7 +425,7 @@ export class VariableTypeVisitor implements TreeVisitor<Phrase | Token> {
             fqns.push(this._namePhraseToFqn(node.elements[n], SymbolKind.Class));
         }
 
-        return new TypeString(fqns.join('|'));
+        return fqns.join('|');
     }
 
     private _namePhraseToFqn(node: Phrase, kind: SymbolKind) {
@@ -478,12 +480,12 @@ export class VariableTypeVisitor implements TreeVisitor<Phrase | Token> {
                 let varTag: Tag;
                 for (let n = 0, l = varTags.length; n < l; ++n) {
                     varTag = varTags[n];
-                    this.variableTable.setType(varTag.name, new TypeString(varTag.typeString).nameResolve(this.nameResolver));
+                    this.variableTable.setType(varTag.name, TypeString.nameResolve(varTag.typeString, this.nameResolver));
                 }
             }
         }
 
-        if(this.haltAtOffset > -1 && ParsedDocument.isOffsetInToken(this.haltAtOffset, t)){
+        if (this.haltAtOffset > -1 && ParsedDocument.isOffsetInToken(this.haltAtOffset, t)) {
             this.haltTraverse = true;
         }
 
@@ -568,7 +570,7 @@ export class VariableTypeVisitor implements TreeVisitor<Phrase | Token> {
         let lhs = node.left;
         let rhs = node.right;
         let exprTypeResolver = new ExpressionTypeResolver(this.document, this.nameResolver, this.symbolStore, this.variableTable);
-        let type: TypeString;
+        let type: string;
 
         if (ParsedDocument.isPhrase(lhs, [PhraseType.SimpleVariable])) {
             let varName = this._simpleVariable(<SimpleVariable>lhs);
@@ -576,7 +578,7 @@ export class VariableTypeVisitor implements TreeVisitor<Phrase | Token> {
             this.variableTable.setType(varName, type);
         } else if (ParsedDocument.isPhrase(node, [PhraseType.ListIntrinsic])) {
             let varNames = this._listIntrinsic(<ListIntrinsic>rhs);
-            this.variableTable.setTypeMany(varNames, exprTypeResolver.resolveExpression(rhs).arrayDereference());
+            this.variableTable.setTypeMany(varNames, TypeString.arrayDereference(exprTypeResolver.resolveExpression(rhs)));
         }
 
     }
@@ -587,14 +589,14 @@ export class VariableTypeVisitor implements TreeVisitor<Phrase | Token> {
         let value = node.value;
 
         let exprResolver = new ExpressionTypeResolver(this.document, this.nameResolver, this.symbolStore, this.variableTable);
-        let type = exprResolver.resolveExpression(collection.expr).arrayDereference();
+        let type = TypeString.arrayDereference(exprResolver.resolveExpression(collection.expr));
 
         if (ParsedDocument.isPhrase(value.expr, [PhraseType.SimpleVariable])) {
             let varName = this._simpleVariable(<SimpleVariable>value.expr);
             this.variableTable.setType(varName, type);
         } else if (ParsedDocument.isPhrase(value.expr, [PhraseType.ListIntrinsic])) {
             let varNames = this._listIntrinsic(<ListIntrinsic>value.expr);
-            this.variableTable.setTypeMany(varNames, type.arrayDereference());
+            this.variableTable.setTypeMany(varNames, TypeString.arrayDereference(type));
         }
 
     }
@@ -603,7 +605,7 @@ export class VariableTypeVisitor implements TreeVisitor<Phrase | Token> {
 
 interface TypedVariable {
     name: string;
-    type: TypeString;
+    type: string;
 }
 
 const enum TypedVariableSetKind {
@@ -629,14 +631,14 @@ export class VariableTable {
         }];
     }
 
-    setType(varName: string, type: TypeString) {
-        if (!varName || !type || type.isEmpty()) {
+    setType(varName: string, type: string) {
+        if (!varName || !type) {
             return;
         }
         this._top().variables[varName] = { name: varName, type: type };
     }
 
-    setTypeMany(varNames: string[], type: TypeString) {
+    setTypeMany(varNames: string[], type: string) {
         for (let n = 0, l = varNames.length; n < l; ++n) {
             this.setType(varNames[n], type);
         }
@@ -651,7 +653,7 @@ export class VariableTable {
         }
 
         if (carry) {
-            let type: TypeString;
+            let type: string;
             for (let n = 0; n < carry.length; ++n) {
                 type = this.getType(carry[n]);
                 if (type) {
@@ -700,7 +702,7 @@ export class VariableTable {
     getType(varName: string, className?: string) {
 
         if (varName === '$this' && className) {
-            return new TypeString(className);
+            return className;
         }
 
         let typeSet: TypedVariableSet;
@@ -716,7 +718,7 @@ export class VariableTable {
             }
         }
 
-        return new TypeString('');
+        return '';
 
     }
 
@@ -727,7 +729,7 @@ export class VariableTable {
         for (let n = 0, l = keys.length; n < l; ++n) {
             typedVar = b.variables[keys[n]];
             if (a.variables[typedVar.name]) {
-                a.variables[typedVar.name].type = a.variables[typedVar.name].type.merge(typedVar.type);
+                a.variables[typedVar.name].type = TypeString.merge(a.variables[typedVar.name].type, typedVar.type);
             } else {
                 a.variables[typedVar.name] = typedVar;
             }

@@ -26,7 +26,7 @@ import {
     ArrayInitialiserList, ArrayElement, ForeachStatement, CatchClause, ArgumentExpressionList
 } from 'php7parser';
 import { PhpDoc, PhpDocParser, Tag, MethodTagParam } from './phpDoc';
-import { PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
+import { PhpSymbol, SymbolKind, SymbolModifier, PhpSymbolDoc } from './symbol';
 import { NameResolver } from './nameResolver';
 import { TypeString } from './typeString';
 import { Location } from 'vscode-languageserver-types';
@@ -157,7 +157,7 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
                 s = this.spine[this.spine.length - 1];
                 let typeDeclarationValue = this.typeDeclaration(<TypeDeclaration>node);
                 if (typeDeclarationValue) {
-                    s.type = new TypeString(typeDeclarationValue); //type hints trump phpdoc
+                    s.type = typeDeclarationValue;
                 }
                 return false;
 
@@ -530,14 +530,11 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         }
 
         if (phpDoc) {
-            s.doc = {};
-            if (phpDoc.text) {
-                s.doc.description = phpDoc.text;
-            }
             let returnTag = phpDoc.returnTag;
-            if (returnTag) {
-                s.doc.type = new TypeString(returnTag.typeString).nameResolve(this.nameResolver);
-            }
+            s.doc = PhpSymbolDoc.create(
+                phpDoc.text,
+                returnTag ? TypeString.nameResolve(returnTag.typeString, this.nameResolver) : ''
+            );
         }
 
         return s;
@@ -560,10 +557,7 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         if (phpDoc) {
             let tag = phpDoc.findParamTag(s.name);
             if (tag) {
-                s.doc = {
-                    description: tag.description,
-                    type: new TypeString(tag.typeString).nameResolve(this.nameResolver)
-                };
+                s.doc = PhpSymbolDoc.create(tag.description, TypeString.nameResolve(tag.typeString, this.nameResolver));
             }
         }
 
@@ -627,10 +621,7 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         if (phpDoc) {
             let tag = phpDoc.findVarTag(s.name);
             if (tag) {
-                s.doc = {
-                    description: tag.description,
-                    type: new TypeString(tag.typeString).nameResolve(this.nameResolver)
-                }
+                s.doc = PhpSymbolDoc.create(tag.description, TypeString.nameResolve(tag.typeString, this.nameResolver));
             }
         }
 
@@ -657,10 +648,7 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         if (phpDoc) {
             let tag = phpDoc.findVarTag(s.name);
             if (tag) {
-                s.doc = {
-                    description: tag.description,
-                    type: new TypeString(tag.typeString).nameResolve(this.nameResolver)
-                }
+                s.doc = PhpSymbolDoc.create(tag.description, TypeString.nameResolve(tag.typeString, this.nameResolver));
             }
         }
 
@@ -678,13 +666,11 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         }
 
         if (phpDoc) {
-            s.doc = {
-                description: phpDoc.text
-            }
             let returnTag = phpDoc.returnTag;
-            if (returnTag) {
-                s.doc.type = new TypeString(returnTag.typeString).nameResolve(this.nameResolver);
-            }
+            s.doc = PhpSymbolDoc.create(
+                phpDoc.text,
+                returnTag ? TypeString.nameResolve(returnTag.typeString, this.nameResolver) : ''
+            );
         }
 
         return s;
@@ -722,10 +708,7 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         if (phpDoc) {
             let tag = phpDoc.findVarTag(s.name);
             if (tag) {
-                s.doc = {
-                    description: tag.description,
-                    type: new TypeString(tag.typeString).nameResolve(this.nameResolver)
-                }
+                s.doc = PhpSymbolDoc.create(tag.description, TypeString.nameResolve(tag.typeString, this.nameResolver));
             }
         }
 
@@ -747,9 +730,7 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         }
 
         if (phpDoc) {
-            s.doc = {
-                description: phpDoc.text
-            };
+            s.doc = PhpSymbolDoc.create(phpDoc.text);
             Array.prototype.push.apply(s.children, this.phpDocMembers(phpDoc, phpDocLoc));
         }
 
@@ -779,10 +760,7 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
             kind: SymbolKind.Method,
             modifiers: SymbolModifier.Magic,
             name: tag.name,
-            doc: {
-                description: tag.description,
-                type: new TypeString(tag.typeString).nameResolve(this.nameResolver)
-            },
+            doc: PhpSymbolDoc.create(tag.description, TypeString.nameResolve(tag.typeString, this.nameResolver)),
             children: [],
             location: phpDocLoc
         };
@@ -804,7 +782,7 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
             kind: SymbolKind.Parameter,
             name: p.name,
             modifiers: SymbolModifier.Magic,
-            type: new TypeString(p.typeString).nameResolve(this.nameResolver),
+            doc: PhpSymbolDoc.create('', TypeString.nameResolve(p.typeString, this.nameResolver)),
             location: phpDocLoc
         }
 
@@ -815,7 +793,7 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
             kind: SymbolKind.Property,
             name: t.name,
             modifiers: this.magicPropertyModifier(t) | SymbolModifier.Magic,
-            type: new TypeString(t.typeString).nameResolve(this.nameResolver),
+            doc: PhpSymbolDoc.create('', TypeString.nameResolve(t.typeString, this.nameResolver)),
             description: t.description,
             location: phpDocLoc
         };

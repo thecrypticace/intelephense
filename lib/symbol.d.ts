@@ -1,4 +1,3 @@
-import { TypeString } from './typeString';
 import { Location } from 'vscode-languageserver-types';
 export declare const enum SymbolKind {
     None = 0,
@@ -32,7 +31,10 @@ export declare const enum SymbolModifier {
 }
 export interface PhpSymbolDoc {
     description?: string;
-    type?: TypeString;
+    type?: string;
+}
+export declare namespace PhpSymbolDoc {
+    function create(description?: string, type?: string): PhpSymbolDoc;
 }
 export interface PhpSymbol {
     kind: SymbolKind;
@@ -40,7 +42,7 @@ export interface PhpSymbol {
     location?: Location;
     modifiers?: SymbolModifier;
     doc?: PhpSymbolDoc;
-    type?: TypeString;
+    type?: string;
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
     scope?: string;
@@ -55,6 +57,7 @@ export declare namespace PhpSymbol {
      * @param s
      */
     function clone(s: PhpSymbol): PhpSymbol;
+    function type(s: PhpSymbol): string;
 }
 export declare class SymbolIndex {
     private _nodeArray;

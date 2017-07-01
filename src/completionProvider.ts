@@ -132,7 +132,7 @@ function toPropertyCompletionItem(s: PhpSymbol) {
     let item = <lsp.CompletionItem>{
         kind: lsp.CompletionItemKind.Property,
         label: !(s.modifiers & SymbolModifier.Static) ? s.name.slice(1) : s.name,
-        detail: s.type ? s.type.toString() : ''
+        detail: PhpSymbol.type(s)
     }
 
     if(s.doc && s.doc.description) {
@@ -716,7 +716,7 @@ class ScopedAccessCompletion implements CompletionStrategy {
         let type = context.resolveExpressionType(<Phrase>accessee);
 
         let text = context.word;
-        let typeNames = type.atomicClassArray();
+        let typeNames = TypeString.atomicClassArray(type);
 
         if (!typeNames.length) {
             return noCompletionResponse;
@@ -819,7 +819,7 @@ class ObjectAccessCompletion implements CompletionStrategy {
         let traverser = context.createTraverser();
         let objAccessExpr = traverser.ancestor(this._isMemberAccessExpr) as ObjectAccessExpression;
         let type = context.resolveExpressionType(<Phrase>objAccessExpr.variable);
-        let typeNames = type.atomicClassArray();
+        let typeNames = TypeString.atomicClassArray(type);
         let text = context.word;
 
         if (!typeNames.length) {
@@ -1274,12 +1274,12 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
 
         let parts: String[] = [];
 
-        if (s.type && !s.type.isEmpty()) {
-            let typeName = s.type.atomicClassArray().shift();
+        if (s.type) {
+            let typeName = TypeString.atomicClassArray(s.type).shift();
             if (typeName) {
                 typeName = '\\' + typeName;
             } else {
-                typeName = s.type.toString();
+                typeName = s.type;
             }
             parts.push(typeName);
         }

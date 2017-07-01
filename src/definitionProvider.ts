@@ -9,6 +9,7 @@ import { PhpSymbol, SymbolKind } from './symbol';
 import {SymbolStore, MemberQuery} from './symbolStore';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Context } from './context';
+import { TypeString } from './typeString';
 import {
     Phrase, PhraseType, Token, MemberName, ScopedMemberName, TokenType,
     ScopedExpression, ObjectAccessExpression, SimpleVariable
@@ -119,7 +120,7 @@ export class DefinitionProvider {
         }
         let parent = traverser.parent() as ScopedExpression;
         let memberName = context.nodeText(memberNamePhrase.name);
-        let typeNames = context.resolveExpressionType(<Phrase>parent.scope).atomicClassArray();
+        let typeNames = TypeString.atomicClassArray(context.resolveExpressionType(<Phrase>parent.scope));
         let pred = (x: PhpSymbol) => {
             return memberName === x.name && !!x.location;
         };
@@ -138,7 +139,7 @@ export class DefinitionProvider {
         }
         let parent = traverser.parent() as ObjectAccessExpression;
         let memberName = context.tokenText(<Token>memberNamePhrase.name);
-        let typeNames = context.resolveExpressionType(<Phrase>parent.variable).atomicClassArray();
+        let typeNames = TypeString.atomicClassArray(context.resolveExpressionType(<Phrase>parent.variable));
 
         if(parent.phraseType === PhraseType.PropertyAccessExpression){
             memberName = '$' + memberName;

@@ -9,6 +9,7 @@ import { SymbolKind, PhpSymbol, SymbolModifier } from './symbol';
 import { SymbolStore, MemberQuery } from './symbolStore';
 import { ExpressionTypeResolver } from './typeResolver';
 import { Context } from './context';
+import { TypeString } from './typeString';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import {
     Phrase, PhraseType, Token, ArgumentExpressionList,
@@ -91,8 +92,9 @@ export class SignatureHelpProvider {
         }).join(', ');
         label += ')';
 
-        if (fn.type && !fn.type.isEmpty()) {
-            label += ': ' + fn.type.toString();
+        let returnType = PhpSymbol.type(fn);
+        if (returnType) {
+            label += ': ' + returnType;
         }
 
         let info = <lsp.SignatureInformation>{
@@ -100,7 +102,7 @@ export class SignatureHelpProvider {
             parameters: paramInfoArray
         }
 
-        if(fn.doc && fn.doc.description) {
+        if (fn.doc && fn.doc.description) {
             info.documentation = fn.doc.description;
         }
 
@@ -121,9 +123,9 @@ export class SignatureHelpProvider {
     private _parameterInfo(s: PhpSymbol) {
 
         let labelParts: string[] = [];
-
-        if (s.type && !s.type.isEmpty()) {
-            labelParts.push(s.type.toString());
+        let paramType = PhpSymbol.type(s);
+        if (paramType) {
+            labelParts.push(paramType);
         }
 
         labelParts.push(s.name);
@@ -136,7 +138,7 @@ export class SignatureHelpProvider {
             label: labelParts.join(' '),
         };
 
-        if(s.doc && s.doc.description) {
+        if (s.doc && s.doc.description) {
             info.documentation = s.doc.description;
         }
 
@@ -169,7 +171,7 @@ export class SignatureHelpProvider {
 
     private _methodCallExpressionSymbol(phrase: MethodCallExpression, context: Context) {
 
-        let typeNames = context.resolveExpressionType(<Phrase>phrase.variable).atomicClassArray();
+        let typeNames = TypeString.atomicClassArray(context.resolveExpressionType(<Phrase>phrase.variable));
         let memberName = ParsedDocument.isFixedMemberName(<MemberName>phrase.memberName) ?
             context.nodeText(phrase.memberName) : '';
 
@@ -196,7 +198,7 @@ export class SignatureHelpProvider {
     }
 
     private _scopedCallExpressionSymbol(phrase: ScopedCallExpression, context: Context) {
-        let typeNames = context.resolveExpressionType(<Phrase>phrase.scope).atomicClassArray();
+        let typeNames = TypeString.atomicClassArray(context.resolveExpressionType(<Phrase>phrase.scope));
         let memberName = ParsedDocument.isFixedScopedMemberName(phrase.memberName) ?
             context.nodeText(phrase.memberName) : '';
 
@@ -224,7 +226,7 @@ export class SignatureHelpProvider {
 
     private _objectCreationExpressionSymbol(phrase: ObjectCreationExpression, context: Context) {
 
-        let typeName = context.resolveExpressionType(phrase.type).atomicClassArray().shift();
+        let typeName = TypeString.atomicClassArray(context.resolveExpressionType(phrase.type)).shift();
 
         if (!typeName) {
             return null;

@@ -16,7 +16,6 @@ export declare class SymbolTable {
     static fromDto(dto: SymbolTableDto): SymbolTable;
     static create(parsedDocument: ParsedDocument, externalOnly?: boolean): SymbolTable;
     static readBuiltInSymbols(): SymbolTable;
-    static builtInSymbolTypeStrings(symbols: any[]): void;
 }
 export interface MemberQuery {
     typeName: string;

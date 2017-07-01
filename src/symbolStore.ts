@@ -96,27 +96,11 @@ export class SymbolTable {
 
     static readBuiltInSymbols() {
 
-        SymbolTable.builtInSymbolTypeStrings(<any>builtInSymbols);
         return new SymbolTable('\\', {
             kind: SymbolKind.None,
             name: '',
             children: <any>builtInSymbols
         });
-
-    }
-
-    static builtInSymbolTypeStrings(symbols: any[]) {
-        let s: any;
-        for (let n = 0, l = symbols.length; n < l; ++n) {
-            s = symbols[n];
-            if (s.type) {
-                s.type = new TypeString(s.type);
-            }
-
-            if (s.children) {
-                SymbolTable.builtInSymbolTypeStrings(s.children);
-            }
-        }
 
     }
 
@@ -455,7 +439,7 @@ class ToPhpSymbolVisitor implements TreeVisitor<PhpSymbolDto> {
         }
 
         if (node.type) {
-            s.type = new TypeString(node.type);
+            s.type = node.type;
         }
 
 
