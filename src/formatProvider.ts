@@ -176,8 +176,15 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         switch ((<Token>node).tokenType) {
 
             case TokenType.Whitespace:
-            case TokenType.Comment:
                 this._nextFormatRule = rule;
+                return false;
+
+            case TokenType.Comment:
+                if (this.doc.tokenText(<Token>node).slice(0, 2) === '/*') {
+                    this._nextFormatRule = FormatVisitor.singleSpaceOrNewlineIndentBefore;
+                } else {
+                    this._nextFormatRule = FormatVisitor.indentBefore;
+                }
                 return false;
 
             case TokenType.DocumentComment:
@@ -331,7 +338,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.ClassConstElementList:
             case PhraseType.StaticVariableDeclarationList:
             case PhraseType.VariableNameList:
-                if(this._isMultilineCommaDelimitedListStack.pop()) {
+                if (this._isMultilineCommaDelimitedListStack.pop()) {
                     this._decrementIndent();
                 }
                 return;
@@ -463,7 +470,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                     this._isMultilineCommaDelimitedListStack[this._isMultilineCommaDelimitedListStack.length - 1]
                 ) {
                     this._nextFormatRule = FormatVisitor.newlineIndentBefore;
-                } 
+                }
                 break;
 
             case TokenType.Arrow:
