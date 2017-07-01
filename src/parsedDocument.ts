@@ -22,6 +22,11 @@ export interface ParsedDocumentChangeEventArgs {
     parsedDocument: ParsedDocument;
 }
 
+export interface PhraseTransform {
+    pushChild(value: any, node: Phrase);
+    transform(): any;
+}
+
 export class ParsedDocument implements Traversable<Phrase | Token>{
 
     private static _wordRegex = /[$a-zA-Z_\x80-\xff][\\a-zA-Z0-9_\x80-\xff]*$/;
