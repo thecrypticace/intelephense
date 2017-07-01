@@ -26,7 +26,7 @@ import {
     ArrayInitialiserList, ArrayElement, ForeachStatement, CatchClause, ArgumentExpressionList
 } from 'php7parser';
 import { PhpDoc, PhpDocParser, Tag, MethodTagParam } from './phpDoc';
-import { PhpSymbol, SymbolKind, SymbolModifier, TypeSource } from './symbol';
+import { PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
 import { NameResolver } from './nameResolver';
 import { TypeString } from './typeString';
 import { Location } from 'vscode-languageserver-types';
@@ -34,7 +34,7 @@ import { Location } from 'vscode-languageserver-types';
 
 export class SymbolReader extends MultiVisitor<Phrase | Token> {
 
-    private _symbolVisitor:SymbolVisitor;
+    private _symbolVisitor: SymbolVisitor;
 
     constructor(
         nameResolverVisitor: NameResolverVisitor,
@@ -44,11 +44,11 @@ export class SymbolReader extends MultiVisitor<Phrase | Token> {
         this._symbolVisitor = symbolVisitor;
     }
 
-    set externalOnly(v:boolean) {
+    set externalOnly(v: boolean) {
         this._symbolVisitor.externalOnly = v;
     }
 
-    get spine(){
+    get spine() {
         return this._symbolVisitor.spine;
     }
 
@@ -158,7 +158,6 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
                 let typeDeclarationValue = this.typeDeclaration(<TypeDeclaration>node);
                 if (typeDeclarationValue) {
                     s.type = new TypeString(typeDeclarationValue); //type hints trump phpdoc
-                    s.typeSource = TypeSource.TypeDeclaration;
                 }
                 return false;
 
@@ -531,10 +530,13 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         }
 
         if (phpDoc) {
-            s.description = phpDoc.text;
+            s.doc = {};
+            if (phpDoc.text) {
+                s.doc.description = phpDoc.text;
+            }
             let returnTag = phpDoc.returnTag;
             if (returnTag) {
-                s.type = new TypeString(returnTag.typeString).nameResolve(this.nameResolver);
+                s.doc.type = new TypeString(returnTag.typeString).nameResolve(this.nameResolver);
             }
         }
 
@@ -558,8 +560,10 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         if (phpDoc) {
             let tag = phpDoc.findParamTag(s.name);
             if (tag) {
-                s.description = tag.description;
-                s.type = new TypeString(tag.typeString).nameResolve(this.nameResolver);
+                s.doc = {
+                    description: tag.description,
+                    type: new TypeString(tag.typeString).nameResolve(this.nameResolver)
+                };
             }
         }
 
@@ -623,8 +627,10 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         if (phpDoc) {
             let tag = phpDoc.findVarTag(s.name);
             if (tag) {
-                s.description = tag.description;
-                s.type = new TypeString(tag.typeString).nameResolve(this.nameResolver);
+                s.doc = {
+                    description: tag.description,
+                    type: new TypeString(tag.typeString).nameResolve(this.nameResolver)
+                }
             }
         }
 
@@ -651,8 +657,10 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         if (phpDoc) {
             let tag = phpDoc.findVarTag(s.name);
             if (tag) {
-                s.description = tag.description;
-                s.type = new TypeString(tag.typeString).nameResolve(this.nameResolver);
+                s.doc = {
+                    description: tag.description,
+                    type: new TypeString(tag.typeString).nameResolve(this.nameResolver)
+                }
             }
         }
 
@@ -670,10 +678,12 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         }
 
         if (phpDoc) {
-            s.description = phpDoc.text;
+            s.doc = {
+                description: phpDoc.text
+            }
             let returnTag = phpDoc.returnTag;
             if (returnTag) {
-                s.type = new TypeString(returnTag.typeString).nameResolve(this.nameResolver);
+                s.doc.type = new TypeString(returnTag.typeString).nameResolve(this.nameResolver);
             }
         }
 
@@ -712,8 +722,10 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         if (phpDoc) {
             let tag = phpDoc.findVarTag(s.name);
             if (tag) {
-                s.description = tag.description;
-                s.type = new TypeString(tag.typeString).nameResolve(this.nameResolver);
+                s.doc = {
+                    description: tag.description,
+                    type: new TypeString(tag.typeString).nameResolve(this.nameResolver)
+                }
             }
         }
 
@@ -735,7 +747,9 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         }
 
         if (phpDoc) {
-            s.description = phpDoc.text;
+            s.doc = {
+                description: phpDoc.text
+            };
             Array.prototype.push.apply(s.children, this.phpDocMembers(phpDoc, phpDocLoc));
         }
 
@@ -765,8 +779,10 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
             kind: SymbolKind.Method,
             modifiers: SymbolModifier.Magic,
             name: tag.name,
-            type: new TypeString(tag.typeString).nameResolve(this.nameResolver),
-            description: tag.description,
+            doc: {
+                description: tag.description,
+                type: new TypeString(tag.typeString).nameResolve(this.nameResolver)
+            },
             children: [],
             location: phpDocLoc
         };
@@ -840,7 +856,9 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         }
 
         if (phpDoc) {
-            s.description = phpDoc.text;
+            s.doc = {
+                description: phpDoc.text
+            };
             Array.prototype.push.apply(s.children, this.phpDocMembers(phpDoc, phpDocLoc));
         }
 
@@ -861,7 +879,10 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         };
 
         if (phpDoc) {
-            s.description = phpDoc.text;
+            s.doc = {
+                description: phpDoc.text
+            }
+
             Array.prototype.push.apply(s.children, this.phpDocMembers(phpDoc, phpDocLoc));
         }
 

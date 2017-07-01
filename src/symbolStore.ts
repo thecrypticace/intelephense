@@ -348,8 +348,8 @@ class ToPhpSymbolDtoVisitor implements TreeVisitor<PhpSymbol> {
             dto.associated = this._associatedToAssociatedDto(node.associated);
         }
 
-        if (node.description) {
-            dto.description = node.description
+        if (node.doc) {
+            dto.doc = node.doc
         }
 
         if (node.scope) {
@@ -358,10 +358,6 @@ class ToPhpSymbolDtoVisitor implements TreeVisitor<PhpSymbol> {
 
         if (node.value) {
             dto.value = node.value;
-        }
-
-        if (node.typeSource) {
-            dto.typeSource = node.typeSource;
         }
 
         if (node.type) {
@@ -446,8 +442,8 @@ class ToPhpSymbolVisitor implements TreeVisitor<PhpSymbolDto> {
             s.associated = this._associatedDtoToAssociated(node.associated);
         }
 
-        if (node.description) {
-            s.description = node.description
+        if (node.doc) {
+            s.doc = node.doc
         }
 
         if (node.scope) {
@@ -456,10 +452,6 @@ class ToPhpSymbolVisitor implements TreeVisitor<PhpSymbolDto> {
 
         if (node.value) {
             s.value = node.value;
-        }
-
-        if (node.typeSource) {
-            s.typeSource = node.typeSource;
         }
 
         if (node.type) {

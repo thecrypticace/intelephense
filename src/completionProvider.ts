@@ -11,7 +11,7 @@ import {
     ClassBaseClause, InterfaceBaseClause, ClassInterfaceClause
 } from 'php7parser';
 import {
-    PhpSymbol, SymbolKind, SymbolModifier, TypeSource
+    PhpSymbol, SymbolKind, SymbolModifier
 } from './symbol';
 import { SymbolStore, SymbolTable, MemberQuery } from './symbolStore';
 import { SymbolReader } from './symbolReader';
@@ -95,9 +95,12 @@ function toMethodCompletionItem(s: PhpSymbol) {
     let item = <lsp.CompletionItem>{
         kind: lsp.CompletionItemKind.Method,
         label: s.name,
-        documentation: s.description,
         detail: PhpSymbol.signatureString(s)
     };
+
+    if(s.doc && s.doc.description) {
+        item.documentation = s.doc.description;
+    }
 
     if (s.name.slice(0, 2) === '__') {
         //sort magic methods last
@@ -111,8 +114,11 @@ function toClassConstantCompletionItem(s: PhpSymbol) {
     let item = <lsp.CompletionItem>{
         kind: lsp.CompletionItemKind.Value, //@todo use Constant
         label: s.name,
-        documentation: s.description,
     };
+
+    if(s.doc && s.doc.description) {
+        item.documentation = s.doc.description;
+    }
 
     if(s.value) {
         item.detail = '= ' + s.value;
@@ -123,22 +129,32 @@ function toClassConstantCompletionItem(s: PhpSymbol) {
 
 
 function toPropertyCompletionItem(s: PhpSymbol) {
-    return <lsp.CompletionItem>{
+    let item = <lsp.CompletionItem>{
         kind: lsp.CompletionItemKind.Property,
         label: !(s.modifiers & SymbolModifier.Static) ? s.name.slice(1) : s.name,
-        documentation: s.description,
         detail: s.type ? s.type.toString() : ''
     }
+
+    if(s.doc && s.doc.description) {
+        item.documentation = s.doc.description;
+    }
+
+    return item;
 }
 
 function toVariableCompletionItem(s: PhpSymbol, varTable: VariableTable) {
 
-    return <lsp.CompletionItem>{
+    let item =  <lsp.CompletionItem>{
         label: s.name,
         kind: lsp.CompletionItemKind.Variable,
-        documentation: s.description,
         detail: varTable.getType(s.name).toString()
     }
+
+    if(s.doc && s.doc.description) {
+        item.documentation = s.doc.description;
+    }
+
+    return item;
 
 }
 
@@ -336,8 +352,11 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         let item = <lsp.CompletionItem>{
             kind: lsp.CompletionItemKind.Class,
             label: PhpSymbol.notFqn(s.name),
-            documentation: s.description,
             insertText: createInsertText(s, context.namespace, namePhraseType)
+        }
+
+        if(s.doc && s.doc.description) {
+            item.documentation = s.doc.description;
         }
 
         switch (s.kind) {
@@ -459,8 +478,11 @@ class ClassTypeDesignatorCompletion extends AbstractNameCompletion {
         let item = <lsp.CompletionItem>{
             kind: lsp.CompletionItemKind.Constructor,
             label: PhpSymbol.notFqn(s.name),
-            documentation: s.description,
             insertText: createInsertText(s, context.namespace, namePhraseType)
+        }
+
+        if(s.doc && s.doc.description) {
+            item.documentation = s.doc.description;
         }
 
         if ((s.modifiers & SymbolModifier.Use) > 0 && s.associated && s.associated.length) {
@@ -1045,8 +1067,12 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
     private _toCompletionItem(s: PhpSymbol) {
         let item = lsp.CompletionItem.create(PhpSymbol.notFqn(s.name));
         item.insertText = s.name;
-        item.documentation = s.description;
         item.kind = symbolKindToLspSymbolKind(s.kind);
+
+        if(s.doc && s.doc.description) {
+            item.documentation = s.doc.description;
+        }
+
         return item;
     }
 
@@ -1101,8 +1127,12 @@ class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
     private _toCompletionItem(s: PhpSymbol, insertText: string) {
         let item = lsp.CompletionItem.create(PhpSymbol.notFqn(s.name));
         item.insertText = insertText;
-        item.documentation = s.description;
         item.kind = symbolKindToLspSymbolKind(s.kind);
+
+        if(s.doc && s.doc.description) {
+            item.documentation = s.doc.description;
+        }
+
         return item;
     }
 
@@ -1229,9 +1259,12 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
             label: s.name,
             insertText: insertText,
             insertTextFormat: lsp.InsertTextFormat.Snippet,
-            documentation: s.description,
             detail: s.scope
         };
+
+        if(s.doc && s.doc.description) {
+            item.documentation = s.doc.description;
+        }
 
         return item;
 
@@ -1241,7 +1274,7 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
 
         let parts: String[] = [];
 
-        if (s.type && !s.type.isEmpty() && s.typeSource === TypeSource.TypeDeclaration) {
+        if (s.type && !s.type.isEmpty()) {
             let typeName = s.type.atomicClassArray().shift();
             if (typeName) {
                 typeName = '\\' + typeName;

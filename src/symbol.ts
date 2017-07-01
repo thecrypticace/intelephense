@@ -132,18 +132,12 @@ export namespace PhpSymbol {
             modifiers: s.modifiers,
             associated: s.associated,
             type: s.type,
-            typeSource: s.typeSource,
-            description: s.description,
+            doc: s.doc,
             scope: s.scope,
             value: s.value
         };
     }
 
-}
-
-export const enum TypeSource {
-    None,
-    TypeDeclaration
 }
 
 export class SymbolIndex {
@@ -385,13 +379,12 @@ export interface PhpSymbolDto {
     name: string;
     location?: number[];
     modifiers?: SymbolModifier;
-    description?: string;
+    doc?: PhpSymbolDoc;
     type?: string;
     associated?: PhpSymbolDto[];
     children?: PhpSymbolDto[];
     scope?: string;
     value?: string;
-    typeSource?: TypeSource;
 }
 
 

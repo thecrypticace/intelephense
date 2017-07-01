@@ -95,11 +95,16 @@ export class SignatureHelpProvider {
             label += ': ' + fn.type.toString();
         }
 
-        return <lsp.SignatureInformation>{
+        let info = <lsp.SignatureInformation>{
             label: label,
-            documentation: fn.description,
             parameters: paramInfoArray
         }
+
+        if(fn.doc && fn.doc.description) {
+            info.documentation = fn.doc.description;
+        }
+
+        return info;
 
     }
 
@@ -127,10 +132,15 @@ export class SignatureHelpProvider {
             labelParts.push('= ' + s.value);
         }
 
-        return <lsp.ParameterInformation>{
+        let info = <lsp.ParameterInformation>{
             label: labelParts.join(' '),
-            documentation: s.description
         };
+
+        if(s.doc && s.doc.description) {
+            info.documentation = s.doc.description;
+        }
+
+        return info;
     }
 
     private _getSymbol(callableExpr: Phrase, context: Context) {

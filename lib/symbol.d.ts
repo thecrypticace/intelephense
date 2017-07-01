@@ -30,18 +30,21 @@ export declare const enum SymbolModifier {
     Variadic = 2048,
     Use = 4096,
 }
+export interface PhpSymbolDoc {
+    description?: string;
+    type?: TypeString;
+}
 export interface PhpSymbol {
     kind: SymbolKind;
     name: string;
     location?: Location;
     modifiers?: SymbolModifier;
-    description?: string;
+    doc?: PhpSymbolDoc;
     type?: TypeString;
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
     scope?: string;
     value?: string;
-    typeSource?: TypeSource;
 }
 export declare namespace PhpSymbol {
     function signatureString(s: PhpSymbol): string;
@@ -52,10 +55,6 @@ export declare namespace PhpSymbol {
      * @param s
      */
     function clone(s: PhpSymbol): PhpSymbol;
-}
-export declare const enum TypeSource {
-    None = 0,
-    TypeDeclaration = 1,
 }
 export declare class SymbolIndex {
     private _nodeArray;
@@ -81,11 +80,10 @@ export interface PhpSymbolDto {
     name: string;
     location?: number[];
     modifiers?: SymbolModifier;
-    description?: string;
+    doc?: PhpSymbolDoc;
     type?: string;
     associated?: PhpSymbolDto[];
     children?: PhpSymbolDto[];
     scope?: string;
     value?: string;
-    typeSource?: TypeSource;
 }
