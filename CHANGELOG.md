@@ -5,7 +5,10 @@
 * Error on signature help for function with no params
 * Format weirdness after comments
 * Parse error on unset cast
-* Workspace discover errors when file data not read.
+* Workspace discover errors when textDocument is undefined.
+
+#### Dependencies
+* php7parser 0.9.9
 
 ## [0.7.1] - 2017-06-25
 #### Fixed
