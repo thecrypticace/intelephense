@@ -6,24 +6,9 @@
 
 import { NameResolverVisitor } from './nameResolverVisitor';
 import { TreeVisitor, MultiVisitor } from './types';
-import { ParsedDocument } from './parsedDocument';
+import { ParsedDocument, NodeTransform, TokenTransform } from './parsedDocument';
 import {
-    Phrase, PhraseType, Token, TokenType, NamespaceName, FunctionDeclarationHeader,
-    ReturnType, TypeDeclaration, QualifiedName, ParameterDeclarationList,
-    ParameterDeclaration, ConstElement, FunctionDeclaration, ClassDeclaration,
-    ClassDeclarationHeader, ClassBaseClause, ClassInterfaceClause, QualifiedNameList,
-    InterfaceDeclaration, InterfaceDeclarationHeader, InterfaceBaseClause,
-    TraitDeclaration, TraitDeclarationHeader, ClassConstDeclaration, ClassConstElementList,
-    ClassConstElement, Identifier, MethodDeclaration, MethodDeclarationHeader,
-    PropertyDeclaration, PropertyElement, MemberModifierList, NamespaceDefinition,
-    NamespaceUseDeclaration, NamespaceUseClause, NamespaceAliasingClause, AnonymousClassDeclaration,
-    AnonymousClassDeclarationHeader, AnonymousFunctionCreationExpression, AnonymousFunctionUseVariable,
-    TraitUseClause, SimpleVariable, ObjectCreationExpression, TypeDesignator, SubscriptExpression,
-    FunctionCallExpression, FullyQualifiedName, RelativeQualifiedName, MethodCallExpression,
-    MemberName, PropertyAccessExpression, ClassTypeDesignator, ScopedCallExpression,
-    ScopedMemberName, ScopedPropertyAccessExpression, BinaryExpression, TernaryExpression,
-    RelativeScope, ListIntrinsic, IfStatement, InstanceOfExpression, InstanceofTypeDesignator,
-    ArrayInitialiserList, ArrayElement, ForeachStatement, CatchClause, ArgumentExpressionList
+    Phrase, PhraseType, Token, TokenType
 } from 'php7parser';
 import { PhpDoc, PhpDocParser, Tag, MethodTagParam } from './phpDoc';
 import { PhpSymbol, SymbolKind, SymbolModifier, PhpSymbolDoc } from './symbol';
@@ -70,7 +55,7 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
     ];
 
     private static _builtInTypes = [
-        'array', 'callable', 'int', 'string', 'bool', 'float'
+        'array', 'callable', 'int', 'string', 'bool', 'float', 'iterable'
     ];
 
     private static _globalVars = [
@@ -994,6 +979,259 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
         };
 
     }
+
+}
+
+class TraitDeclarationHeader implements NodeTransform {
+
+    value: string;
+    phraseType = PhraseType.TraitDeclarationHeader;
+
+    constructor(public nameResolver:NameResolver) {    }
+
+    push(transform:NodeTransform) {
+        if(transform.tokenType === TokenType.Name) {
+            this.value = this.nameResolver.resolveRelative(transform.value);
+        }
+    }
+    
+}
+
+class InterfaceBaseClauseTransform implements NodeTransform {
+
+    value:PhpSymbol[];
+    phraseType = PhraseType.InterfaceBaseClause;
+
+    constructor() {
+        this.value = [];
+    }
+
+    push(transform:NodeTransform) {
+        if(transform.phraseType === PhraseType.QualifiedNameList) {
+            let v = transform.value as string[];
+            for(let n =0; n < v.length; ++n){
+                this.value.push({
+                    kind:SymbolKind.Interface,
+                    name:v[n]
+                });
+            }
+        }
+    }
+
+}
+
+class InterfaceDeclarationHeaderTransform implements NodeTransform {
+
+    value:[string, PhpSymbol[]];
+    phraseType = PhraseType.InterfaceDeclarationHeader;
+
+    constructor(public nameResolver:NameResolver) {
+        this.value = new Array(2) as [string, PhpSymbol[]];
+    }
+
+    push(transform:NodeTransform) {
+        if(transform.tokenType === TokenType.Name) {
+            this.value[0] = this.nameResolver.resolveRelative(transform.value);
+        } else if (transform.phraseType === PhraseType.InterfaceBaseClause) {
+            this.value[1] = transform.value;
+        }
+    }
+
+}
+
+class TraitUseClauseTransform implements NodeTransform {
+
+    value:PhpSymbol[];
+    PhraseType = PhraseType.TraitUseClause;
+
+    constructor() {
+        this.value = [];
+    }
+
+    push(transform:NodeTransform) {
+        if(transform.phraseType === PhraseType.QualifiedNameList) {
+            let tVal = transform.value as string[];
+            for(let n= 0, l = tVal.length; n < l; ++n) {
+                this.value.push({
+                    kind:SymbolKind.Trait,
+                    name: tVal[n]
+                });
+            }
+        }
+    }
+
+}
+
+class ClassInterfaceClauseTransform implements NodeTransform {
+    value:PhpSymbol[];
+    phraseType = PhraseType.ClassInterfaceClause;
+
+    constructor() {
+        this.value = [];
+    }
+
+    push(transform:NodeTransform) {
+        if(transform.phraseType !== PhraseType.QualifiedNameList) {
+            return;
+        }
+
+        for(let n = 0; n < transform.value.length; ++n) {
+            this.value.push({
+                kind:SymbolKind.Interface,
+                name: transform.value[n]
+            });
+        }
+    }
+}
+
+class QualifiedNameTransform implements NodeTransform {
+
+    value: string;
+    phraseType = PhraseType.QualifiedName;
+
+    constructor(public nameResolver: NameResolver) {}
+
+    push(transform:NodeTransform) {
+        if (transform.phraseType === PhraseType.NamespaceName) {
+            this.value = this.nameResolver.resolveNotFullyQualified(transform.value);
+        }
+    }
+
+}
+
+class RelativeQualifiedNameTransform implements NodeTransform {
+
+    value: string;
+    phraseType = PhraseType.RelativeQualifiedName;
+
+    constructor(public nameResolver: NameResolver) { }
+
+    push(transform:NodeTransform) {
+        if (transform.phraseType === PhraseType.NamespaceName) {
+            this.value = this.nameResolver.resolveRelative(transform.value);
+        }
+    }
+
+}
+
+class FullyQualifiedNameTransform implements NodeTransform {
+
+    value: string;
+    phraseType = PhraseType.FullyQualifiedName;
+
+    push(transform: NodeTransform) {
+        if (transform.phraseType === PhraseType.NamespaceName) {
+            this.value = transform.value;
+        }
+    }
+
+}
+
+class NamespaceDefinitionTransform implements NodeTransform {
+
+    value: PhpSymbol;
+    phraseType = PhraseType.NamespaceDefinition;
+
+    constructor(location: Location) {
+        this.value = {
+            kind: SymbolKind.Namespace,
+            name: undefined,
+            location: location
+        };
+    }
+
+    push(transform: NodeTransform) {
+        if (transform.phraseType === PhraseType.NamespaceName) {
+            this.value.name = transform.value;
+        }
+    }
+
+}
+
+class ClassDeclarationHeaderTransform implements NodeTransform {
+
+    value: [SymbolModifier, string, PhpSymbol, PhpSymbol[]];
+    phraseType = PhraseType.ClassDeclarationHeader;
+
+    constructor(public nameResolver: NameResolver) {
+        this.value = new Array(4) as [SymbolModifier, string, PhpSymbol, PhpSymbol[]];
+    }
+
+    push(transform: NodeTransform) {
+
+        switch (transform.phraseType) {
+            case PhraseType.ClassModifiers:
+                this.value[0] = transform.value;
+                break;
+
+            case PhraseType.ClassBaseClause:
+                this.value[2] = transform.value;
+                break;
+
+            case PhraseType.ClassInterfaceClause:
+                this.value[3] = transform.value;
+                break;
+
+            case undefined:
+                if (transform.tokenType === TokenType.Name) {
+                    this.value[1] = this.nameResolver.resolveRelative(transform.value);
+                }
+                break;
+
+            default:
+                break;
+
+        }
+    }
+
+}
+
+class ClassBaseClauseTransform implements NodeTransform {
+
+    value: PhpSymbol;
+    phraseType = PhraseType.ClassBaseClause;
+
+    constructor(public nameResolver: NameResolver) {
+        this.value = {
+            kind:SymbolKind.Class,
+            name:undefined
+        };
+    }
+
+    push(transform: NodeTransform) {
+        if (transform.tokenType === TokenType.Name) {
+            this.value.name = this.nameResolver.resolveRelative(<string>transform.value);
+        }
+    }
+
+}
+
+class QualifiedNameListTransform implements NodeTransform {
+
+    value:string[];
+    phraseType = PhraseType.QualifiedNameList;
+
+    constructor() {
+        this.value = [];
+    }
+
+    push(transform:NodeTransform) {
+        switch(transform.phraseType) {
+            case PhraseType.FullyQualifiedName:
+            case PhraseType.QualifiedName:
+            case PhraseType.RelativeQualifiedName:
+                this.value.push(transform.value);
+                break;
+            default:
+                break;
+        }
+    }
+
+}
+
+class ClassConstantElementTransform implements NodeTransform {
+
+    
 
 }
 

@@ -11,7 +11,7 @@ import {
 } from 'php7parser';
 import { SymbolKind, PhpSymbol } from './symbol';
 import { SymbolStore } from './symbolStore';
-import { ParsedDocument, PhraseTransform } from './parsedDocument';
+import { ParsedDocument, NodeTransform } from './parsedDocument';
 import { NameResolver } from './nameResolver';
 import { Predicate, BinarySearch, BinarySearchResult } from './types';
 import { NameResolverVisitor } from './nameResolverVisitor';
@@ -51,7 +51,7 @@ export class ReferenceReader extends MultiVisitor<Phrase | Token> {
 export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
     private _references: Reference[];
-    private _transformerStack: PhraseTransform[];
+    private _transformerStack: NodeTransform[];
 
     constructor(
         public doc: ParsedDocument,
@@ -115,18 +115,18 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.QualifiedName:
             case PhraseType.RelativeQualifiedName:
             case PhraseType.FullyQualifiedName:
-                if ((transform = transformer.transform() as Reference)) {
+                if ((transform = transformer.value() as Reference)) {
                     this._references.push(transform);
                 }
 
                 if (parentTransformer) {
-                    parentTransformer.pushChild(transform, <Phrase>node);
+                    parentTransformer.push(transform, node);
                 }
                 break;
 
             case PhraseType.NamespaceName:
                 if (parentTransformer) {
-                    parentTransformer.pushChild(this.doc.nodeText(node), <Phrase>node);
+                    parentTransformer.push(this.doc.nodeText(node), node);
                 }
                 break;
 
@@ -143,7 +143,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
 }
 
-class FullyQualifiedNameTransformer implements PhraseTransform {
+class FullyQualifiedNameTransformer implements NodeTransform {
 
     protected _name: string;
     protected _kindPredicate: Predicate<PhpSymbol>;
@@ -166,13 +166,13 @@ class FullyQualifiedNameTransformer implements PhraseTransform {
         }
     }
 
-    pushChild(value: any, node: Phrase | Token) {
+    push(value: any, node: Phrase | Token) {
         if ((<Phrase>node).phraseType === PhraseType.NamespaceName) {
             this._name = value;
         }
     }
 
-    transform() {
+    value() {
 
         let name = this.fqn();
 

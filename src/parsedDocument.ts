@@ -22,9 +22,25 @@ export interface ParsedDocumentChangeEventArgs {
     parsedDocument: ParsedDocument;
 }
 
-export interface PhraseTransform {
-    pushChild(value: any, node: Phrase);
-    transform(): any;
+export interface NodeTransform {
+    phraseType?:PhraseType;
+    tokenType?:TokenType;
+    push?(transform: NodeTransform);
+    value: any;
+}
+
+export class TokenTransform implements NodeTransform {
+
+    tokenType:TokenType;
+
+    constructor(public doc: ParsedDocument, public token: Token) {
+        this.tokenType = token.tokenType;
+    }
+
+    get value() {
+        return this.doc.tokenText(this.token);
+    }
+
 }
 
 export class ParsedDocument implements Traversable<Phrase | Token>{
@@ -320,12 +336,12 @@ export namespace ParsedDocument {
         return null;
     }
 
-    export function isNamePhrase(node:Phrase|Token) {
-        if(!node){
+    export function isNamePhrase(node: Phrase | Token) {
+        if (!node) {
             return false;
         }
 
-        switch((<Phrase>node).phraseType){
+        switch ((<Phrase>node).phraseType) {
             case PhraseType.QualifiedName:
             case PhraseType.RelativeQualifiedName:
             case PhraseType.FullyQualifiedName:
@@ -333,7 +349,7 @@ export namespace ParsedDocument {
             default:
                 return false;
         }
-    } 
+    }
 
 }
 
