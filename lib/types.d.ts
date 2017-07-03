@@ -17,6 +17,7 @@ export declare class Event<T> {
     trigger(args: T): void;
 }
 export interface TreeLike {
+    [index: string]: any;
     children?: TreeLike[];
 }
 export declare class TreeTraverser<T extends TreeLike> {

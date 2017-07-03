@@ -48,6 +48,7 @@ export class Event<T> {
 }
 
 export interface TreeLike {
+    [index:string]:any
     children?: TreeLike[]
 }
 

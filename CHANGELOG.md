@@ -1,9 +1,11 @@
 # Change Log
 
-## [0.7.2] - TBA
+## [0.7.2] - 2017-07-03
 #### Fixed
 * Error on signature help for function with no params
-* Newlines being repeatedly appended after comments when formatting
+* Format weirdness after comments
+* Parse error on unset cast
+* Workspace discover errors when file data not read.
 
 ## [0.7.1] - 2017-06-25
 #### Fixed
