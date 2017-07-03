@@ -280,8 +280,8 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
             case TokenType.CloseTag:
                 if (previous.tokenType === TokenType.Comment && this.doc.tokenText(previous).slice(0, 2) !== '/*') {
-                    rule = FormatVisitor.noSpaceOrNewlineIndentBefore;
-                } else {
+                    rule = FormatVisitor.noSpaceBefore;
+                } else if (rule !== FormatVisitor.indentOrNewLineIndentBefore) {
                     rule = FormatVisitor.singleSpaceOrNewlineIndentBefore;
                 }
                 break;
@@ -375,7 +375,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                     }
 
                 } else {
-                    this._nextFormatRule = FormatVisitor.indentBefore;
+                    this._nextFormatRule = FormatVisitor.indentOrNewLineIndentBefore;
                 }
                 break;
 
@@ -636,6 +636,31 @@ namespace FormatVisitor {
         }
 
         let actualWs = doc.tokenText(previous);
+        if (actualWs === indentText) {
+            return null;
+        }
+        return lsp.TextEdit.replace(doc.tokenRange(previous), indentText);
+    }
+
+    export function indentOrNewLineIndentBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
+        if (previous.tokenType !== TokenType.Whitespace) {
+            return indentText ? lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length), indentText) : null;
+        }
+
+        let actualWs = doc.tokenText(previous);
+        let nl = countNewlines(actualWs);
+        if (nl) {
+            let expectedWs = createWhitespace(Math.max(1, nl), '\n') + indentText;
+            if (actualWs === expectedWs) {
+                return null;
+            }
+            return lsp.TextEdit.replace(doc.tokenRange(previous), expectedWs);
+        }
+
+        if (!indentText) {
+            return lsp.TextEdit.del(doc.tokenRange(previous));
+        }
+
         if (actualWs === indentText) {
             return null;
         }
