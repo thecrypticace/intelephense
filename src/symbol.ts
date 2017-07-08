@@ -49,8 +49,8 @@ export interface PhpSymbolDoc {
 export namespace PhpSymbolDoc {
     export function create(description?:string, type?: string) : PhpSymbolDoc {
         return {
-            description : description ? description : '',
-            type : type ? type : ''
+            description : description || '',
+            type : type || ''
         };
     }
 }
@@ -159,6 +159,21 @@ export namespace PhpSymbol {
             return '';
         }
 
+    }
+
+    export function setScope(symbols:PhpSymbol[], scope:string) {
+        for(let n = 0; n < symbols.length; ++n) {
+            symbols[n].scope = scope;
+        }
+        return symbols;
+    }
+
+    export function create(kind:SymbolKind, name:string, location?:Location) : PhpSymbol {
+        return {
+            kind: kind,
+            name: name,
+            location: location
+        };
     }
 
 }
