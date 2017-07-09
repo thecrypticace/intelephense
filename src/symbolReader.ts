@@ -895,29 +895,66 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
 
 }
 
-class VariableScopeNodeTransform implements NodeTransform {
+/**
+ * Ensures that there are no variable and parameter symbols with same name
+ * and excludes inbuilt vars
+ */
+class UniqueSymbolCollection {
 
-    value:PhpSymbol[];
+    private _symbols:PhpSymbol[];
     private _varMap:{[index:string]:boolean};
+    private static _inbuilt = {
+        '$GLOBALS':true,
+        '$_SERVER':true,
+        '$_GET':true,
+        '$_POST':true,
+        '$_FILES':true,
+        '$_REQUEST':true,
+        '$_SESSION':true,
+        '$_ENV':true,
+        '$_COOKIE':true,
+        '$php_errormsg':true,
+        '$HTTP_RAW_POST_DATA':true,
+        '$http_response_header':true,
+        '$argc':true,
+        '$argv':true,
+        '$this':true
+    };
+
+    constructor() {
+        this._symbols = [];
+        this._varMap = Object.assign({}, UniqueSymbolCollection._inbuilt);
+    }
+
+    push(s:PhpSymbol) {
+        if(s.kind & (SymbolKind.Parameter | SymbolKind.Variable)) {
+            if(this._varMap[s.name] === undefined) {
+                this._varMap[s.name] = true;
+                this._symbols.push(s);
+            }
+        } else {
+            this._symbols.push(s);
+        }
+    }
+
+    get symbols() {
+        return this._symbols;
+    }
+}
+
+class InitialTransform implements NodeTransform {
+
+    value:UniqueSymbolCollection;
 
     constructor(public phraseType:PhraseType) {
-        this.value = [];
-        this._varMap = {};
+        this.value = new UniqueSymbolCollection();
     }
 
     push(transform:NodeTransform) {
 
-        if(transform.phraseType === PhraseType.SimpleVariable || transform.tokenType === TokenType.VariableName) {
-            let v = transform.value as PhpSymbol;
-            if(this._varMap[v.name] === undefined) {
-                this.value.push(v);
-                this._varMap[v.name] = true;
-            }
-        } else if(
-            transform.phraseType === PhraseType.AnonymousClassDeclaration || 
-            transform.phraseType === PhraseType.AnonymousFunctionCreationExpression
-            ) {
-            this.value.push(transform.value);
+        let value = transform.value as PhpSymbol;
+        if(value && value.kind !== undefined) {
+            this.value.push(value);
         }
 
     }
@@ -1378,7 +1415,7 @@ class ClassDeclarationTransform implements NodeTransform {
                 this.value.associated.push(v[2]);
             }
             Array.prototype.push.apply(this.value.associated, v[3]);
-        }
+        } else if
 
     }
 
@@ -1592,6 +1629,7 @@ class ReturnTypeTransform implements NodeTransform {
 
 class TypeDeclarationTransform implements NodeTransform {
 
+    private static _scalarTypes = ['int', 'string', 'bool', 'float', 'iterable'];
     phraseType = PhraseType.TypeDeclaration;
     value = '';
 
@@ -1602,12 +1640,17 @@ class TypeDeclarationTransform implements NodeTransform {
             case PhraseType.RelativeQualifiedName:
             case PhraseType.QualifiedName:
                 this.value = transform.value;
+                if(TypeDeclarationTransform._scalarTypes.indexOf(PhpSymbol.notFqn(this.value).toLowerCase()) > -1) {
+                    this.value = PhpSymbol.notFqn(this.value);
+                }
                 break;
+
             case undefined:
                 if (transform.tokenType === TokenType.Callable || transform.tokenType === TokenType.Array) {
                     this.value = transform.value;
                 }
                 break;
+
             default:
                 break;
         }
@@ -1890,6 +1933,36 @@ export namespace SymbolReader {
         }
     }
 
+    export function assignChildrenToType(parent:PhpSymbol, child:NodeTransform) {
+        
+        if(!parent.children) {
+            parent.children = [];
+        }
+
+        if(!parent.associated) {
+            parent.associated = [];
+        }
+        
+        switch(child.phraseType) {
+            case PhraseType.ClassConstDeclaration:
+            case PhraseType.PropertyDeclaration:
+                Array.prototype.push.apply(parent.children, <PhpSymbol[]>child.value);
+                break;
+
+            case PhraseType.MethodDeclaration:
+                parent.children.push(child.value);
+                break;
+
+            case PhraseType.TraitUseClause:
+                Array.prototype.push.apply(parent.associated, child.value);
+                break;
+
+            default:
+                break;
+
+        }
+
+    }
 
     export function modifierListElementsToSymbolModifier(tokens: Token[]) {
 
