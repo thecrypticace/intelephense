@@ -119,6 +119,20 @@ export function ciStringMatch(a: string, b: string) {
     return a.toLowerCase() === b.toLowerCase();
 }
 
-export function whitespace(n:number){
+export function whitespace(n: number) {
     return new Array(n).fill(' ').join('');
+}
+
+/**
+ * http://stackoverflow.com/a/7616484
+ */
+export function hash(text: string) {
+    let hash = 0;
+    let chr: number;
+    for (let i = 0, l = text.length; i < l; ++i) {
+        chr = text.charCodeAt(i);
+        hash = ((hash << 5) - hash) + chr;
+        hash |= 0; // Convert to 32bit integer
+    }
+    return hash >>> 0; //positive int only
 }

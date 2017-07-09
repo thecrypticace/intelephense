@@ -15,6 +15,7 @@ import {
     TreeVisitor, TreeTraverser, Event, Debounce, Unsubscribe,
     Predicate, Traversable
 } from './types';
+import * as util from './util';
 
 const textDocumentChangeDebounceWait = 250;
 
@@ -199,7 +200,7 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
     createAnonymousName(node: Phrase) {
         let tFirst = ParsedDocument.firstToken(node);
         let offset = tFirst ? tFirst.offset : 0;
-        return `#anonymous#${this.uri}#${offset}`;
+        return `#anon#${util.hash(this.uri).toString(16)}#${offset}`;
     }
 
     positionAtOffset(offset: number) {
