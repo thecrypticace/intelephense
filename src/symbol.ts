@@ -42,15 +42,15 @@ export const enum SymbolModifier {
 }
 
 export interface PhpSymbolDoc {
-    description?:string;
-    type?:string;
+    description?: string;
+    type?: string;
 }
 
 export namespace PhpSymbolDoc {
-    export function create(description?:string, type?: string) : PhpSymbolDoc {
+    export function create(description?: string, type?: string): PhpSymbolDoc {
         return {
-            description : description || '',
-            type : type || ''
+            description: description || '',
+            type: type || ''
         };
     }
 }
@@ -85,7 +85,7 @@ export namespace PhpSymbol {
         let paramStrings: String[] = [];
         let param: PhpSymbol;
         let parts: string[];
-        let paramType:string;
+        let paramType: string;
 
         for (let n = 0, l = params.length; n < l; ++n) {
             param = params[n];
@@ -150,10 +150,10 @@ export namespace PhpSymbol {
         };
     }
 
-    export function type(s:PhpSymbol){
-        if(s.type){
+    export function type(s: PhpSymbol) {
+        if (s.type) {
             return s.type;
-        } else if(s.doc && s.doc.type) {
+        } else if (s.doc && s.doc.type) {
             return s.doc.type;
         } else {
             return '';
@@ -161,14 +161,17 @@ export namespace PhpSymbol {
 
     }
 
-    export function setScope(symbols:PhpSymbol[], scope:string) {
-        for(let n = 0; n < symbols.length; ++n) {
+    export function setScope(symbols: PhpSymbol[], scope: string) {
+        if (!symbols) {
+            return symbols;
+        }
+        for (let n = 0; n < symbols.length; ++n) {
             symbols[n].scope = scope;
         }
         return symbols;
     }
 
-    export function create(kind:SymbolKind, name:string, location?:Location) : PhpSymbol {
+    export function create(kind: SymbolKind, name: string, location?: Location): PhpSymbol {
         return {
             kind: kind,
             name: name,
