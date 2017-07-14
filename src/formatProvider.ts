@@ -176,8 +176,10 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         switch ((<Token>node).tokenType) {
 
             case TokenType.Whitespace:
-            case TokenType.Comment:
                 this._nextFormatRule = rule;
+                return false;
+
+            case TokenType.Comment:
                 return false;
 
             case TokenType.DocumentComment:
@@ -276,6 +278,14 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 }
                 break;
 
+            case TokenType.CloseTag:
+                if (previous.tokenType === TokenType.Comment && this.doc.tokenText(previous).slice(0, 2) !== '/*') {
+                    rule = FormatVisitor.noSpaceBefore;
+                } else if (rule !== FormatVisitor.indentOrNewLineIndentBefore) {
+                    rule = FormatVisitor.singleSpaceOrNewlineIndentBefore;
+                }
+                break;
+
             default:
                 break;
         }
@@ -331,7 +341,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.ClassConstElementList:
             case PhraseType.StaticVariableDeclarationList:
             case PhraseType.VariableNameList:
-                if(this._isMultilineCommaDelimitedListStack.pop()) {
+                if (this._isMultilineCommaDelimitedListStack.pop()) {
                     this._decrementIndent();
                 }
                 return;
@@ -353,6 +363,21 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         }
 
         switch ((<Token>node).tokenType) {
+
+            case TokenType.Comment:
+                if (this.doc.tokenText(<Token>node).slice(0, 2) === '/*') {
+                    this._nextFormatRule = FormatVisitor.singleSpaceOrNewlineIndentBefore;
+                    if (this._active) {
+                        let edit = this._formatDocBlock(<Token>node);
+                        if (edit) {
+                            this._edits.push(edit);
+                        }
+                    }
+
+                } else {
+                    this._nextFormatRule = FormatVisitor.indentOrNewLineIndentBefore;
+                }
+                break;
 
             case TokenType.DocumentComment:
                 this._nextFormatRule = FormatVisitor.newlineIndentBefore;
@@ -463,7 +488,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                     this._isMultilineCommaDelimitedListStack[this._isMultilineCommaDelimitedListStack.length - 1]
                 ) {
                     this._nextFormatRule = FormatVisitor.newlineIndentBefore;
-                } 
+                }
                 break;
 
             case TokenType.Arrow:
@@ -477,7 +502,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                     if (FormatVisitor.countNewlines(tagText) > 0) {
                         this._nextFormatRule = FormatVisitor.indentBefore;
                     } else {
-                        this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                        this._nextFormatRule = FormatVisitor.noSpaceOrNewlineIndentBefore;
                     }
                     break;
                 }
@@ -617,6 +642,31 @@ namespace FormatVisitor {
         return lsp.TextEdit.replace(doc.tokenRange(previous), indentText);
     }
 
+    export function indentOrNewLineIndentBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
+        if (previous.tokenType !== TokenType.Whitespace) {
+            return indentText ? lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length), indentText) : null;
+        }
+
+        let actualWs = doc.tokenText(previous);
+        let nl = countNewlines(actualWs);
+        if (nl) {
+            let expectedWs = createWhitespace(Math.max(1, nl), '\n') + indentText;
+            if (actualWs === expectedWs) {
+                return null;
+            }
+            return lsp.TextEdit.replace(doc.tokenRange(previous), expectedWs);
+        }
+
+        if (!indentText) {
+            return lsp.TextEdit.del(doc.tokenRange(previous));
+        }
+
+        if (actualWs === indentText) {
+            return null;
+        }
+        return lsp.TextEdit.replace(doc.tokenRange(previous), indentText);
+    }
+
     export function newlineIndentBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
         if (previous.tokenType !== TokenType.Whitespace) {
             return lsp.TextEdit.insert(doc.positionAtOffset(previous.offset + previous.length), '\n' + indentText);
@@ -662,6 +712,25 @@ namespace FormatVisitor {
         }
 
         let expectedWs = createWhitespace(newlineCount, '\n') + indentText + indentUnit;
+        if (actualWs === expectedWs) {
+            return null;
+        }
+        return lsp.TextEdit.replace(doc.tokenRange(previous), expectedWs);
+
+    }
+
+    export function noSpaceOrNewlineIndentBefore(previous: Token, doc: ParsedDocument, indentText: string, indentUnit: string): lsp.TextEdit {
+        if (previous.tokenType !== TokenType.Whitespace) {
+            return null;
+        }
+
+        let actualWs = doc.tokenText(previous);
+        let newlineCount = countNewlines(actualWs);
+        if (!newlineCount) {
+            return lsp.TextEdit.del(doc.tokenRange(previous));
+        }
+
+        let expectedWs = createWhitespace(newlineCount, '\n') + indentText;
         if (actualWs === expectedWs) {
             return null;
         }
