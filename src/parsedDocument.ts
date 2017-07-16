@@ -23,27 +23,6 @@ export interface ParsedDocumentChangeEventArgs {
     parsedDocument: ParsedDocument;
 }
 
-export interface NodeTransform {
-    phraseType?:PhraseType;
-    tokenType?:TokenType;
-    push?(transform: NodeTransform);
-    value: any;
-}
-
-export class TokenTransform implements NodeTransform {
-
-    tokenType:TokenType;
-
-    constructor(public doc: ParsedDocument, public token: Token) {
-        this.tokenType = token.tokenType;
-    }
-
-    get value() {
-        return this.doc.tokenText(this.token);
-    }
-
-}
-
 export class ParsedDocument implements Traversable<Phrase | Token>{
 
     private static _wordRegex = /[$a-zA-Z_\x80-\xff][\\a-zA-Z0-9_\x80-\xff]*$/;

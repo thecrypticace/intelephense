@@ -6,7 +6,12 @@
 
 import { NameResolverVisitor } from './nameResolverVisitor';
 import { TreeVisitor, MultiVisitor } from './types';
-import { ParsedDocument, NodeTransform, TokenTransform } from './parsedDocument';
+import { ParsedDocument } from './parsedDocument';
+import {
+    NodeTransform, TokenTransform, QualifiedNameTransform,
+    RelativeQualifiedNameTransform, FullyQualifiedNameTransform,
+    NamespaceNameTransform, DelimiteredListTransform
+} from './transforms';
 import {
     Phrase, PhraseType, Token, TokenType
 } from 'php7parser';
@@ -230,7 +235,7 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case PhraseType.Identifier:
-                if(parentNode.phraseType === PhraseType.MethodDeclarationHeader) {
+                if (parentNode.phraseType === PhraseType.MethodDeclarationHeader) {
                     this._transformStack.push(new IdentifierTransform());
                 } else {
                     this._transformStack.push(null);
@@ -380,17 +385,17 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
 
     postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
-        if(!(<Phrase>node).phraseType) {
+        if (!(<Phrase>node).phraseType) {
             return;
         }
 
         let transform = this._transformStack.pop();
-        if(!transform){
+        if (!transform) {
             return;
         }
 
-        for(let n = this._transformStack.length - 1; n > -1; --n) {
-            if(this._transformStack[n]) {
+        for (let n = this._transformStack.length - 1; n > -1; --n) {
+            if (this._transformStack[n]) {
                 this._transformStack[n].push(transform);
                 break;
             }
@@ -503,7 +508,7 @@ class IdentifierTransform implements NodeTransform {
     phraseType = PhraseType.Identifier;
     value = '';
 
-    push(transform:NodeTransform) {
+    push(transform: NodeTransform) {
         this.value = transform.value;
     }
 
@@ -987,49 +992,6 @@ class ClassInterfaceClauseTransform implements NodeTransform {
     }
 }
 
-class QualifiedNameTransform implements NodeTransform {
-
-    value: string;
-    phraseType = PhraseType.QualifiedName;
-
-    constructor(public nameResolver: NameResolver) { }
-
-    push(transform: NodeTransform) {
-        if (transform.phraseType === PhraseType.NamespaceName) {
-            this.value = this.nameResolver.resolveNotFullyQualified(transform.value);
-        }
-    }
-
-}
-
-class RelativeQualifiedNameTransform implements NodeTransform {
-
-    value: string;
-    phraseType = PhraseType.RelativeQualifiedName;
-
-    constructor(public nameResolver: NameResolver) { }
-
-    push(transform: NodeTransform) {
-        if (transform.phraseType === PhraseType.NamespaceName) {
-            this.value = this.nameResolver.resolveRelative(transform.value);
-        }
-    }
-
-}
-
-class FullyQualifiedNameTransform implements NodeTransform {
-
-    value: string;
-    phraseType = PhraseType.FullyQualifiedName;
-
-    push(transform: NodeTransform) {
-        if (transform.phraseType === PhraseType.NamespaceName) {
-            this.value = transform.value;
-        }
-    }
-
-}
-
 class NamespaceDefinitionTransform implements NodeTransform {
 
     value: PhpSymbol;
@@ -1042,19 +1004,6 @@ class NamespaceDefinitionTransform implements NodeTransform {
     push(transform: NodeTransform) {
         if (transform.phraseType === PhraseType.NamespaceName) {
             this.value.name = transform.value;
-        }
-    }
-
-}
-
-class NamespaceNameTransform implements NodeTransform {
-
-    phraseType = PhraseType.NamespaceName;
-    value: string = '';
-
-    push(transform: NodeTransform) {
-        if (transform.tokenType === TokenType.Name || transform.tokenType === TokenType.Backslash) {
-            this.value += transform.value;
         }
     }
 
@@ -1156,29 +1105,6 @@ class ClassBaseClauseTransform implements NodeTransform {
 
 }
 
-class QualifiedNameListTransform implements NodeTransform {
-
-    value: string[];
-    phraseType = PhraseType.QualifiedNameList;
-
-    constructor() {
-        this.value = [];
-    }
-
-    push(transform: NodeTransform) {
-        switch (transform.phraseType) {
-            case PhraseType.FullyQualifiedName:
-            case PhraseType.QualifiedName:
-            case PhraseType.RelativeQualifiedName:
-                this.value.push(transform.value);
-                break;
-            default:
-                break;
-        }
-    }
-
-}
-
 class MemberModifierListTransform implements NodeTransform {
 
     value: SymbolModifier = SymbolModifier.None;
@@ -1239,29 +1165,6 @@ class ClassConstantElementTransform implements NodeTransform {
 
     get value() {
         return SymbolReader.assignPhpDocInfoToSymbol(this._value, this._doc, this._docLocation, this.nameResolver);
-    }
-
-}
-
-class DelimiteredListTransform implements NodeTransform {
-
-    value: any[];
-
-    constructor(public phraseType: PhraseType, public delimiter: TokenType) {
-        this.value = [];
-    }
-
-    push(transform: NodeTransform) {
-        switch (transform.tokenType) {
-            case TokenType.Comment:
-            case TokenType.DocumentComment:
-            case TokenType.Whitespace:
-            case this.delimiter:
-                break;
-            default:
-                this.value.push(transform.value);
-                break;
-        }
     }
 
 }
