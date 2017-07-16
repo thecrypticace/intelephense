@@ -48,34 +48,6 @@ export class SymbolReader extends MultiVisitor<Phrase | Token> {
 
 export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
 
-    private static _varAncestors = [
-        PhraseType.ListIntrinsic, PhraseType.ForeachKey, PhraseType.ForeachValue,
-        PhraseType.ByRefAssignmentExpression, PhraseType.CompoundAssignmentExpression,
-        PhraseType.SimpleAssignmentExpression
-    ];
-
-    private static _builtInTypes = [
-        'array', 'callable', 'int', 'string', 'bool', 'float', 'iterable'
-    ];
-
-    private static _globalVars = [
-        '$GLOBALS',
-        '$_SERVER',
-        '$_GET',
-        '$_POST',
-        '$_FILES',
-        '$_REQUEST',
-        '$_SESSION',
-        '$_ENV',
-        '$_COOKIE',
-        '$php_errormsg',
-        '$HTTP_RAW_POST_DATA',
-        '$http_response_header',
-        '$argc',
-        '$argv',
-        '$this'
-    ];
-
     lastPhpDoc: PhpDoc;
     lastPhpDocLocation: Location;
     externalOnly = false;
@@ -90,7 +62,7 @@ export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
     }
 
     get symbols() {
-        return this._transformStack[0].value;
+        return this._transformStack[0].value as PhpSymbol[];
     }
 
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {

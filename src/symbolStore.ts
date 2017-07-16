@@ -82,15 +82,14 @@ export class SymbolTable {
 
         let symbolReader = SymbolReader.create(
             parsedDocument,
-            new NameResolver(),
-            [{ kind: SymbolKind.None, name: '', children: [] }]
+            new NameResolver()
         );
         symbolReader.externalOnly = externalOnly;
 
         parsedDocument.traverse(symbolReader);
         return new SymbolTable(
             parsedDocument.uri,
-            symbolReader.spine[0]
+            { kind: SymbolKind.None, name: '', children: symbolReader.symbols }
         );
 
     }
@@ -190,7 +189,7 @@ export class SymbolStore {
      * Fuzzy matches indexed symbols.
      * Case insensitive
      */
-    match(text: string, filter?: Predicate<PhpSymbol>, fuzzy?: boolean) {
+    match(text: string, filter?: Predicate<PhpSymbol>) {
 
         if (!text) {
             return [];
@@ -206,8 +205,8 @@ export class SymbolStore {
             substrings = [text];
         }
 
-        let matches:PhpSymbol[] = [];
-        for(let n = 0; n < substrings.length; ++n) {
+        let matches: PhpSymbol[] = [];
+        for (let n = 0; n < substrings.length; ++n) {
             Array.prototype.push.apply(matches, this._index.match(substrings[n]));
         }
 
@@ -228,15 +227,6 @@ export class SymbolStore {
         }
 
         return filtered;
-    }
-
-    memberMatch(type:string, text:string) {
-
-        if(!type){
-            return [];
-        }
-        let typeSymbol = this.find(type, this.classInterfaceTraitFilter);
-
     }
 
     private _sortMatches(query: string, matches: PhpSymbol[]) {
@@ -279,73 +269,8 @@ export class SymbolStore {
         return (s.kind & (SymbolKind.Class | SymbolKind.Interface)) > 0;
     }
 
-    private classInterfaceTraitFilter(s:PhpSymbol) {
+    private _classInterfaceTraitFilter(s: PhpSymbol) {
         return (s.kind & (SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait)) > 0;
-    }
-
-    lookupTypeMembers(query: MemberQuery) {
-        let type = this.find(query.typeName, this._classOrInterfaceFilter);
-        return this._lookupTypeMembers(type, query.memberPredicate, []);
-    }
-
-    lookupTypeMember(query: MemberQuery) {
-        return this.lookupTypeMembers(query).shift();
-    }
-
-    lookupMembersOnTypes(queries: MemberQuery[]) {
-        let symbols: PhpSymbol[] = [];
-
-        for (let n = 0, l = queries.length; n < l; ++n) {
-            Array.prototype.push.apply(symbols, this.lookupTypeMembers(queries[n]));
-        }
-
-        return symbols;
-    }
-
-    lookupMemberOnTypes(queries: MemberQuery[]) {
-        return this.lookupMembersOnTypes(queries).shift();
-    }
-
-    /**
-     * This will return duplicate symbols where members are overridden or already implemented
-     * @param type 
-     * @param predicate 
-     * @param typeHistory 
-     */
-    private _lookupTypeMembers(type: PhpSymbol, predicate: Predicate<PhpSymbol>, typeHistory: string[]) {
-
-        if (!type || typeHistory.indexOf(type.name) > -1) {
-            return [];
-        }
-
-        //prevent cyclical lookup
-        typeHistory.push(type.name);
-        let members = type.children ? type.children.filter(predicate) : [];
-
-        if (!type.associated) {
-            return members;
-        }
-
-        //lookup in base class/traits
-        let baseMemberPredicate: Predicate<PhpSymbol> = (x) => {
-            return predicate(x) && !(x.modifiers & SymbolModifier.Private);
-        };
-        let baseSymbol: PhpSymbol;
-        let basePredicate: Predicate<PhpSymbol>;
-
-        for (let n = 0, l = type.associated.length; n < l; ++n) {
-            baseSymbol = type.associated[n]; //stub symbol
-            basePredicate = (x) => {
-                return x.kind === baseSymbol.kind;
-            };
-            baseSymbol = this.find(baseSymbol.name, basePredicate);
-            if (baseSymbol) {
-                Array.prototype.push.apply(members, this._lookupTypeMembers(baseSymbol, baseMemberPredicate, typeHistory));
-            }
-
-        }
-
-        return members;
     }
 
     private _indexSymbols(root: PhpSymbol) {
@@ -568,3 +493,4 @@ class ToPhpSymbolVisitor implements TreeVisitor<PhpSymbolDto> {
 
 
 }
+
