@@ -12,6 +12,7 @@ import * as builtInSymbols from './builtInSymbols.json';
 import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
 import { SymbolReader } from './symbolReader';
 import { NameResolver } from './nameResolver';
+import * as util from './util';
 
 export class SymbolTable {
 
@@ -160,8 +161,8 @@ export class SymbolStore {
     }
 
     /**
-     * As per match but returns first item in result that matches full text
-     * the match is case sensitive for constants and variables and insensitive for 
+     * Finds all indexed symbols that match text exactly.
+     * Case sensitive for constants and variables and insensitive for 
      * classes, traits, interfaces, functions, methods
      * @param text 
      * @param filter 
@@ -169,18 +170,25 @@ export class SymbolStore {
     find(text: string, filter?: Predicate<PhpSymbol>) {
         let lcText = text.toLowerCase();
         let kindMask = SymbolKind.Constant | SymbolKind.Variable;
-        let exactMatchFn = (x: PhpSymbol) => {
-            return (!filter || filter(x)) && 
-                (((x.kind & kindMask) > 0 && x.name === text) || 
-                (!(x.kind & kindMask) && x.name.toLowerCase() === lcText));
-        };
-        return this.match(text, exactMatchFn).shift();
+        let result = this._index.find(text);
+        let symbols: PhpSymbol[] = [];
+        let s: PhpSymbol;
+
+        for (let n = 0, l = result.length; n < l; ++n) {
+            s = result[n];
+            if ((!filter || filter(s)) &&
+                (((s.kind & kindMask) > 0 && s.name === text) ||
+                    (!(s.kind & kindMask) && s.name.toLowerCase() === lcText))) {
+                symbols.push(s);
+            }
+        }
+
+        return symbols;
     }
 
     /**
-     * Matches any indexed symbol by name or partial name with optional additional filter
-     * Parameters and variables that are not file scoped are not indexed.
-     * case insensitive
+     * Fuzzy matches indexed symbols.
+     * Case insensitive
      */
     match(text: string, filter?: Predicate<PhpSymbol>, fuzzy?: boolean) {
 
@@ -188,17 +196,32 @@ export class SymbolStore {
             return [];
         }
 
-        let matched = this._index.match(text, fuzzy);
+        let substrings: string[];
+
+        if (text.length > 3) {
+            let trigrams = util.trigrams(text);
+            trigrams.add(text);
+            substrings = Array.from(trigrams);
+        } else {
+            substrings = [text];
+        }
+
+        let matches:PhpSymbol[] = [];
+        for(let n = 0; n < substrings.length; ++n) {
+            Array.prototype.push.apply(matches, this._index.match(substrings[n]));
+        }
+
+        matches = this._sortMatches(text, matches);
 
         if (!filter) {
-            return matched;
+            return matches;
         }
 
         let filtered: PhpSymbol[] = [];
         let s: PhpSymbol;
 
-        for (let n = 0, l = matched.length; n < l; ++n) {
-            s = matched[n];
+        for (let n = 0, l = matches.length; n < l; ++n) {
+            s = matches[n];
             if (filter(s)) {
                 filtered.push(s);
             }
@@ -207,8 +230,57 @@ export class SymbolStore {
         return filtered;
     }
 
+    memberMatch(type:string, text:string) {
+
+        if(!type){
+            return [];
+        }
+        let typeSymbol = this.find(type, this.classInterfaceTraitFilter);
+
+    }
+
+    private _sortMatches(query: string, matches: PhpSymbol[]) {
+
+        let map: { [index: string]: number } = {};
+        let s: PhpSymbol;
+        let name: string;
+        let checkIndexOf = query.length > 3;
+        let val: number;
+        query = query.toLowerCase();
+
+        for (let n = 0, l = matches.length; n < l; ++n) {
+            s = matches[n];
+            name = s.name;
+            if (map[name] === undefined) {
+                val = 0;
+                if (checkIndexOf) {
+                    val = (PhpSymbol.notFqn(s.name).toLowerCase().indexOf(query) + 1) * -10;
+                    if (val < 0) {
+                        val += 1000;
+                    }
+                }
+                map[name] = val;
+            }
+            ++map[name];
+        }
+
+        let unique = Array.from(new Set(matches));
+
+        let sortFn = (a: PhpSymbol, b: PhpSymbol) => {
+            return map[b.name] - map[a.name];
+        }
+
+        unique.sort(sortFn);
+        return unique;
+
+    }
+
     private _classOrInterfaceFilter(s: PhpSymbol) {
         return (s.kind & (SymbolKind.Class | SymbolKind.Interface)) > 0;
+    }
+
+    private classInterfaceTraitFilter(s:PhpSymbol) {
+        return (s.kind & (SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait)) > 0;
     }
 
     lookupTypeMembers(query: MemberQuery) {
@@ -397,7 +469,7 @@ class ToPhpSymbolVisitor implements TreeVisitor<PhpSymbolDto> {
 
     private _symbolStack: PhpSymbol[];
 
-    constructor(public uri:string) {
+    constructor(public uri: string) {
         this._symbolStack = [];
     }
 

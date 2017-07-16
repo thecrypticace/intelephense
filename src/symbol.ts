@@ -250,72 +250,31 @@ export class SymbolIndex {
         }
     }
 
-    match(text: string, fuzzy?: boolean) {
+    /**
+     * Matches all items that are prefixed with text
+     * @param text 
+     */
+    match(text: string) {
 
         text = text.toLowerCase();
-        let substrings: string[];
-
-        if (fuzzy) {
-            let trigrams = util.trigrams(text);
-            trigrams.add(text);
-            substrings = Array.from(trigrams);
-        } else {
-            substrings = [text];
-        }
-
-        let nodes: SymbolIndexNode[] = [];
-
-        for (let n = 0, l = substrings.length; n < l; ++n) {
-            Array.prototype.push.apply(nodes, this._nodeMatch(text));
-        }
-
-        let matches: PhpSymbol[] = [];
+        let nodes = this._nodeMatch(text);
+        let matches = new Set<PhpSymbol>();
 
         for (let n = 0; n < nodes.length; ++n) {
-            Array.prototype.push.apply(matches, nodes[n].items);
+            Set.prototype.add.apply(matches, nodes[n].items);
         }
 
-        if (fuzzy) {
-            return this._sortedFuzzyResults(text, matches);
-        } else {
-            return Array.from(new Set<PhpSymbol>(matches));
-        }
+        return Array.from(matches);
 
     }
 
-    private _sortedFuzzyResults(query: string, matches: PhpSymbol[]) {
-
-        let map: { [index: string]: number } = {};
-        let s: PhpSymbol;
-        let name: string;
-        let checkIndexOf = query.length > 3;
-        let val: number;
-
-        for (let n = 0, l = matches.length; n < l; ++n) {
-            s = matches[n];
-            name = s.name;
-            if (map[name] === undefined) {
-                val = 0;
-                if (checkIndexOf) {
-                    val = (PhpSymbol.notFqn(s.name).indexOf(query) + 1) * -10;
-                    if (val < 0) {
-                        val += 1000;
-                    }
-                }
-                map[name] = val;
-            }
-            ++map[name];
-        }
-
-        let unique = Array.from(new Set(matches));
-
-        let sortFn = (a: PhpSymbol, b: PhpSymbol) => {
-            return map[b.name] - map[a.name];
-        }
-
-        unique.sort(sortFn);
-        return unique;
-
+    /**
+     * Finds all items that match text exactly
+     * @param text 
+     */
+    find(text: string) {
+        let node = this._nodeFind(text.toLowerCase());
+        return node ? node.items : [];
     }
 
     private _nodeMatch(lcText: string) {
@@ -332,9 +291,8 @@ export class SymbolIndex {
 
     }
 
-    private _nodeFind(text: string) {
+    private _nodeFind(lcText: string) {
 
-        let lcText = text.toLowerCase();
         let collator = this._collator;
         let compareFn = (n: SymbolIndexNode) => {
             return collator.compare(n.key, lcText);
