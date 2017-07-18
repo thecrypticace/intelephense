@@ -19,6 +19,8 @@ import { NameResolverVisitor } from './nameResolverVisitor';
 import { ParseTreeHelper } from './parseTreeHelper';
 import * as lsp from 'vscode-languageserver-types';
 import { isInRange } from './util';
+import { TypeString } from './typeString';
+import { TypeAggregate } from './typeAggregate';
 
 export class ReferenceReader extends MultiVisitor<Phrase | Token> {
 
@@ -52,7 +54,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
     private _references: Reference[];
     private _transformerStack: NodeTransform[];
-    private _variableTable:VariableTable;
+    private _variableTable: VariableTable;
 
     constructor(
         public doc: ParsedDocument,
@@ -246,14 +248,14 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 class MemberNameTransform implements NodeTransform {
 
     phraseType = PhraseType.MemberName;
-    value:Reference;
+    value: Reference;
 
-    constructor(position:lsp.Position) {
+    constructor(position: lsp.Position) {
         this.value = Reference.create(PhpSymbol.create(SymbolKind.Method | SymbolKind.Property, ''), position, 0);
     }
 
-    push(transform:NodeTransform) {
-        if(transform.tokenType === TokenType.Name) {
+    push(transform: NodeTransform) {
+        if (transform.tokenType === TokenType.Name) {
             this.value.identifier.name = transform.value;
             this.value.length = this.value.identifier.name.length;
         }
@@ -264,14 +266,14 @@ class MemberNameTransform implements NodeTransform {
 class ScopedMemberNameTransform implements NodeTransform {
 
     phraseType = PhraseType.ScopedMemberName;
-    value:Reference;
+    value: Reference;
 
-    constructor(position:lsp.Position) {
+    constructor(position: lsp.Position) {
         this.value = Reference.create(PhpSymbol.create(SymbolKind.Method | SymbolKind.Property | SymbolKind.ClassConstant, ''), position, 0);
     }
 
-    push(transform:NodeTransform) {
-        if(transform.tokenType === TokenType.VariableName || transform.phraseType === PhraseType.Identifier) {
+    push(transform: NodeTransform) {
+        if (transform.tokenType === TokenType.VariableName || transform.phraseType === PhraseType.Identifier) {
             this.value.identifier.name = transform.value;
             this.value.length = this.value.identifier.name.length;
         }
@@ -282,48 +284,162 @@ class ScopedMemberNameTransform implements NodeTransform {
 class ScopedExpressionTransform implements NodeTransform {
 
     phraseType = PhraseType.ScopedCallExpression;
-    value:Reference;
-    private _symbolKind:SymbolKind;
+    value: Reference;
+    private _symbolKind: SymbolKind;
 
-    constructor(symbolKind:SymbolKind) {
+    constructor(symbolKind: SymbolKind) {
         this._symbolKind = symbolKind;
     }
 
-    push(transform:NodeTransform) {
+    push(transform: NodeTransform) {
 
-        if(transform.phraseType === PhraseType.ScopedMemberName) {
+        if (transform.phraseType === PhraseType.ScopedMemberName) {
             this.value = transform.value;
             this.value.identifier.kind = this._symbolKind;
-        } else if(
-            transform.tokenType !== TokenType.ColonColon && 
+        } else if (
+            transform.tokenType !== TokenType.ColonColon &&
             transform.tokenType !== TokenType.Whitespace &&
             transform.tokenType !== TokenType.Comment &&
-            transform.tokenType !== TokenType.DocumentComment
+            transform.tokenType !== TokenType.DocumentComment &&
+            transform.phraseType !== PhraseType.ArgumentExpressionList
         ) {
-            this.value.identifier.scope = transform.value;
+            let ref = transform.value as Reference;
+            if (ref && ref.identifier && ref.identifier.name) {
+
+            }
         }
     }
 
 }
 
-class S
 
 
 export interface Reference {
-    identifier:PhpSymbol;
-    position:lsp.Position;
-    length:number;
+    kind: SymbolKind;
+    name: string;
+    position: lsp.Position;
     type?: string;
+    altName?: string;
+    scope?: string;
 }
 
 export namespace Reference {
-    export function create(identifier:PhpSymbol, position:lsp.Position, length:number){
+    export function create(identifier: PhpSymbol, position: lsp.Position, length: number) {
         return {
             identifier: identifier,
-            position:position,
-            length:length
+            position: position,
+            length: length
         };
     }
+
+    export function toTypeString(ref: Reference, symbolStore: SymbolStore) {
+
+        if (!ref) {
+            return '';
+        }
+
+        switch (ref.kind) {
+            case SymbolKind.Class:
+            case SymbolKind.Interface:
+            case SymbolKind.Trait:
+                return ref.name;
+
+            case SymbolKind.Function:
+
+
+            case SymbolKind.Method:
+
+            case SymbolKind.Property:
+
+
+            case SymbolKind.Variable:
+                return ref.type || '';
+
+            default:
+                return '';
+
+
+        }
+    }
+
+    export function findSymbols(ref: Reference, symbolStore: SymbolStore) {
+
+        if (!ref) {
+            return null;
+        }
+
+        let symbols: PhpSymbol[];
+        let fn: Predicate<PhpSymbol>;
+
+        switch (ref.kind) {
+            case SymbolKind.Class:
+            case SymbolKind.Interface:
+            case SymbolKind.Trait:
+                fn = (x) => {
+                    return x.kind === ref.kind;
+                };
+                symbols = symbolStore.find(ref.name, fn);
+                break;
+
+            case SymbolKind.Function:
+            case SymbolKind.Constant:
+                fn = (x) => {
+                    return x.kind === ref.kind;
+                };
+                symbols = symbolStore.find(ref.name, fn);
+                if (symbols.length < 1 && ref.altName) {
+                    symbols = symbolStore.find(ref.altName, fn);
+                }
+                break;
+
+            case SymbolKind.Method:
+                fn = (x) => {
+                    return x.kind === SymbolKind.Method && x.name.toLowerCase() === ref.name.toLowerCase();
+                };
+                symbols = findMembers(symbolStore, ref.scope, fn);
+                break;
+
+            case SymbolKind.Property:
+                fn = (x) => {
+                    return x.kind === SymbolKind.Property && x.name.slice(1) === ref.name;
+                };
+                symbols = findMembers(symbolStore, ref.scope, fn);
+                break;
+
+            case SymbolKind.ClassConstant:
+                fn = (x) => {
+                    return x.kind === SymbolKind.ClassConstant && x.name === ref.name;
+                };
+                symbols = findMembers(symbolStore, ref.scope, fn);
+                break;
+
+            case SymbolKind.Variable:
+
+                break;
+
+            default:
+                break;
+
+        }
+
+        return symbols;
+
+    }
+
+    function findMembers(symbolStore: SymbolStore, scope: string, predicate: Predicate<PhpSymbol>) {
+
+        let fqnArray = TypeString.atomicClassArray(scope);
+        let type: TypeAggregate;
+        let members = new Set<PhpSymbol>();
+        for (let n = 0; n < fqnArray.length; ++n) {
+            type = TypeAggregate.create(symbolStore, fqnArray[n]);
+            if (type) {
+                Set.prototype.add.apply(members, type.members(predicate));
+            }
+        }
+        return Array.from(members);
+    }
+
 }
 
 export class DocumentReferences {

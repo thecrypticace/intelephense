@@ -4,7 +4,7 @@
 
 'use strict';
 
-import {PhpSymbol, SymbolKind} from './symbol';
+import {PhpSymbol, SymbolKind, SymbolModifier} from './symbol';
 import {SymbolStore} from './symbolStore';
 import {Predicate} from './types';
 
@@ -59,6 +59,9 @@ export class TypeAggregate {
         let members: PhpSymbol[] = [];
         let s: PhpSymbol;
         let traits: PhpSymbol[] = [];
+        let noPrivate = (x:PhpSymbol)=> {
+            return !(x.modifiers & SymbolModifier.Private) && predicate(x);
+        };
 
         for (let n = 0; n < associated.length; ++n) {
             s = associated[n];
@@ -67,8 +70,11 @@ export class TypeAggregate {
             } else if (s.children) {
                 Array.prototype.push.apply(members, s.children.filter(predicate));
             }
+
+            predicate = noPrivate;
         }
 
+        predicate = noPrivate;
         members = this._mergeMembers(members);
         //@todo trait precendence/alias
         Array.prototype.push.apply(members, this._traitMembers(traits, predicate));
