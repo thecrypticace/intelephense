@@ -8,14 +8,14 @@ import {Token, PhraseType, TokenType} from 'php7parser';
 import {ParsedDocument} from './parsedDocument';
 import {NameResolver} from './nameResolver';
 
-export interface NodeTransform {
+export interface NodeTransform<T> {
     phraseType?:PhraseType;
     tokenType?:TokenType;
-    push?(transform: NodeTransform);
-    value: any;
+    push?(transform: NodeTransform<any>);
+    value: T;
 }
 
-export class TokenTransform implements NodeTransform {
+export class TokenTransform implements NodeTransform<string> {
 
     tokenType:TokenType;
 

@@ -69,7 +69,7 @@ export namespace TypeString {
 
     }
 
-    export function array(typeString:string) {
+    export function arrayReference(typeString:string) {
         if(!typeString) {
             return '';
         }
