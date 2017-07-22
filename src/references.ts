@@ -6,8 +6,8 @@
 
 import { TreeVisitor, MultiVisitor } from './types';
 import { Phrase, Token, PhraseType, TokenType } from 'php7parser';
-import { SymbolKind, PhpSymbol } from './symbol';
-import { SymbolStore } from './symbolStore';
+import { SymbolKind, PhpSymbol, SymbolModifier } from './symbol';
+import { SymbolStore, SymbolTable } from './symbolStore';
 import { ParsedDocument } from './parsedDocument';
 import {
     NodeTransform, QualifiedNameTransform, RelativeQualifiedNameTransform,
@@ -21,6 +21,7 @@ import * as lsp from 'vscode-languageserver-types';
 import { isInRange } from './util';
 import { TypeString } from './typeString';
 import { TypeAggregate } from './typeAggregate';
+import * as util from './util';
 
 export class ReferenceReader extends MultiVisitor<Phrase | Token> {
 
@@ -245,19 +246,214 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
 }
 
+class InstanceOfExpressionTransform implements NodeTransform {
+
+    phraseType = PhraseType.InstanceOfExpression;
+    value:[Reference, string];
+
+    constructor() {
+        this.value = [undefined, ''];
+    }
+
+    push(transform:NodeTransform) {
+
+        if(transform.phraseType === PhraseType.InstanceofTypeDesignator) {
+            this.value[1] = transform.value;
+        } else if(transform.phraseType) {
+            
+        }
+
+    }
+
+}
+
+class FunctionCallExpressionTransform implements NodeTransform {
+
+    phraseType = PhraseType.FunctionCallExpression;
+    value = '';
+    private _symbolStore:SymbolStore;
+    private _uri:string;
+
+    constructor(symbolStore:SymbolStore, uri:string) {
+        this._symbolStore = symbolStore;
+        this._uri = uri;
+    }
+
+    push(transform:NodeTransform) {
+        switch(transform.phraseType){
+            case PhraseType.FullyQualifiedName:
+            case PhraseType.RelativeQualifiedName:
+            case PhraseType.QualifiedName:
+                this.value = Reference.toTypeString(transform.value, this._symbolStore, this._uri);
+                break;
+            default:
+                break;
+        }
+    }
+
+}
+
+class RelativeScopeTransform implements NodeTransform {
+
+    phraseType = PhraseType.RelativeScope;
+    value = '';
+
+    constructor(name:string) {
+        this.value = name;
+    }
+
+    push(transform:NodeTransform) { }
+
+}
+
+class TypeDesignatorTransform implements NodeTransform {
+
+    value = '';
+    private _symbolStore:SymbolStore;
+    private _uri:string;
+
+    constructor(public phraseType:PhraseType, symbolStore:SymbolStore, uri:string) {
+        this._symbolStore = symbolStore;
+        this._uri = uri;
+    }
+
+    push(transform:NodeTransform) {
+        switch(transform.phraseType) {
+            case PhraseType.RelativeScope:
+                this.value = transform.value;
+                break;
+            case PhraseType.FullyQualifiedName:
+            case PhraseType.RelativeQualifiedName:
+            case PhraseType.QualifiedName:
+                this.value = Reference.toTypeString(<Reference>transform.value, this._symbolStore, this._uri);
+                break; 
+            default:
+                break;
+        }
+    }
+
+}
+
+class AnonymousClassDeclarationTransform implements NodeTransform {
+    phraseType = PhraseType.AnonymousClassDeclaration;
+    value = '';
+    constructor(name:string) {
+        this.value = name;
+    }
+
+    push(transform:NodeTransform) {}
+}
+
+class ObjectCreationExpressionTransform implements NodeTransform{
+
+    phraseType = PhraseType.ObjectCreationExpression;
+    value = '';
+
+    push(transform:NodeTransform) {
+        if(transform.phraseType === PhraseType.ClassTypeDesignator || transform.phraseType === PhraseType.AnonymousClassDeclaration) {
+            this.value = transform.value;
+        }
+    }
+
+}
+
+class SimpleVariableTransform implements NodeTransform {
+
+    phraseType = PhraseType.SimpleVariable;
+    value:Reference;
+
+    constructor(range:lsp.Range){
+        this.value = Reference.create(SymbolKind.Variable, '', range);
+    }
+
+    push(transform:NodeTransform) {
+        if(transform.tokenType === TokenType.VariableName) {
+            this.value = transform.value;
+        }
+    }
+
+}
+
+class FullyQualifiedNameTransform implements NodeTransform {
+
+    phraseType = PhraseType.FullyQualifiedName;
+    value:Reference;
+
+    constructor(symbolKind:SymbolKind, range:lsp.Range) {
+        this.value = Reference.create(symbolKind, '', range);
+    }
+
+    push(transform:NodeTransform) {
+
+        if(transform.phraseType === PhraseType.NamespaceName) {
+            this.value.name = transform.value;
+        }
+
+    }
+
+}
+
+class QualifiedNameTransform implements NodeTransform {
+
+    phraseType = PhraseType.QualifiedName;
+    value:Reference;
+    private _nameResolver:NameResolver;
+
+    constructor(symbolKind:SymbolKind, range:lsp.Range, nameResolver:NameResolver) {
+        this.value = Reference.create(symbolKind, '', range);
+        this._nameResolver = nameResolver;
+    }
+
+    push(transform:NodeTransform) {
+
+        if(transform.phraseType === PhraseType.NamespaceName) {
+            let name = transform.value;
+            this.value.name = this._nameResolver.resolveNotFullyQualified(transform.value, this.value.kind);
+            if(
+                (this.value.kind === SymbolKind.Function || this.value.kind === SymbolKind.Constant) &&
+                name !== this.value.name
+            ) {
+                this.value.altName = name;
+            }
+        }
+
+    }
+
+}
+
+class RelativeQualifiedNameTransform implements NodeTransform {
+
+    phraseType = PhraseType.RelativeQualifiedName;
+    value:Reference;
+    private _nameResolver:NameResolver;
+
+    constructor(symbolKind:SymbolKind, range:lsp.Range, nameResolver:NameResolver) {
+        this.value = Reference.create(symbolKind, '', range);
+        this._nameResolver = nameResolver;
+    }
+
+    push(transform:NodeTransform) {
+
+        if(transform.phraseType === PhraseType.NamespaceName) {
+            this.value.name = this._nameResolver.resolveRelative(transform.value);
+        }
+
+    }
+
+}
+
 class MemberNameTransform implements NodeTransform {
 
     phraseType = PhraseType.MemberName;
     value: Reference;
 
-    constructor(position: lsp.Position) {
-        this.value = Reference.create(PhpSymbol.create(SymbolKind.Method | SymbolKind.Property, ''), position, 0);
+    constructor(range: lsp.Range) {
+        this.value = Reference.create(SymbolKind.None, '', range);
     }
 
     push(transform: NodeTransform) {
         if (transform.tokenType === TokenType.Name) {
-            this.value.identifier.name = transform.value;
-            this.value.length = this.value.identifier.name.length;
+            this.value.name = transform.value;
         }
     }
 
@@ -268,34 +464,36 @@ class ScopedMemberNameTransform implements NodeTransform {
     phraseType = PhraseType.ScopedMemberName;
     value: Reference;
 
-    constructor(position: lsp.Position) {
-        this.value = Reference.create(PhpSymbol.create(SymbolKind.Method | SymbolKind.Property | SymbolKind.ClassConstant, ''), position, 0);
+    constructor(range: lsp.Range) {
+        this.value = Reference.create(SymbolKind.None, '', range);
     }
 
     push(transform: NodeTransform) {
         if (transform.tokenType === TokenType.VariableName || transform.phraseType === PhraseType.Identifier) {
-            this.value.identifier.name = transform.value;
-            this.value.length = this.value.identifier.name.length;
+            this.value.name = transform.value;
         }
     }
 
 }
 
-class ScopedExpressionTransform implements NodeTransform {
+class MemberAccessExpressionTransform implements NodeTransform {
 
-    phraseType = PhraseType.ScopedCallExpression;
     value: Reference;
     private _symbolKind: SymbolKind;
+    private _symbolStore:SymbolStore;
+    private _uri:string
 
-    constructor(symbolKind: SymbolKind) {
+    constructor(public phraseType:PhraseType, symbolKind: SymbolKind, symbolStore:SymbolStore, uri:string) {
         this._symbolKind = symbolKind;
+        this._symbolStore = symbolStore;
+        this._uri = uri;
     }
 
     push(transform: NodeTransform) {
 
-        if (transform.phraseType === PhraseType.ScopedMemberName) {
+        if (transform.phraseType === PhraseType.ScopedMemberName || transform.phraseType === PhraseType.MemberName) {
             this.value = transform.value;
-            this.value.identifier.kind = this._symbolKind;
+            this.value.kind = this._symbolKind;
         } else if (
             transform.tokenType !== TokenType.ColonColon &&
             transform.tokenType !== TokenType.Whitespace &&
@@ -304,8 +502,8 @@ class ScopedExpressionTransform implements NodeTransform {
             transform.phraseType !== PhraseType.ArgumentExpressionList
         ) {
             let ref = transform.value as Reference;
-            if (ref && ref.identifier && ref.identifier.name) {
-
+            if (ref && ref.name) {
+                this.value.scope = Reference.toTypeString(ref, this._symbolStore, this._uri);
             }
         }
     }
@@ -317,22 +515,22 @@ class ScopedExpressionTransform implements NodeTransform {
 export interface Reference {
     kind: SymbolKind;
     name: string;
-    position: lsp.Position;
+    range: lsp.Range;
     type?: string;
     altName?: string;
     scope?: string;
 }
 
 export namespace Reference {
-    export function create(identifier: PhpSymbol, position: lsp.Position, length: number) {
+    export function create(kind:SymbolKind, name:string, range: lsp.Range) {
         return {
-            identifier: identifier,
-            position: position,
-            length: length
+            kind:kind,
+            name:name,
+            range: range
         };
     }
 
-    export function toTypeString(ref: Reference, symbolStore: SymbolStore) {
+    export function toTypeString(ref: Reference, symbolStore: SymbolStore, uri:string) {
 
         if (!ref) {
             return '';
@@ -345,12 +543,11 @@ export namespace Reference {
                 return ref.name;
 
             case SymbolKind.Function:
-
-
             case SymbolKind.Method:
-
             case SymbolKind.Property:
-
+                return findSymbols(ref, symbolStore, uri).reduce<string>((carry, val)=>{
+                    return TypeString.merge(carry, PhpSymbol.type(val));
+                }, '');
 
             case SymbolKind.Variable:
                 return ref.type || '';
@@ -362,7 +559,7 @@ export namespace Reference {
         }
     }
 
-    export function findSymbols(ref: Reference, symbolStore: SymbolStore) {
+    export function findSymbols(ref: Reference, symbolStore: SymbolStore, uri:string) {
 
         if (!ref) {
             return null;
@@ -370,13 +567,15 @@ export namespace Reference {
 
         let symbols: PhpSymbol[];
         let fn: Predicate<PhpSymbol>;
+        let lcName:string;
+        let table:SymbolTable;
 
         switch (ref.kind) {
             case SymbolKind.Class:
             case SymbolKind.Interface:
             case SymbolKind.Trait:
                 fn = (x) => {
-                    return x.kind === ref.kind;
+                    return (x.kind & (SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait)) > 0;
                 };
                 symbols = symbolStore.find(ref.name, fn);
                 break;
@@ -393,8 +592,9 @@ export namespace Reference {
                 break;
 
             case SymbolKind.Method:
+                lcName = ref.name.toLowerCase();
                 fn = (x) => {
-                    return x.kind === SymbolKind.Method && x.name.toLowerCase() === ref.name.toLowerCase();
+                    return x.kind === SymbolKind.Method && x.name.toLowerCase() === lcName;
                 };
                 symbols = findMembers(symbolStore, ref.scope, fn);
                 break;
@@ -414,7 +614,27 @@ export namespace Reference {
                 break;
 
             case SymbolKind.Variable:
-
+                table = symbolStore.getSymbolTable(uri);
+                if(table){
+                    //find the var scope
+                    fn = (x) => {
+                        return ((x.kind === SymbolKind.Function && (x.modifiers & SymbolModifier.Anonymous) > 0) || 
+                            x.kind === SymbolKind.Method) &&
+                            x.location && util.isInRange(ref.range.start, x.location.range.start, x.location.range.end) === 0;
+                    };
+                    let scope = table.find(fn);
+                    if(!scope) {
+                        scope = table.root;
+                    }
+                    fn = (x) => {
+                        return (x.kind & (SymbolKind.Parameter | SymbolKind.Variable)) > 0 && 
+                            x.name === ref.name;
+                    }
+                    let s = scope.children ? scope.children.find(fn) : null;
+                    if(s) {
+                        symbols = [s];
+                    }
+                }
                 break;
 
             default:
@@ -422,7 +642,7 @@ export namespace Reference {
 
         }
 
-        return symbols;
+        return symbols || [];
 
     }
 
