@@ -246,12 +246,12 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
 }
 
-type ReferenceToTypeDelegate = (ref:Reference) => string;
-type TransformToTypeDelegate = (transform:NodeTransform<any>) => string;
+type ReferenceToTypeDelegate = (ref: Reference) => string;
+type TransformToTypeDelegate = (transform: NodeTransform<any>) => string;
 
-function transformToTypeString(transform:NodeTransform<any>, refToTypeStringDelegate:ReferenceToTypeDelegate): string {
+function transformToTypeString(transform: NodeTransform<any>, refToTypeStringDelegate: ReferenceToTypeDelegate): string {
 
-    switch(transform.phraseType) {
+    switch (transform.phraseType) {
         case PhraseType.SimpleVariable:
         case PhraseType.SubscriptExpression:
         case PhraseType.ScopedCallExpression:
@@ -277,8 +277,156 @@ function transformToTypeString(transform:NodeTransform<any>, refToTypeStringDele
 
 }
 
-class SimpleAssignmentExpressionTrnasform implements NodeTransform<> {
-    
+class ForeachStatementTransform implements NodeTransform<TypedVariable[]> {
+
+    phraseType = PhraseType.ForeachStatement;
+    value:TypedVariable[];
+    private _collection:NodeTransform<any>;
+
+    push(transform:NodeTransform<any>) {
+        if(transform.phraseType === PhraseType.ForeachCollection) {
+
+        } else if(transform.phraseType === PhraseType.ForeachValue) {
+
+        }
+    }
+
+}
+
+class SimpleAssignmentExpressionTransform implements NodeTransform<TypedVariable[]> {
+
+    private _transforms: NodeTransform<any>[];
+
+    constructor(public phraseType: PhraseType, public transformToTypeDelegate: TransformToTypeDelegate) {
+        this._transforms = [];
+    }
+
+    push(transform: NodeTransform<any>) {
+        if (
+            transform.tokenType !== TokenType.Equals &&
+            transform.tokenType !== TokenType.Ampersand &&
+            transform.tokenType !== TokenType.Whitespace &&
+            transform.tokenType !== TokenType.Comment &&
+            transform.tokenType !== TokenType.DocumentComment
+        ) {
+            this._transforms.push(transform);
+        }
+    }
+
+    get value() {
+        if (this._transforms.length !== 2) {
+            return null;
+        }
+        let lhs: NodeTransform<any>, rhs: NodeTransform<any>;
+        [lhs, rhs] = this._transforms;
+        let type = this.transformToTypeDelegate(rhs);
+        let typedVars: TypedVariable[];
+
+        switch (lhs.phraseType) {
+            case PhraseType.SimpleVariable:
+                {
+                    let val = lhs.value as Reference;
+                    typedVars = [];
+                    if (val && val.name) {
+                        typedVars.push({ name: val.name, type: type });
+                    }
+                    break;
+                }
+            case PhraseType.SubscriptExpression:
+                {
+                    let val = lhs.value as SubscriptExpressionTransformValue;
+                    typedVars = [];
+                    if (val && val.assignType) {
+                        typedVars.push(val.assignType(type));
+                    }
+                    break;
+                }
+            case PhraseType.ListIntrinsic:
+                {
+                    let fn = lhs.value as ListIntrinsicAssignType;
+                    if (fn) {
+                        typedVars = fn(type);
+                    }
+                    break;
+                }
+            default:
+                typedVars = [];
+                break;
+        }
+
+        return typedVars;
+    }
+
+}
+
+type ListIntrinsicAssignType = (ts: string) => TypedVariable[];
+
+class ListIntrinsicTransform implements NodeTransform<ListIntrinsicAssignType> {
+
+    phraseType = PhraseType.ListIntrinsic;
+    value: ListIntrinsicAssignType;
+
+    push(transform: NodeTransform<any>) {
+        if (transform.phraseType === PhraseType.ArrayInitialiserList) {
+            let varNames = transform.value as string[];
+            this.value = (ts) => {
+                ts = TypeString.arrayDereference(ts);
+                return varNames.map<TypedVariable>((v) => {
+                    return { name: v, type: ts };
+                });
+            };
+        }
+    }
+
+}
+
+class ArrayInititialiserListTransform implements NodeTransform<string[]> {
+
+    phraseType = PhraseType.ArrayInitialiserList;
+    value: string[];
+
+    constructor() {
+        this.value = [];
+    }
+
+    push(transform: NodeTransform<any>) {
+        if (transform.phraseType === PhraseType.ArrayElement) {
+            let v = transform.value;
+            if (v) {
+                this.value.push(v);
+            }
+        }
+    }
+
+}
+
+class ArrayElementTransform implements NodeTransform<string> {
+
+    phraseType = PhraseType.ArrayElement;
+    value = '';
+
+    push(transform: NodeTransform<any>) {
+        if (transform.phraseType === PhraseType.ArrayValue) {
+            this.value = transform.value;
+        }
+    }
+
+}
+
+class ArrayValueTransform implements NodeTransform<string> {
+
+    phraseType = PhraseType.ArrayValue;
+    value = '';
+
+    push(transform: NodeTransform<any>) {
+        if (transform.phraseType === PhraseType.SimpleVariable) {
+            let v = transform.value as Reference;
+            if (v && v.name) {
+                this.value = v.name;
+            }
+        }
+    }
+
 }
 
 class CoalesceExpressionTransform implements NodeTransform<string> {
@@ -286,10 +434,10 @@ class CoalesceExpressionTransform implements NodeTransform<string> {
     phraseType = PhraseType.CoalesceExpression;
     value = '';
 
-    constructor(public transformToTypeDelegate:TransformToTypeDelegate) { }
+    constructor(public transformToTypeDelegate: TransformToTypeDelegate) { }
 
-    push(transform:NodeTransform<any>) {
-        if(
+    push(transform: NodeTransform<any>) {
+        if (
             transform.tokenType !== TokenType.QuestionQuestion &&
             transform.tokenType !== TokenType.Whitespace &&
             transform.tokenType !== TokenType.Comment &&
@@ -304,29 +452,29 @@ class CoalesceExpressionTransform implements NodeTransform<string> {
 class TernaryExpressionTransform implements NodeTransform<string> {
 
     phraseType = PhraseType.TernaryExpression;
-    private _transforms:NodeTransform<any>[];
+    private _transforms: NodeTransform<any>[];
 
-    constructor(public transformToTypeDelegate:TransformToTypeDelegate) {
+    constructor(public transformToTypeDelegate: TransformToTypeDelegate) {
         this._transforms = [];
     }
 
-    push(transform:NodeTransform<any>) {
+    push(transform: NodeTransform<any>) {
 
-        if(
+        if (
             transform.tokenType !== TokenType.Question &&
             transform.tokenType !== TokenType.Colon &&
             transform.tokenType !== TokenType.Whitespace &&
             transform.tokenType !== TokenType.Comment &&
             transform.tokenType !== TokenType.DocumentComment
         ) {
-            this._transforms.push(transform);    
+            this._transforms.push(transform);
         }
 
     }
 
     get value() {
         let fn = this.transformToTypeDelegate;
-        return this._transforms.slice(-2).reduce<string>((prev, current)=>{
+        return this._transforms.slice(-2).reduce<string>((prev, current) => {
             return TypeString.merge(prev, fn(current));
         }, '');
     }
@@ -343,7 +491,7 @@ class SubscriptExpressionTransform implements NodeTransform<SubscriptExpressionT
     phraseType = PhraseType.SubscriptExpression;
     value: SubscriptExpressionTransformValue;
 
-    constructor(public symbolStore:SymbolStore, public uri:string) { }
+    constructor(public symbolStore: SymbolStore, public uri: string) { }
 
     push(transform: NodeTransform<any>) {
 
