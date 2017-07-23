@@ -9,10 +9,7 @@ import { Phrase, Token, PhraseType, TokenType } from 'php7parser';
 import { SymbolKind, PhpSymbol, SymbolModifier } from './symbol';
 import { SymbolStore, SymbolTable } from './symbolStore';
 import { ParsedDocument } from './parsedDocument';
-import {
-    NodeTransform, QualifiedNameTransform, RelativeQualifiedNameTransform,
-    FullyQualifiedNameTransform, DelimiteredListTransform
-} from './transforms';
+import { NodeTransform } from './transforms';
 import { NameResolver } from './nameResolver';
 import { Predicate, BinarySearch, BinarySearchResult } from './types';
 import { NameResolverVisitor } from './nameResolverVisitor';
@@ -277,18 +274,105 @@ function transformToTypeString(transform: NodeTransform<any>, refToTypeStringDel
 
 }
 
+class CatchClauseTransform implements NodeTransform<TypedVariable> {
+
+    phraseType = PhraseType.CatchClause;
+    private _varName = '';
+    private _type = '';
+
+    push(transform: NodeTransform<any>) {
+        if (transform.phraseType === PhraseType.CatchNameList) {
+            let v = transform.value as string[];
+            this._type = v.reduce<string>((prev, current) => {
+                return TypeString.merge(prev, current);
+            }, '');
+        } else if (transform.tokenType === TokenType.VariableName) {
+            this._varName = transform.value;
+        }
+    }
+
+    get value() {
+        return this._varName && this._type ? <TypedVariable>{ name: this._varName, type: this._type } : null;
+    }
+
+}
+
+class CatchNameListTransform implements NodeTransform<string[]> {
+
+    phraseType = PhraseType.CatchNameList;
+    value: string[];
+
+    constructor() {
+        this.value = [];
+    }
+
+    push(transform: NodeTransform<any>) {
+
+        let ref: Reference;
+        switch (transform.phraseType) {
+            case PhraseType.FullyQualifiedName:
+            case PhraseType.RelativeQualifiedName:
+            case PhraseType.QualifiedName:
+                ref = transform.value;
+                if (ref && ref.name) {
+                    this.value.push(ref.name);
+                }
+                break;
+            default:
+                break;
+        }
+
+    }
+
+
+}
+
 class ForeachStatementTransform implements NodeTransform<TypedVariable[]> {
 
     phraseType = PhraseType.ForeachStatement;
-    value:TypedVariable[];
-    private _collection:NodeTransform<any>;
+    value: TypedVariable[];
+    private _type = '';
 
-    push(transform:NodeTransform<any>) {
-        if(transform.phraseType === PhraseType.ForeachCollection) {
-
-        } else if(transform.phraseType === PhraseType.ForeachValue) {
-
+    push(transform: NodeTransform<any>) {
+        if (transform.phraseType === PhraseType.ForeachCollection) {
+            this._type = TypeString.arrayDereference(transform.value);
+        } else if (transform.phraseType === PhraseType.ForeachValue) {
+            let fn = transform.value as AssignVariableTypeMany;
+            if (fn) {
+                this.value = fn(this._type);
+            }
         }
+    }
+
+}
+
+class ForeachValueTransform implements NodeTransform<AssignVariableTypeMany> {
+
+    phraseType = PhraseType.ForeachValue;
+    value: AssignVariableTypeMany;
+
+    push(transform: NodeTransform<any>) {
+        if (transform.phraseType === PhraseType.SimpleVariable) {
+            let val = transform.value as Reference;
+            this.value = (ts) => {
+                return [{ name: val.name, type: ts }];
+            };
+        } else if (transform.phraseType === PhraseType.ListIntrinsic) {
+            this.value = transform.value;
+        }
+    }
+
+}
+
+class ForeachCollectionTransform implements NodeTransform<string> {
+
+    phraseType = PhraseType.ForeachCollection;
+    value = '';
+
+    constructor(public transformToTypeDelegate: TransformToTypeDelegate) { }
+
+    push(transform: NodeTransform<any>) {
+        this.value = this.transformToTypeDelegate(transform);
     }
 
 }
@@ -343,7 +427,7 @@ class SimpleAssignmentExpressionTransform implements NodeTransform<TypedVariable
                 }
             case PhraseType.ListIntrinsic:
                 {
-                    let fn = lhs.value as ListIntrinsicAssignType;
+                    let fn = lhs.value as AssignVariableTypeMany;
                     if (fn) {
                         typedVars = fn(type);
                     }
@@ -359,12 +443,12 @@ class SimpleAssignmentExpressionTransform implements NodeTransform<TypedVariable
 
 }
 
-type ListIntrinsicAssignType = (ts: string) => TypedVariable[];
+type AssignVariableTypeMany = (ts: string) => TypedVariable[];
 
-class ListIntrinsicTransform implements NodeTransform<ListIntrinsicAssignType> {
+class ListIntrinsicTransform implements NodeTransform<AssignVariableTypeMany> {
 
     phraseType = PhraseType.ListIntrinsic;
-    value: ListIntrinsicAssignType;
+    value: AssignVariableTypeMany;
 
     push(transform: NodeTransform<any>) {
         if (transform.phraseType === PhraseType.ArrayInitialiserList) {
@@ -481,9 +565,10 @@ class TernaryExpressionTransform implements NodeTransform<string> {
 
 }
 
+type AssignVariableType = (typeString: string) => TypedVariable;
 interface SubscriptExpressionTransformValue {
     type: string;
-    assignType?: (typeString: string) => TypedVariable;
+    assignType?: AssignVariableType;
 }
 
 class SubscriptExpressionTransform implements NodeTransform<SubscriptExpressionTransformValue> {
