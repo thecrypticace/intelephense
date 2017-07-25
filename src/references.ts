@@ -77,6 +77,10 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
         let parentTransform = this._transformStack.length ? this._transformStack[this._transformStack.length] : null;
 
         switch ((<Phrase>node).phraseType) {
+
+            //case PhraseType.Error:
+            //    return false;
+
             case PhraseType.FunctionDeclaration:
                 this._functionDeclaration();
                 break;
