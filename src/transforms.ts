@@ -15,6 +15,17 @@ export interface NodeTransform<T> {
     value: T;
 }
 
+export class IdentifierTransform implements NodeTransform<string> {
+
+    phraseType = PhraseType.Identifier;
+    value = '';
+
+    push(transform: NodeTransform<any>) {
+        this.value = transform.value;
+    }
+
+}
+
 export class TokenTransform implements NodeTransform<string> {
 
     tokenType:TokenType;
@@ -29,81 +40,14 @@ export class TokenTransform implements NodeTransform<string> {
 
 }
 
-export class QualifiedNameTransform implements NodeTransform {
-
-    value: string;
-    phraseType = PhraseType.QualifiedName;
-
-    constructor(public nameResolver: NameResolver) { }
-
-    push(transform: NodeTransform) {
-        if (transform.phraseType === PhraseType.NamespaceName) {
-            this.value = this.nameResolver.resolveNotFullyQualified(transform.value);
-        }
-    }
-
-}
-
-export class RelativeQualifiedNameTransform implements NodeTransform {
-
-    value: string;
-    phraseType = PhraseType.RelativeQualifiedName;
-
-    constructor(public nameResolver: NameResolver) { }
-
-    push(transform: NodeTransform) {
-        if (transform.phraseType === PhraseType.NamespaceName) {
-            this.value = this.nameResolver.resolveRelative(transform.value);
-        }
-    }
-
-}
-
-export class FullyQualifiedNameTransform implements NodeTransform {
-
-    value: string;
-    phraseType = PhraseType.FullyQualifiedName;
-
-    push(transform: NodeTransform) {
-        if (transform.phraseType === PhraseType.NamespaceName) {
-            this.value = transform.value;
-        }
-    }
-
-}
-
-
-export class NamespaceNameTransform implements NodeTransform {
+export class NamespaceNameTransform implements NodeTransform<string> {
 
     phraseType = PhraseType.NamespaceName;
     value: string = '';
 
-    push(transform: NodeTransform) {
+    push(transform: NodeTransform<any>) {
         if (transform.tokenType === TokenType.Name || transform.tokenType === TokenType.Backslash) {
             this.value += transform.value;
-        }
-    }
-
-}
-
-export class DelimiteredListTransform implements NodeTransform {
-
-    value: any[];
-
-    constructor(public phraseType: PhraseType, public delimiter: TokenType) {
-        this.value = [];
-    }
-
-    push(transform: NodeTransform) {
-        switch (transform.tokenType) {
-            case TokenType.Comment:
-            case TokenType.DocumentComment:
-            case TokenType.Whitespace:
-            case this.delimiter:
-                break;
-            default:
-                this.value.push(transform.value);
-                break;
         }
     }
 

@@ -7,14 +7,8 @@
 import { NameResolverVisitor } from './nameResolverVisitor';
 import { TreeVisitor, MultiVisitor } from './types';
 import { ParsedDocument } from './parsedDocument';
-import {
-    NodeTransform, TokenTransform, QualifiedNameTransform,
-    RelativeQualifiedNameTransform, FullyQualifiedNameTransform,
-    NamespaceNameTransform, DelimiteredListTransform
-} from './transforms';
-import {
-    Phrase, PhraseType, Token, TokenType
-} from 'php7parser';
+import { NodeTransform, TokenTransform, NamespaceNameTransform } from './transforms';
+import { Phrase, PhraseType, Token, TokenType } from 'php7parser';
 import { PhpDoc, PhpDocParser, Tag, MethodTagParam } from './phpDoc';
 import { PhpSymbol, SymbolKind, SymbolModifier, PhpSymbolDoc } from './symbol';
 import { NameResolver } from './nameResolver';
@@ -503,13 +497,68 @@ class InitialTransform implements NodeTransform {
 
 }
 
-class IdentifierTransform implements NodeTransform {
+class DelimiteredListTransform implements NodeTransform {
 
-    phraseType = PhraseType.Identifier;
-    value = '';
+    value: any[];
+
+    constructor(public phraseType: PhraseType, public delimiter: TokenType) {
+        this.value = [];
+    }
 
     push(transform: NodeTransform) {
-        this.value = transform.value;
+        switch (transform.tokenType) {
+            case TokenType.Comment:
+            case TokenType.DocumentComment:
+            case TokenType.Whitespace:
+            case this.delimiter:
+                break;
+            default:
+                this.value.push(transform.value);
+                break;
+        }
+    }
+
+}
+
+class QualifiedNameTransform implements NodeTransform {
+
+    value: string;
+    phraseType = PhraseType.QualifiedName;
+
+    constructor(public nameResolver: NameResolver) { }
+
+    push(transform: NodeTransform) {
+        if (transform.phraseType === PhraseType.NamespaceName) {
+            this.value = this.nameResolver.resolveNotFullyQualified(transform.value);
+        }
+    }
+
+}
+
+class RelativeQualifiedNameTransform implements NodeTransform {
+
+    value: string;
+    phraseType = PhraseType.RelativeQualifiedName;
+
+    constructor(public nameResolver: NameResolver) { }
+
+    push(transform: NodeTransform) {
+        if (transform.phraseType === PhraseType.NamespaceName) {
+            this.value = this.nameResolver.resolveRelative(transform.value);
+        }
+    }
+
+}
+
+class FullyQualifiedNameTransform implements NodeTransform {
+
+    value: string;
+    phraseType = PhraseType.FullyQualifiedName;
+
+    push(transform: NodeTransform) {
+        if (transform.phraseType === PhraseType.NamespaceName) {
+            this.value = transform.value;
+        }
     }
 
 }

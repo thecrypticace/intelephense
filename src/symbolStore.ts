@@ -51,6 +51,10 @@ export class SymbolTable {
         return traverser.find(predicate);
     }
 
+    scopeSymbols() {
+        return this.filter(this._isScopeSymbol);
+    }
+
     symbolAtPosition(position: Position) {
 
         let pred = (x: PhpSymbol) => {
@@ -67,6 +71,11 @@ export class SymbolTable {
             uri: this.uri,
             root: (<ToPhpSymbolDtoVisitor>this.traverse(new ToPhpSymbolDtoVisitor())).root
         }
+    }
+
+    private _isScopeSymbol(s:PhpSymbol) {
+        const mask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.None | SymbolKind.Function | SymbolKind.Method;
+        return (s.kind & mask) > 0;
     }
 
     static fromDto(dto: SymbolTableDto) {

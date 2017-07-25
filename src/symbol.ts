@@ -7,6 +7,7 @@
 import { TypeString } from './typeString';
 import { BinarySearch } from './types';
 import { Location } from 'vscode-languageserver-types';
+import { Reference } from './references';
 import * as util from './util';
 
 export const enum SymbolKind {
@@ -66,6 +67,7 @@ export interface PhpSymbol {
     children?: PhpSymbol[];
     scope?: string;
     value?: string;
+    references?:Reference[];
 }
 
 
