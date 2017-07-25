@@ -502,6 +502,7 @@ class TokenTransform implements NodeTypeTransform<string> {
             case TokenType.FloatingLiteral:
                 return 'float';
             case TokenType.StringLiteral:
+            case TokenType.EncapsulatedAndWhitespace:
                 return 'string';
             case TokenType.IntegerLiteral:
                 return 'int';
@@ -513,6 +514,50 @@ class TokenTransform implements NodeTypeTransform<string> {
             default:
                 return '';
         }
+    }
+
+}
+
+class NamespaceUseDeclarationTransform implements NodeTransform<Reference[]> {
+
+    phraseType = PhraseType.NamespaceUseDeclaration;
+    private _kind = SymbolKind.Class;
+    private _prefix = '';
+
+    push(transform:NodeTransform<any>) {
+        if(transform.tokenType === TokenType.Const) {
+            this._kind = SymbolKind.Constant;
+        } else if(transform.tokenType === TokenType.Function) {
+            this._kind = SymbolKind.Function;
+        } else if(transform.phraseType === PhraseType.NamespaceName) {
+            this._prefix = transform.value;
+        } else if(transform.phraseType === PhraseType.NamespaceUseGroupClauseList) {
+
+        } else if(transform.phraseType === PhraseType.NamespaceUseClauseList) {
+
+        }
+    }
+
+}
+
+class NamespaceUseClauseTransform implements NodeTransform<Reference> {
+
+    phraseType = PhraseType.NamespaceUseClause;
+    value:Reference;
+
+    push(transform:NodeTransform<any>) {
+
+    }
+
+}
+
+class NamespaceUseGroupClauseTransform implements NodeTransform<Reference> {
+
+    phraseType = PhraseType.NamespaceUseGroupClause;
+    value:Reference;
+
+    push(transform:NodeTransform<any>) {
+        
     }
 
 }
