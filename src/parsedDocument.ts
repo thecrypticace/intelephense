@@ -20,7 +20,8 @@ import * as util from './util';
 const textDocumentChangeDebounceWait = 250;
 
 export interface NodeTransform {
-    node: Phrase | Token;
+    phraseType?:PhraseType;
+    tokenType?:TokenType;
     push(transform: NodeTransform);
 }
 
