@@ -103,6 +103,15 @@ export namespace TypeString {
         return unique(types).join('|');
     }
 
+    export function mergeMany(typeStrings:string[]){
+        
+        let type = '';
+        for(let n = 0; n < typeStrings.length; ++n) {
+            type = merge(type, typeStrings[n]);
+        }
+        return type;
+    }
+
     export function nameResolve(typeString:string, nameResolver: NameResolver) {
 
         if(!typeString) {
@@ -126,6 +135,10 @@ export namespace TypeString {
         };
 
         return typeString.replace(classNamePattern, replacer);
+    }
+
+    export function count(typeString:string) {
+        return chunk(typeString).length;
     }
 
     function unique(parts: string[]) {
