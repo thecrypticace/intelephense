@@ -296,18 +296,8 @@ export namespace ParsedDocument {
                 ParsedDocument.isPhrase(phrase.name, [PhraseType.Identifier]));
     }
 
-    const nodeKeys = [
-        'tokenType', 'offset', 'length', 'modeStack',
-        'phraseType', 'children', 'errors', 'unexpected',
-        'numberSkipped'
-    ];
-
     function isNumeric(n) {
         return !isNaN(parseFloat(n)) && isFinite(n);
-    }
-
-    export function stringyfyReplacer(k, v) {
-        return k && !isNumeric(k) && nodeKeys.indexOf(k) < 0 ? undefined : v;
     }
 
     export function firstPhraseOfType(type: PhraseType, nodes: (Phrase | Token)[]) {
