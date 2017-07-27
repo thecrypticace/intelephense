@@ -109,7 +109,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
                     this._scopeStack.push(context);
                     this._contextStack.push(new TypeAggregate(this.symbolStore, context));
                     this._variableTable.pushScope();
-                    this._variableTable.setTypedVariable({ name: '$this', type: context.name });
+                    this._variableTable.setVariable(Variable.create('$this', context.name));
                 }
                 break;
 
@@ -178,7 +178,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case PhraseType.NamespaceName:
-                this._transformStack.push(new NamespaceNameTransform());
+                this._transformStack.push(new NamespaceNameTransform(<Phrase>node, this.doc));
                 break;
 
             case PhraseType.SimpleVariable:
@@ -302,7 +302,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
                 if (parentTransform) {
                     this._transformStack.push(new TernaryExpressionTransform());
                 } else {
-
+                    this._transformStack.push(null);
                 }
                 break;
 
@@ -319,7 +319,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
                 if (parentTransform && (<Token>node).tokenType > TokenType.EndOfFile && (<Token>node).tokenType < TokenType.Equals) {
                     parentTransform.push(new TokenTransform(<Token>node, this.doc));
                     if (parentTransform.phraseType === PhraseType.CatchClause && (<Token>node).tokenType === TokenType.VariableName) {
-                        this._variableTable.setTypedVariable(parentTransform.value);
+                        this._variableTable.setVariable((<CatchClauseTransform>parentTransform).variable);
                     }
                 }
                 break;
@@ -362,21 +362,24 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
                     if (!scope.references) {
                         scope.references = [];
                     }
-                    scope.references.push(transform.value);
+                    let ref = (<ReferenceNodeTransform>transform).reference;
+                    if(ref) {
+                        scope.references.push(ref);
+                    }
                 }
                 break;
 
             case PhraseType.SimpleAssignmentExpression:
             case PhraseType.ByRefAssignmentExpression:
-                this._variableTable.setTypedVariables((<SimpleAssignmentExpressionTransform>transform).typedVariables);
+                this._variableTable.setVariables((<SimpleAssignmentExpressionTransform>transform).variables);
                 break;
 
             case PhraseType.InstanceOfExpression:
-                this._variableTable.setTypedVariable((<InstanceOfExpressionTransform>transform).value);
+                this._variableTable.setVariable((<InstanceOfExpressionTransform>transform).variable);
                 break;
 
             case PhraseType.ForeachValue:
-                this._variableTable.setTypedVariables((<ForeachStatementTransform>parentTransform).typedVariables);
+                this._variableTable.setVariables((<ForeachStatementTransform>parentTransform).variables);
                 break;
 
             case PhraseType.IfStatement:
@@ -443,7 +446,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
         for (let n = 0, l = children.length; n < l; ++n) {
             param = children[n];
             if (param.kind === SymbolKind.Parameter) {
-                this._variableTable.setTypedVariable({ name: param.name, type: PhpSymbol.type(param) });
+                this._variableTable.setVariable(Variable.create(param.name, PhpSymbol.type(param)));
             }
         }
     }
@@ -457,7 +460,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
         for (let n = 0, l = children.length; n < l; ++n) {
             param = children[n];
             if (param.kind === SymbolKind.Parameter) {
-                this._variableTable.setTypedVariable({ name: param.name, type: PhpSymbol.type(param) });
+                this._variableTable.setVariable(Variable.create(param.name, PhpSymbol.type(param)));
             }
         }
     }
@@ -481,7 +484,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
         for (let n = 0, l = children.length; n < l; ++n) {
             s = children[n];
             if (s.kind === SymbolKind.Parameter) {
-                this._variableTable.setTypedVariable({ name: s.name, type: PhpSymbol.type(s) });
+                this._variableTable.setVariable(Variable.create(s.name, PhpSymbol.type(s)));
             }
         }
 
@@ -547,12 +550,35 @@ class NamespaceNameTransform implements NodeTransform {
 
 }
 
+class NamespaceUseClauseListTransform implements NodeTransform {
+
+    references:Reference[];
+
+    constructor(public phraseType:PhraseType) {
+        this.references = [];
+     }
+
+    push(transform:NodeTransform) {
+        if(
+            transform.phraseType === PhraseType.NamespaceUseClause || 
+            transform.phraseType === PhraseType.NamespaceUseGroupClause
+        ) {
+            this.references.push((<ReferenceNodeTransform>transform).reference);
+        }
+    }
+
+}
+
 class NamespaceUseDeclarationTransform implements NodeTransform {
 
     phraseType = PhraseType.NamespaceUseDeclaration;
     references: Reference[];
     private _kind = SymbolKind.Class;
     private _prefix = '';
+
+    constructor() {
+        this.references = [];
+    }
 
     push(transform: NodeTransform) {
         if (transform.tokenType === TokenType.Const) {
@@ -562,32 +588,64 @@ class NamespaceUseDeclarationTransform implements NodeTransform {
         } else if (transform.phraseType === PhraseType.NamespaceName) {
             this._prefix = (<NamespaceNameTransform>transform).text;
         } else if (transform.phraseType === PhraseType.NamespaceUseGroupClauseList) {
-
+            this.references = (<NamespaceUseClauseListTransform>transform).references;
+            let ref:Reference;
+            let prefix = this._prefix ? this._prefix + '\\' : '';
+            for(let n = 0; n < this.references.length; ++n) {
+                ref = this.references[n];
+                ref.name = prefix + ref.name;
+                if(!ref.kind) {
+                    ref.kind = this._kind;
+                }
+            }
         } else if (transform.phraseType === PhraseType.NamespaceUseClauseList) {
-
+            this.references = (<NamespaceUseClauseListTransform>transform).references;
+            let ref:Reference;
+            for(let n = 0; n < this.references.length; ++n) {
+                ref = this.references[n];
+                ref.kind = this._kind;
+            }
         }
     }
 
 }
 
-class NamespaceUseClauseTransform implements NodeTransform<Reference> {
+class NamespaceUseClauseTransform implements ReferenceNodeTransform {
 
     phraseType = PhraseType.NamespaceUseClause;
-    value: Reference;
+    reference: Reference;
 
-    push(transform: NodeTransform<any>) {
+    constructor() {
+        this.reference = Reference.create(0, '', null);
+    }
 
+    push(transform: NodeTransform) {
+        if(transform.phraseType === PhraseType.NamespaceName) {
+            this.reference.name = (<NamespaceNameTransform>transform).text;
+            this.reference.range = (<NamespaceNameTransform>transform).range;
+        }
     }
 
 }
 
-class NamespaceUseGroupClauseTransform implements NodeTransform<Reference> {
+class NamespaceUseGroupClauseTransform implements ReferenceNodeTransform {
 
     phraseType = PhraseType.NamespaceUseGroupClause;
-    value: Reference;
+    reference: Reference;
 
-    push(transform: NodeTransform<any>) {
+    constructor() {
+        this.reference = Reference.create(0, '', null);
+    }
 
+    push(transform: NodeTransform) {
+        if(transform.tokenType === TokenType.Function) {
+            this.reference.kind = SymbolKind.Function;
+        } else if(transform.tokenType === TokenType.Const) {
+            this.reference.kind = SymbolKind.Constant;
+        } else if(transform.phraseType === PhraseType.NamespaceName) {
+            this.reference.name = (<NamespaceNameTransform>transform).text;
+            this.reference.range = (<NamespaceNameTransform>transform).range;
+        }
     }
 
 }
@@ -597,21 +655,19 @@ type ReferenceSymbolDelegate = (ref: Reference) => PhpSymbol[];
 class CatchClauseTransform implements VariableNodeTransform {
 
     phraseType = PhraseType.CatchClause;
-    typedVariable: TypedVariable;
-
-    constructor() {
-        this.typedVariable = {
-            name: '',
-            type: ''
-        };
-    }
+    private _varType = '';
+    private _varName = '';
 
     push(transform: NodeTransform) {
         if (transform.phraseType === PhraseType.CatchNameList) {
-            this.typedVariable.type = (<CatchNameListTransform>transform).type;
+            this._varType = (<CatchNameListTransform>transform).type;
         } else if (transform.tokenType === TokenType.VariableName) {
-            this.typedVariable.name = (<TokenTransform>transform).text;
+            this._varName = (<TokenTransform>transform).text;
         }
+    }
+
+    get variable() {
+        return this._varName && this._varType ? Variable.create(this._varName, this._varType) : null;
     }
 
 }
@@ -633,16 +689,20 @@ class CatchNameListTransform implements TypeNodeTransform {
 class ForeachStatementTransform implements NodeTransform {
 
     phraseType = PhraseType.ForeachStatement;
-    typedVariables: TypedVariable[];
+    variables: Variable[];
     private _type = '';
+
+    constructor() {
+        this.variables = [];
+    }
 
     push(transform: NodeTransform) {
         if (transform.phraseType === PhraseType.ForeachCollection) {
             this._type = TypeString.arrayDereference((<ForeachCollectionTransform>transform).type);
         } else if (transform.phraseType === PhraseType.ForeachValue) {
-            let fn = transform.value as AssignVariableTypeMany;
-            if (fn) {
-                this.typedVariables = fn(this._type);
+            let vars = (<ForeachValueTransform>transform).variables;
+            for(let n = 0; n < vars.length; ++n) {
+                this.variables.push(Variable.resolveBaseVariable(vars[n], this._type));
             }
         }
     }
@@ -656,6 +716,15 @@ interface Variable {
 }
 
 namespace Variable {
+    
+    export function create(name:string, type:string){
+        return <Variable>{
+            name: name,
+            arrayDereferenced: 0,
+            type:type
+        };
+    }
+
     export function resolveBaseVariable(variable: Variable, type: string) {
         let deref = variable.arrayDereferenced;
         if (deref > 0) {
@@ -667,11 +736,7 @@ namespace Variable {
                 type = TypeString.arrayDereference(type);
             }
         }
-        return <Variable>{
-            name: variable.name,
-            arrayDereferenced: 0,
-            type: type
-        };
+        return Variable.create(variable.name, type);
     }
 }
 
@@ -733,7 +798,7 @@ class SimpleAssignmentExpressionTransform implements TypeNodeTransform {
                 {
                     let ref = (<SimpleVariableTransform>lhs).reference;
                     if (ref) {
-                        this.variables.push({ name: ref.name, arrayDereferenced: 0, type: ref.type });
+                        this.variables.push(Variable.create(ref.name, ref.type));
                     }
                     break;
                 }
@@ -1457,49 +1522,42 @@ export class DocumentReferences {
 
 }
 
-export class VariableTable {
+class VariableTable {
 
-    private _typeVariableSetStack: TypedVariableSet[];
+    private _typeVariableSetStack: VariableSet[];
 
     constructor() {
-
-        this._typeVariableSetStack = [{
-            kind: TypedVariableSetKind.Scope,
-            variables: {},
-            branches: []
-        }];
+        this._typeVariableSetStack = [VariableSet.create(VariableSetKind.Scope)];
     }
 
-    setTypedVariable(typedVar: TypedVariable) {
-        if (!typedVar) {
+    setVariable(v: Variable) {
+        if (!v || !v.name || !v.type) {
             return;
         }
-        this._top().variables[typedVar.name] = typedVar;
+        this._typeVariableSetStack[this._typeVariableSetStack.length - 1].variables[v.name] = v;
     }
 
-    setTypedVariables(typedVars: TypedVariable[]) {
-        if (!typedVars) {
+    setVariables(vars: Variable[]) {
+        if (!vars) {
             return;
         }
-        for (let n = 0; n < typedVars.length; ++n) {
-            this.setTypedVariable(typedVars[n]);
+        for (let n = 0; n < vars.length; ++n) {
+            this.setVariable(vars[n]);
         }
     }
 
     pushScope(carry?: string[]) {
 
-        let scope = <TypedVariableSet>{
-            kind: TypedVariableSetKind.Scope,
-            variables: {},
-            branches: []
-        }
+        let scope = VariableSet.create(VariableSetKind.Scope);
 
         if (carry) {
             let type: string;
+            let name:string
             for (let n = 0; n < carry.length; ++n) {
-                type = this.getType(carry[n]);
-                if (type) {
-                    scope.variables[carry[n]] = { name: carry[n], type: type };
+                name = carry[n];
+                type = this.getType(name);
+                if (type && name) {
+                    scope.variables[name] = Variable.create(name, type);
                 }
             }
         }
@@ -1513,12 +1571,8 @@ export class VariableTable {
     }
 
     pushBranch() {
-        let b = <TypedVariableSet>{
-            kind: TypedVariableSetKind.Branch,
-            variables: {},
-            branches: []
-        };
-        this._top().branches.push(b);
+        let b = VariableSet.create(VariableSetKind.Branch);
+        this._typeVariableSetStack[this._typeVariableSetStack.length - 1].branches.push(b);
         this._typeVariableSetStack.push(b);
     }
 
@@ -1532,7 +1586,7 @@ export class VariableTable {
      */
     pruneBranches() {
 
-        let node = this._top();
+        let node = this._typeVariableSetStack[this._typeVariableSetStack.length - 1];
         let branches = node.branches;
         node.branches = [];
         for (let n = 0, l = branches.length; n < l; ++n) {
@@ -1543,7 +1597,7 @@ export class VariableTable {
 
     getType(varName: string) {
 
-        let typeSet: TypedVariableSet;
+        let typeSet: VariableSet;
 
         for (let n = this._typeVariableSetStack.length - 1; n >= 0; --n) {
             typeSet = this._typeVariableSetStack[n];
@@ -1551,7 +1605,7 @@ export class VariableTable {
                 return typeSet.variables[varName].type;
             }
 
-            if (typeSet.kind === TypedVariableSetKind.Scope) {
+            if (typeSet.kind === VariableSetKind.Scope) {
                 break;
             }
         }
@@ -1560,38 +1614,39 @@ export class VariableTable {
 
     }
 
-    private _mergeSets(a: TypedVariableSet, b: TypedVariableSet) {
+    private _mergeSets(a: VariableSet, b: VariableSet) {
 
         let keys = Object.keys(b.variables);
-        let typedVar: TypedVariable;
+        let v: Variable;
         for (let n = 0, l = keys.length; n < l; ++n) {
-            typedVar = b.variables[keys[n]];
-            if (a.variables[typedVar.name]) {
-                a.variables[typedVar.name].type = TypeString.merge(a.variables[typedVar.name].type, typedVar.type);
+            v = b.variables[keys[n]];
+            if (a.variables[v.name]) {
+                a.variables[v.name].type = TypeString.merge(a.variables[v.name].type, v.type);
             } else {
-                a.variables[typedVar.name] = typedVar;
+                a.variables[v.name] = v;
             }
         }
 
     }
 
-    private _top() {
-        return this._typeVariableSetStack[this._typeVariableSetStack.length - 1];
-    }
-
 }
 
-export interface TypedVariable {
-    name: string;
-    type: string;
-}
-
-const enum TypedVariableSetKind {
+const enum VariableSetKind {
     None, Scope, BranchGroup, Branch
 }
 
-interface TypedVariableSet {
-    kind: TypedVariableSetKind;
-    variables: { [index: string]: TypedVariable };
-    branches: TypedVariableSet[];
+interface VariableSet {
+    kind: VariableSetKind;
+    variables: { [index: string]: Variable };
+    branches: VariableSet[];
+}
+
+namespace VariableSet {
+    export function create(kind:VariableSetKind) {
+        return <VariableSet>{
+            kind: kind,
+            variables: {},
+            branches: []
+        };
+    }
 }
