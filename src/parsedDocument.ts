@@ -163,23 +163,28 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
     }
 
     tokenText(t: Token) {
-        return ParsedDocument.isToken(t) ? this._textDocument.textAtOffset(t.offset, t.length) : '';
+        return t && t.tokenType !== undefined ? this._textDocument.textAtOffset(t.offset, t.length) : '';
     }
 
-    nodeText(node: Phrase | Token, ignore?: TokenType[]) {
+    nodeText(node: Phrase | Token) {
 
         if (!node) {
             return '';
         }
 
-        if (ParsedDocument.isToken(node)) {
-            return this.tokenText(<Token>node);
+        if ((<Token>node).tokenType !== undefined) {
+            return this._textDocument.textAtOffset((<Token>node).offset, (<Token>node).length);
         }
 
-        let visitor = new ToStringVisitor(this, ignore);
-        let traverser = new TreeTraverser([node]);
-        traverser.traverse(visitor);
-        return visitor.text;
+        let tFirst = ParsedDocument.firstToken(node);
+        let tLast = ParsedDocument.lastToken(node);
+
+        if(!tFirst || !tLast) {
+            return '';
+        }
+
+        return this._textDocument.text.slice(tFirst.offset, tLast.offset + tLast.length);
+
     }
 
     createAnonymousName(node: Phrase) {
