@@ -9,14 +9,9 @@
 import * as lsp from 'vscode-languageserver-types';
 import { PhpSymbol, SymbolKind } from './symbol';
 import { NameResolver } from './nameResolver';
-import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
+import { ParsedDocument, ParsedDocumentStore, NodeTransform } from './parsedDocument';
 import { Context } from './context';
-import {
-    Phrase, PhraseType, Token, TokenType, NamespaceDefinition, NamespaceUseDeclaration,
-    NamespaceUseClause, QualifiedName, FullyQualifiedName, RelativeQualifiedName,
-    NamespaceName, ClassDeclarationHeader, AnonymousClassDeclarationHeader,
-    AnonymousClassDeclaration
-} from 'php7parser';
+import { Phrase, PhraseType, Token, TokenType } from 'php7parser';
 import { TreeTraverser, TreeVisitor } from './types';
 
 export class NameResolverVisitor implements TreeVisitor<Phrase | Token> {
@@ -176,4 +171,128 @@ export class NameResolverVisitor implements TreeVisitor<Phrase | Token> {
         }
     }
 
+}
+
+
+class NamespaceUseClauseListTransform implements NodeTransform {
+
+    symbols:PhpSymbol[];
+
+    constructor(public phraseType:PhraseType) {
+        this.symbols = [];
+     }
+
+    push(transform:NodeTransform) {
+        if(
+            transform.phraseType === PhraseType.NamespaceUseClause || 
+            transform.phraseType === PhraseType.NamespaceUseGroupClause
+        ) {
+            this.symbols.push((<NamespaceUseClauseTransform>transform).symbol);
+        }
+    }
+
+}
+
+class NamespaceUseDeclarationTransform implements NodeTransform {
+
+    phraseType = PhraseType.NamespaceUseDeclaration;
+    symbols: PhpSymbol[];
+    private _kind = SymbolKind.Class;
+    private _prefix = '';
+
+    constructor() {
+        this.symbols = [];
+    }
+
+    push(transform: NodeTransform) {
+        if (transform.tokenType === TokenType.Const) {
+            this._kind = SymbolKind.Constant;
+        } else if (transform.tokenType === TokenType.Function) {
+            this._kind = SymbolKind.Function;
+        } else if (transform.phraseType === PhraseType.NamespaceName) {
+            this._prefix = (<NamespaceNameTransform>transform).text;
+        } else if (transform.phraseType === PhraseType.NamespaceUseGroupClauseList) {
+            this.symbols = (<NamespaceUseClauseListTransform>transform).symbols;
+            let s:PhpSymbol;
+            let prefix = this._prefix ? this._prefix + '\\' : '';
+            for(let n = 0; n < this.symbols.length; ++n) {
+                s = this.symbols[n];
+                s.name = prefix + s.name;
+                if(!s.kind) {
+                    s.kind = this._kind;
+                }
+            }
+        } else if (transform.phraseType === PhraseType.NamespaceUseClauseList) {
+            this.symbols = (<NamespaceUseClauseListTransform>transform).symbols;
+            let s:PhpSymbol;
+            for(let n = 0; n < this.symbols.length; ++n) {
+                s = this.symbols[n];
+                s.kind = this._kind;
+            }
+        }
+    }
+
+}
+
+class NamespaceUseClauseTransform implements NodeTransform {
+
+    symbol: PhpSymbol;
+
+    constructor(public phraseType:PhraseType) {
+        this.symbol = PhpSymbol.create(0, '');
+    }
+
+    push(transform: NodeTransform) {
+        if(transform.tokenType === TokenType.Function) {
+            this.symbol.kind = SymbolKind.Function;
+        } else if(transform.tokenType === TokenType.Const) {
+            this.symbol.kind = SymbolKind.Constant;
+        } else if(transform.phraseType === PhraseType.NamespaceName) {
+            this.symbol.name = (<NamespaceNameTransform>transform).text;
+        }
+    }
+
+}
+
+class NamespaceDefinitionTransform implements NodeTransform {
+
+    phraseType = PhraseType.NamespaceDefinition;
+    name = '';
+
+    push(transform:NodeTransform) {
+        if(transform.phraseType === PhraseType.NamespaceName) {
+            this.name = (<NamespaceNameTransform>transform).text;
+        }
+    }
+
+}
+
+class NamespaceNameTransform implements NodeTransform {
+
+    phraseType = PhraseType.NamespaceName;
+    private _parts:string[];
+
+    constructor() {
+        this._parts = [];
+    }
+
+    push(transform:NodeTransform) {
+        if(transform.tokenType === TokenType.Name) {
+            this._parts.push((<TokenTransform>transform).text);
+        }
+    }
+
+    get text() {
+        return this._parts.join('\\');
+    }
+
+}
+
+class TokenTransform implements NodeTransform {
+
+    constructor(public token:Token, public doc:ParsedDocument) { }
+    push(transform:NodeTransform) { }
+    get text() {
+        return this.doc.tokenText(this.token);
+    }
 }

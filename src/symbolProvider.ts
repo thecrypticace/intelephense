@@ -45,7 +45,7 @@ export class SymbolProvider {
      */
     provideWorkspaceSymbols(query: string) {
         const maxItems = 100;
-        let matches = this.symbolStore.match(query, null, true);
+        let matches = this.symbolStore.match(query);
         let symbolInformationList: lsp.SymbolInformation[] = [];
 
         let s: PhpSymbol;

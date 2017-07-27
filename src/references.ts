@@ -89,8 +89,8 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
         switch ((<Phrase>node).phraseType) {
 
-            //case PhraseType.Error:
-            //    return false;
+            case PhraseType.Error:
+                return false;
 
             case PhraseType.FunctionDeclaration:
                 this._functionDeclaration();
@@ -534,18 +534,24 @@ class TokenTransform implements TypeNodeTransform, TextNodeTransform {
 class NamespaceNameTransform implements NodeTransform {
 
     phraseType = PhraseType.NamespaceName;
-    text = '';
+    private _parts:string[];
 
-    constructor(public node: Phrase, public document: ParsedDocument) { }
+    constructor(public node: Phrase, public document: ParsedDocument) {
+        this._parts = [];
+     }
 
     get range() {
         return this.document.nodeRange(this.node);
     }
 
     push(transform: NodeTransform) {
-        if (transform.tokenType === TokenType.Name || transform.tokenType === TokenType.Backslash) {
-            this.text += (<TokenTransform>transform).text;
+        if (transform.tokenType === TokenType.Name) {
+            this._parts.push((<TokenTransform>transform).text);
         }
+    }
+
+    get text() {
+        return this._parts.join('\\');
     }
 
 }
