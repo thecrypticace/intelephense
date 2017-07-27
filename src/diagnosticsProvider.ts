@@ -6,7 +6,7 @@
 
 import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
 import { TreeVisitor, Event, Debounce, Unsubscribe } from './types';
-import { Phrase, Token, ParseError, tokenTypeToString } from 'php7parser';
+import { Phrase, Token, ParseError, tokenTypeToString, PhraseType } from 'php7parser';
 import * as lsp from 'vscode-languageserver-types';
 
 export interface PublishDiagnosticsEventArgs {
@@ -115,12 +115,25 @@ export class DiagnosticsProvider {
     }
 
     private _parseErrorToDiagnostic(err: ParseError, doc: ParsedDocument) {
-        return <lsp.Diagnostic>{
-            range: doc.tokenRange(err.unexpected),
-            severity: lsp.DiagnosticSeverity.Error,
-            source: 'intelephense',
-            message: `Unexpected ${tokenTypeToString(err.unexpected.tokenType)}`,
-        };
+        return lsp.Diagnostic.create(this._errorRange(err, doc), this._message(err), lsp.DiagnosticSeverity.Error, undefined, 'intelephense');
+    }
+
+    private _message(err:ParseError) {
+        let msg = `Unexpected ${tokenTypeToString(err.unexpected.tokenType)}.`;
+        if(err.expected) {
+            msg += ` Expected ${tokenTypeToString(err.expected)}.`;
+        }
+        return msg;
+    }
+
+    private _errorRange(err:ParseError, doc:ParsedDocument) {
+        if(!err.children || err.children.length < 1) {
+            return doc.tokenRange(err.unexpected);
+        }
+
+        let tFirst = err.children[0] as Token;
+        let tLast = err.children[err.children.length - 1] as Token;
+        return lsp.Range.create(doc.tokenRange(tFirst).start, doc.tokenRange(tLast).end);
     }
 
 
@@ -140,8 +153,9 @@ class ErrorVisitor implements TreeVisitor<Phrase | Token>{
 
     preorder(node: Token | Phrase, spine: (Token | Phrase)[]) {
 
-        if (ParsedDocument.isPhrase(node) && (<Phrase>node).errors) {
-            Array.prototype.push.apply(this._errors, (<Phrase>node).errors);
+        if ((<Phrase>node).phraseType === PhraseType.Error) {
+            this._errors.push(<ParseError>node);
+            return false;
         }
 
         return true;
