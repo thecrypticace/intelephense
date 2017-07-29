@@ -293,6 +293,10 @@ export class Context {
         return this._scopePhrase;
     }
 
+    get reference() {
+        
+    }
+
     get scopeSymbol() {
 
         if (!this._scopeSymbol) {
@@ -327,6 +331,46 @@ export class Context {
         }
         return this._variableTable;
 
+    }
+
+    /**
+     * Is declaration context if position is in name part of declaration only
+     */
+    isDeclaration() {
+
+        let t = this.token;
+        let traverser = this.createTraverser();
+        let parent = traverser.parent() as Phrase;
+
+        if(!t || !parent) {
+            return false;
+        }
+
+        return ((t.tokenType === TokenType.Name || t.tokenType === TokenType.VariableName) && this._isDeclarationPhrase(parent)) ||
+            (parent.phraseType === PhraseType.Identifier && this._isDeclarationPhrase(<Phrase>traverser.parent()));
+
+    }
+
+    private _isDeclarationPhrase(node:Phrase) {
+        
+        if(!node) {
+            return false;
+        }
+
+        switch(node.phraseType) {
+            case PhraseType.ClassDeclarationHeader:
+            case PhraseType.TraitDeclarationHeader:
+            case PhraseType.InterfaceDeclarationHeader:
+            case PhraseType.PropertyElement:
+            case PhraseType.ConstElement:
+            case PhraseType.ParameterDeclaration:
+            case PhraseType.FunctionDeclarationHeader:
+            case PhraseType.MethodDeclarationHeader:
+            case PhraseType.ClassConstElement:
+                return true;
+            default:
+                return false;
+        }
     }
 
     get symbolTable() {

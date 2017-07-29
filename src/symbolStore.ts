@@ -4,8 +4,8 @@
 
 'use strict';
 
-import { PhpSymbol, SymbolIndex, SymbolKind, SymbolModifier, PhpSymbolDto } from './symbol';
-import { TreeTraverser, Predicate, TreeVisitor } from './types';
+import { PhpSymbol, SymbolIndex, SymbolKind, SymbolModifier, Reference, SymbolIdentifier } from './symbol';
+import { TreeTraverser, Predicate, TreeVisitor, Traversable } from './types';
 import { Position, Location, Range } from 'vscode-languageserver-types';
 import { TypeString } from './typeString';
 import * as builtInSymbols from './builtInSymbols.json';
@@ -14,7 +14,7 @@ import { SymbolReader } from './symbolReader';
 import { NameResolver } from './nameResolver';
 import * as util from './util';
 
-export class SymbolTable {
+export class SymbolTable implements Traversable<PhpSymbol> {
 
     constructor(
         public uri: string,
@@ -51,6 +51,21 @@ export class SymbolTable {
         return traverser.find(predicate);
     }
 
+    nameResolver(pos: Position) {
+        let nameResolver = new NameResolver();
+        let traverser = new TreeTraverser([this.root]);
+        let visitor = new NameResolverVisitor(pos, nameResolver);
+        traverser.traverse(visitor);
+        return nameResolver;
+    }
+
+    scope(pos:Position) {
+        let traverser = new TreeTraverser([this.root]);
+        let visitor = new ScopeVisitor(pos, this.root);
+        traverser.traverse(visitor);
+        return visitor.scope;
+    }
+
     scopeSymbols() {
         return this.filter(this._isScopeSymbol);
     }
@@ -73,7 +88,7 @@ export class SymbolTable {
         }
     }
 
-    private _isScopeSymbol(s:PhpSymbol) {
+    private _isScopeSymbol(s: PhpSymbol) {
         const mask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.None | SymbolKind.Function | SymbolKind.Method;
         return (s.kind & mask) > 0;
     }
@@ -113,11 +128,6 @@ export class SymbolTable {
 
     }
 
-}
-
-export interface MemberQuery {
-    typeName: string;
-    memberPredicate: Predicate<PhpSymbol>;
 }
 
 export class SymbolStore {
@@ -238,6 +248,14 @@ export class SymbolStore {
         return filtered;
     }
 
+    findSymbolsByReference(ref:Reference): PhpSymbol[] {
+
+    }
+
+    findReferences(identifier:SymbolIdentifier):Reference[] {
+
+    }
+
     private _sortMatches(query: string, matches: PhpSymbol[]) {
 
         let map: { [index: string]: number } = {};
@@ -300,206 +318,79 @@ export class SymbolStore {
 
 }
 
-export interface SymbolTableDto {
-    uri: string;
-    root: PhpSymbolDto;
-}
+class NameResolverVisitor implements TreeVisitor<PhpSymbol> {
 
-class ToPhpSymbolDtoVisitor implements TreeVisitor<PhpSymbol> {
+    haltTraverse = false;
+    private _kindMask = SymbolKind.Class | SymbolKind.Function | SymbolKind.Constant;
 
-    private _dtoStack;
-
-    constructor() {
-        this._dtoStack = [];
-    }
-
-    get root() {
-        return this._dtoStack.length ? this._dtoStack[0] : null;
-    }
+    constructor(public pos: Position, public nameResolver: NameResolver) { }
 
     preorder(node: PhpSymbol, spine: PhpSymbol[]) {
 
-        let parent = this._dtoStack.length ? this._dtoStack[this._dtoStack.length - 1] : null;
-
-        let dto = <PhpSymbolDto>{
-            kind: node.kind,
-            name: node.name
-        };
-
-        if (node.modifiers) {
-            dto.modifiers = node.modifiers;
+        if (node.location && node.location.range.start.line > this.pos.line) {
+            this.haltTraverse = true;
+            return false;
         }
 
-        if (node.location) {
-            dto.location = this._rangeToArray(node.location.range)
+        if ((node.modifiers & SymbolModifier.Use) > 0 && (node.kind & this._kindMask) > 0) {
+            this.nameResolver.rules.push(node);
+        } else if (node.kind === SymbolKind.Namespace) {
+            this.nameResolver.namespace = node;
+        } else if (node.kind === SymbolKind.Class) {
+            this.nameResolver.pushClassName(node);
         }
 
-        if (node.associated) {
-            dto.associated = this._associatedToAssociatedDto(node.associated);
-        }
-
-        if (node.doc) {
-            dto.doc = node.doc
-        }
-
-        if (node.scope) {
-            dto.scope = node.scope;
-        }
-
-        if (node.value) {
-            dto.value = node.value;
-        }
-
-        if (node.type) {
-            dto.type = node.type.toString();
-        }
-
-        if (parent) {
-            if (!parent.children) {
-                parent.children = [];
-            }
-
-            parent.children.push(dto);
-        }
-
-        this._dtoStack.push(dto);
         return true;
 
     }
 
     postorder(node: PhpSymbol, spine: PhpSymbol[]) {
-        if (this._dtoStack.length > 1) {
-            this._dtoStack.pop();
-        }
-    }
 
-    private _rangeToArray(range: Range) {
-        return [
-            range.start.line,
-            range.start.character,
-            range.end.line,
-            range.end.character
-        ];
-    }
-
-    private _associatedToAssociatedDto(associated: PhpSymbol[]) {
-
-        let dtos: PhpSymbolDto[] = [];
-        let s: PhpSymbol;
-        for (let n = 0, l = associated.length; n < l; ++n) {
-            s = associated[n];
-            dtos.push({
-                kind: s.kind,
-                name: s.name
-            });
+        if (this.haltTraverse) {
+            return;
         }
 
-        return dtos;
-    }
+        if (node.kind === SymbolKind.Class) {
+            this.nameResolver.popClassName();
+        }
 
+    }
 }
 
-class ToPhpSymbolVisitor implements TreeVisitor<PhpSymbolDto> {
+class ScopeVisitor implements TreeVisitor<PhpSymbol> {
 
-    private _symbolStack: PhpSymbol[];
+    haltTraverse = false;
+    private _scope:PhpSymbol;
+    private _kindMask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.Function | SymbolKind.Method;
 
-    constructor(public uri: string) {
-        this._symbolStack = [];
+    constructor(public pos:Position, defaultScope:PhpSymbol) { 
+        this._scope = defaultScope;
     }
 
-    get root() {
-        return this._symbolStack.length ? this._symbolStack[0] : null;
+    get scope() {
+        return this._scope;
     }
 
-    preorder(node: PhpSymbolDto, spine: PhpSymbolDto[]) {
+    preorder(node:PhpSymbol, spine:PhpSymbol[]) {
 
-        let parent = this._symbolStack.length ? this._symbolStack[this._symbolStack.length - 1] : null;
-
-        let s = <PhpSymbol>{
-            kind: node.kind,
-            name: node.name
-        };
-
-        if (node.modifiers) {
-            s.modifiers = node.modifiers;
+        if (node.location && node.location.range.start.line > this.pos.line) {
+            this.haltTraverse = true;
+            return false;
         }
 
-        if (node.location) {
-            s.location = this._arrayToLocation(this.uri, node.location);
+        if(node.location && util.isInRange(this.pos, node.location.range.start, node.location.range.end) !== 0) {
+            return false;
         }
 
-        if (node.associated) {
-            s.associated = this._associatedDtoToAssociated(node.associated);
+        if(
+            (node.kind & this._kindMask) > 0 && 
+            !(node.modifiers & SymbolModifier.Use) && 
+            node.location && util.isInRange(this.pos, node.location.range.start, node.location.range.end) === 0
+        ) {
+            this._scope = node;
         }
 
-        if (node.doc) {
-            s.doc = node.doc
-        }
-
-        if (node.scope) {
-            s.scope = node.scope;
-        }
-
-        if (node.value) {
-            s.value = node.value;
-        }
-
-        if (node.type) {
-            s.type = node.type;
-        }
-
-
-        if (parent) {
-            if (!parent.children) {
-                parent.children = [];
-            }
-
-            parent.children.push(s);
-        }
-
-        this._symbolStack.push(s);
         return true;
     }
 
-    postorder(node: PhpSymbolDto, spine: PhpSymbolDto[]) {
-        if (this._symbolStack.length > 1) {
-            this._symbolStack.pop();
-        }
-    }
-
-    private _associatedDtoToAssociated(associatedDto: PhpSymbolDto[]) {
-
-        let associated: PhpSymbol[] = [];
-        let dto: PhpSymbolDto;
-
-        for (let n = 0, l = associatedDto.length; n < l; ++n) {
-            dto = associatedDto[n];
-            associated.push({
-                kind: dto.kind,
-                name: dto.name
-            });
-        }
-        return associated;
-    }
-
-    private _arrayToLocation(uri: string, array: number[]) {
-
-        return <Location>{
-            uri: uri,
-            range: {
-                start: {
-                    line: array[0],
-                    character: array[1]
-                },
-                end: {
-                    line: array[2],
-                    character: array[3]
-                }
-            }
-        };
-
-    }
-
-
 }
-

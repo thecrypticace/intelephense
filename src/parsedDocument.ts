@@ -4,11 +4,7 @@
 
 'use strict';
 
-import {
-    Phrase, Token, NamespaceName, MemberName, TokenType,
-    PhraseType, NamespaceDefinition, Parser, SimpleVariable,
-    ScopedMemberName
-} from 'php7parser';
+import { Phrase, Token, TokenType, PhraseType, Parser } from 'php7parser';
 import { TextDocument } from './textDocument';
 import * as lsp from 'vscode-languageserver-types';
 import {
@@ -20,13 +16,35 @@ import * as util from './util';
 const textDocumentChangeDebounceWait = 250;
 
 export interface NodeTransform {
-    phraseType?:PhraseType;
-    tokenType?:TokenType;
+    phraseType?: PhraseType;
+    tokenType?: TokenType;
     push(transform: NodeTransform);
 }
 
 export interface ParsedDocumentChangeEventArgs {
     parsedDocument: ParsedDocument;
+}
+
+export class ParseTreeTraverser extends TreeTraverser<Phrase | Token> {
+
+    private _doc: ParsedDocument;
+
+    constructor(document: ParsedDocument) {
+        super([document.tree]);
+        this._doc = document;
+    }
+
+    position(pos: lsp.Position) {
+        let offset = this._doc.offsetAtPosition(pos);
+        let fn = (x: Phrase | Token) => {
+            return (<Token>x).tokenType !== undefined &&
+                offset < (<Token>x).offset + (<Token>x).length &&
+                offset >= (<Token>x).offset;
+        };
+
+        return this.find(fn) as Token;
+    }
+
 }
 
 export class ParsedDocument implements Traversable<Phrase | Token>{
@@ -90,7 +108,7 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
     }
 
     createTraverser() {
-        return new TreeTraverser<Phrase | Token>([this._parseTree]);
+        return new ParseTreeTraverser(this);
     }
 
     applyChanges(contentChanges: lsp.TextDocumentContentChangeEvent[]) {
@@ -179,7 +197,7 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         let tFirst = ParsedDocument.firstToken(node);
         let tLast = ParsedDocument.lastToken(node);
 
-        if(!tFirst || !tLast) {
+        if (!tFirst || !tLast) {
             return '';
         }
 
@@ -190,7 +208,11 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
     createAnonymousName(node: Phrase) {
         let tFirst = ParsedDocument.firstToken(node);
         let offset = tFirst ? tFirst.offset : 0;
-        return `#anon#${util.hash(this.uri).toString(16)}#${offset}`;
+        let hash = util.hash32(this.uri);
+        if(hash < 0) {
+            hash = Math.abs(hash) + (Math.pow(2, 31));
+        }
+        return `#anon#${hash.toString(16)}#${offset}`;
     }
 
     positionAtOffset(offset: number) {

@@ -126,7 +126,7 @@ export function whitespace(n: number) {
 /**
  * http://stackoverflow.com/a/7616484
  */
-export function hash(text: string) {
+export function hash32(text: string) {
     let hash = 0;
     let chr: number;
     for (let i = 0, l = text.length; i < l; ++i) {
@@ -134,5 +134,5 @@ export function hash(text: string) {
         hash = ((hash << 5) - hash) + chr;
         hash |= 0; // Convert to 32bit integer
     }
-    return hash >>> 0; //positive int only
+    return hash;
 }

@@ -6,8 +6,7 @@
 
 import { TypeString } from './typeString';
 import { BinarySearch } from './types';
-import { Location } from 'vscode-languageserver-types';
-import { Reference } from './references';
+import { Location, Range } from 'vscode-languageserver-types';
 import * as util from './util';
 
 export const enum SymbolKind {
@@ -56,20 +55,22 @@ export namespace PhpSymbolDoc {
     }
 }
 
-export interface PhpSymbol {
-    kind: SymbolKind;
-    name: string;
+export interface PhpSymbol extends SymbolIdentifier {
     location?: Location;
     modifiers?: SymbolModifier;
     doc?: PhpSymbolDoc;
     type?: string;
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
-    scope?: string;
     value?: string;
     references?:Reference[];
 }
 
+export interface SymbolIdentifier {
+    kind:SymbolKind;
+    name:string;
+    scope?:string;
+}
 
 export namespace PhpSymbol {
 
@@ -179,6 +180,153 @@ export namespace PhpSymbol {
             name: name,
             location: location
         };
+    }
+
+}
+
+export interface Reference extends SymbolIdentifier {
+    range: Range;
+    type?: string;
+    altName?: string;
+}
+
+export namespace Reference {
+    export function create(kind: SymbolKind, name: string, range: Range) {
+        return {
+            kind: kind,
+            name: name,
+            range: range
+        };
+    }
+
+    export function toTypeString(ref: Reference, symbolStore: SymbolStore, uri: string) {
+
+        if (!ref) {
+            return '';
+        }
+
+        switch (ref.kind) {
+            case SymbolKind.Class:
+            case SymbolKind.Interface:
+            case SymbolKind.Trait:
+                return ref.name;
+
+            case SymbolKind.Function:
+            case SymbolKind.Method:
+            case SymbolKind.Property:
+                return findSymbols(ref, symbolStore, uri).reduce<string>((carry, val) => {
+                    return TypeString.merge(carry, PhpSymbol.type(val));
+                }, '');
+
+            case SymbolKind.Variable:
+                return ref.type || '';
+
+            default:
+                return '';
+
+
+        }
+    }
+
+    export function findSymbols(ref: Reference, symbolStore: SymbolStore, uri: string) {
+
+        if (!ref) {
+            return [];
+        }
+
+        let symbols: PhpSymbol[];
+        let fn: Predicate<PhpSymbol>;
+        let lcName: string;
+        let table: SymbolTable;
+
+        switch (ref.kind) {
+            case SymbolKind.Class:
+            case SymbolKind.Interface:
+            case SymbolKind.Trait:
+                fn = (x) => {
+                    return (x.kind & (SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait)) > 0;
+                };
+                symbols = symbolStore.find(ref.name, fn);
+                break;
+
+            case SymbolKind.Function:
+            case SymbolKind.Constant:
+                fn = (x) => {
+                    return x.kind === ref.kind;
+                };
+                symbols = symbolStore.find(ref.name, fn);
+                if (symbols.length < 1 && ref.altName) {
+                    symbols = symbolStore.find(ref.altName, fn);
+                }
+                break;
+
+            case SymbolKind.Method:
+                lcName = ref.name.toLowerCase();
+                fn = (x) => {
+                    return x.kind === SymbolKind.Method && x.name.toLowerCase() === lcName;
+                };
+                symbols = findMembers(symbolStore, ref.scope, fn);
+                break;
+
+            case SymbolKind.Property:
+                fn = (x) => {
+                    return x.kind === SymbolKind.Property && x.name.slice(1) === ref.name;
+                };
+                symbols = findMembers(symbolStore, ref.scope, fn);
+                break;
+
+            case SymbolKind.ClassConstant:
+                fn = (x) => {
+                    return x.kind === SymbolKind.ClassConstant && x.name === ref.name;
+                };
+                symbols = findMembers(symbolStore, ref.scope, fn);
+                break;
+
+            case SymbolKind.Variable:
+                table = symbolStore.getSymbolTable(uri);
+                if (table) {
+                    //find the var scope
+                    fn = (x) => {
+                        return ((x.kind === SymbolKind.Function && (x.modifiers & SymbolModifier.Anonymous) > 0) ||
+                            x.kind === SymbolKind.Method) &&
+                            x.location && util.isInRange(ref.range.start, x.location.range.start, x.location.range.end) === 0;
+                    };
+                    let scope = table.find(fn);
+                    if (!scope) {
+                        scope = table.root;
+                    }
+                    fn = (x) => {
+                        return (x.kind & (SymbolKind.Parameter | SymbolKind.Variable)) > 0 &&
+                            x.name === ref.name;
+                    }
+                    let s = scope.children ? scope.children.find(fn) : null;
+                    if (s) {
+                        symbols = [s];
+                    }
+                }
+                break;
+
+            default:
+                break;
+
+        }
+
+        return symbols || [];
+
+    }
+
+    function findMembers(symbolStore: SymbolStore, scope: string, predicate: Predicate<PhpSymbol>) {
+
+        let fqnArray = TypeString.atomicClassArray(scope);
+        let type: TypeAggregate;
+        let members = new Set<PhpSymbol>();
+        for (let n = 0; n < fqnArray.length; ++n) {
+            type = TypeAggregate.create(symbolStore, fqnArray[n]);
+            if (type) {
+                Set.prototype.add.apply(members, type.members(predicate));
+            }
+        }
+        return Array.from(members);
     }
 
 }
