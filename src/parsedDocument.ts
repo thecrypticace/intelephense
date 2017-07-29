@@ -329,6 +329,10 @@ export namespace ParsedDocument {
 
     export function firstPhraseOfType(type: PhraseType, nodes: (Phrase | Token)[]) {
 
+        if(!nodes) {
+            return null;
+        }
+
         let child: Phrase;
         for (let n = 0, l = nodes.length; n < l; ++n) {
             child = nodes[n] as Phrase;
