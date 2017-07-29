@@ -49,11 +49,11 @@ export class NameResolverVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case PhraseType.AnonymousClassDeclarationHeader:
-                this.nameResolver.pushClassName(this._anonymousClassDeclarationHeader(<AnonymousClassDeclarationHeader>node,  parent));
+                this.nameResolver.pushClass(this._anonymousClassDeclarationHeader(<AnonymousClassDeclarationHeader>node,  parent));
                 break;
 
             case PhraseType.ClassDeclarationHeader:
-                this.nameResolver.pushClassName(this._classDeclarationHeader(<ClassDeclarationHeader>node));
+                this.nameResolver.pushClass(this._classDeclarationHeader(<ClassDeclarationHeader>node));
                 break;
 
             default:
@@ -80,7 +80,7 @@ export class NameResolverVisitor implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.ClassDeclaration:
             case PhraseType.AnonymousClassDeclaration:
-                this.nameResolver.popClassName();
+                this.nameResolver.popClass();
                 break;
 
             default:

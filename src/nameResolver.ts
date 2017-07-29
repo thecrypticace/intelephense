@@ -10,37 +10,48 @@ import { PhpSymbol, SymbolKind } from './symbol';
 
 export class NameResolver {
 
-    private _classStack:[string, string][];
+    private _classStack:PhpSymbol[];
     rules:PhpSymbol[];
-    namespace = '';
+    namespace:PhpSymbol;
 
     constructor() {
         this.rules = [];
         this._classStack = [];
      }
 
+     get class() {
+        return this._classStack.length ? this._classStack[this._classStack.length - 1] : null;
+     }
+
+     get namespaceName() {
+         return this.namespace ? this.namespace.name : '';
+     }
+
      get className(){
-         return this._classStack.length ? this._classStack[this._classStack.length - 1][0] : '';
+         return this._classStack.length ? this._classStack[this._classStack.length - 1].name : '';
      }
 
      get classBaseName(){
-         return this._classStack.length ? this._classStack[this._classStack.length - 1][1] : '';
+         let s = this.class;
+         if(!s || !s.associated) {
+             return '';
+         }
+         let base = s.associated.find((x)=>{
+            return x.kind === SymbolKind.Class;
+         });
+         return base ? base.name : '';
      }
 
-     /**
-      * 
-      * @param classNameTuple className, classBaseName
-      */
-     pushClassName(classNameTuple:[string, string]){
-        this._classStack.push(classNameTuple);
+     pushClass(symbol:PhpSymbol){
+        this._classStack.push(symbol);
      }
 
-     popClassName(){
+     popClass(){
          this._classStack.pop();
      }
 
     resolveRelative(relativeName: string) {
-        return this.concatNamespaceName(this.namespace, relativeName);
+        return this.concatNamespaceName(this.namespaceName, relativeName);
     }
 
     resolveNotFullyQualified(notFqn: string, kind?: SymbolKind) {

@@ -337,7 +337,7 @@ class NameResolverVisitor implements TreeVisitor<PhpSymbol> {
         } else if (node.kind === SymbolKind.Namespace) {
             this.nameResolver.namespace = node;
         } else if (node.kind === SymbolKind.Class) {
-            this.nameResolver.pushClassName(node);
+            this.nameResolver.pushClass(node);
         }
 
         return true;
@@ -351,7 +351,7 @@ class NameResolverVisitor implements TreeVisitor<PhpSymbol> {
         }
 
         if (node.kind === SymbolKind.Class) {
-            this.nameResolver.popClassName();
+            this.nameResolver.popClass();
         }
 
     }
