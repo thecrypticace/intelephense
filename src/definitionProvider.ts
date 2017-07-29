@@ -6,14 +6,11 @@
 
 import * as lsp from 'vscode-languageserver-types';
 import { PhpSymbol, SymbolKind } from './symbol';
-import {SymbolStore, MemberQuery} from './symbolStore';
+import {SymbolStore} from './symbolStore';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Context } from './context';
 import { TypeString } from './typeString';
-import {
-    Phrase, PhraseType, Token, MemberName, ScopedMemberName, TokenType,
-    ScopedExpression, ObjectAccessExpression, SimpleVariable
-} from 'php7parser';
+import { Phrase, PhraseType, Token, TokenType } from 'php7parser';
 import { TreeTraverser } from './types';
 
 export class DefinitionProvider {
@@ -28,25 +25,28 @@ export class DefinitionProvider {
         }
 
         let context = new Context(this.symbolStore, doc, position);
-        let traverser = context.createTraverser();
-        let phrase: Phrase;
-        let symbol: PhpSymbol;
-        let name: string;
-
-        while (phrase = <Phrase>traverser.parent()) {
-
-            symbol = this._lookupSymbol(traverser.clone(), context);
-            if (symbol) {
-                break;
-            }
-
+        let ref = context.reference;
+        
+        if(!ref) {
+            return null;
         }
 
-        return symbol && symbol.location ? symbol.location : null;
+        let symbols = this.symbolStore.findSymbolsByReference(ref);
+        let locations = [];
+        let s:PhpSymbol;
 
+        for(let n = 0; n < symbols.length; ++n) {
+            s = symbols[n];
+            if(s.location) {
+                locations.push(s.location);
+            }
+        }
+
+        return locations.length === 1 ? locations[0] : locations;
 
     }
 
+    /*
     private _lookupSymbol(traverser: TreeTraverser<Phrase | Token>, context: Context) {
 
         let phrase = traverser.node as Phrase;
@@ -187,5 +187,5 @@ export class DefinitionProvider {
         }
 
     }
-
+ */
 }
