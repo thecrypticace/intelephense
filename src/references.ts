@@ -6,7 +6,7 @@
 
 import { TreeVisitor, MultiVisitor } from './types';
 import { Phrase, Token, PhraseType, TokenType } from 'php7parser';
-import { SymbolKind, PhpSymbol, SymbolModifier } from './symbol';
+import { SymbolKind, PhpSymbol, SymbolModifier, Reference } from './symbol';
 import { SymbolStore, SymbolTable } from './symbolStore';
 import { ParsedDocument, NodeTransform } from './parsedDocument';
 import { NameResolver } from './nameResolver';
@@ -64,10 +64,13 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
     private _transformStack: NodeTransform[];
     private _variableTable: VariableTable;
-    private _scopeSymbolsPos = 0;
-    private _contextStack: TypeAggregate[];
+    private _classStack: TypeAggregate[];
     private _scopeStack: PhpSymbol[];
-    private _scopeSymbols: PhpSymbol[];
+    private _symbols: PhpSymbol[];
+    private _symbolFilter:Predicate<PhpSymbol> = (x) => {
+        const mask = SymbolKind.Namespace | SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.Method | SymbolKind.Function;
+        return !x.kind || (x.kind & mask) > 0;
+    };
 
     constructor(
         public doc: ParsedDocument,
@@ -77,9 +80,9 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
     ) {
         this._transformStack = [];
         this._variableTable = new VariableTable();
-        this._contextStack = [];
-        this._scopeStack = [];
-        this._scopeSymbols = symbolTable.scopeSymbols();
+        this._classStack = [];
+        this._symbols = symbolTable.filter(this._symbolFilter);
+        this._scopeStack = [this._symbols.shift()];
     }
 
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
@@ -91,6 +94,29 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.Error:
                 return false;
+
+            case PhraseType.NamespaceDefinition:
+                {
+                    let s = this._symbols.shift();
+                    this._scopeStack.push(s);
+                    this.nameResolver.namespace = s;
+                }
+                break;
+
+            case PhraseType.NamespaceUseDeclaration:
+                this._transformStack.push(new NamespaceUseDeclarationTransform());
+                break;
+
+            case PhraseType.NamespaceUseGroupClauseList:
+            case PhraseType.NamespaceUseClauseList:
+                this._transformStack.push(new NamespaceUseClauseListTransform((<Phrase>node).phraseType));
+                break;
+
+            case PhraseType.NamespaceUseClause:
+            case PhraseType.NamespaceUseGroupClause:
+                this.nameResolver.rules.push(this._symbols.shift());
+                this._transformStack.push(new NamespaceUseClauseTransform((<Phrase>node).phraseType));
+                break;
 
             case PhraseType.FunctionDeclaration:
                 this._functionDeclaration();
@@ -105,11 +131,12 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.InterfaceDeclaration:
             case PhraseType.AnonymousClassDeclaration:
                 {
-                    let context = this._nextScopeSymbol();
-                    this._scopeStack.push(context);
-                    this._contextStack.push(new TypeAggregate(this.symbolStore, context));
+                    let s = this._symbols.shift();
+                    this._scopeStack.push(s);
+                    this.nameResolver.pushClass(s);
+                    this._classStack.push(new TypeAggregate(this.symbolStore, s));
                     this._variableTable.pushScope();
-                    this._variableTable.setVariable(Variable.create('$this', context.name));
+                    this._variableTable.setVariable(Variable.create('$this', s.name));
                 }
                 break;
 
@@ -286,7 +313,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.RelativeScope:
                 if (parentTransform) {
-                    let context = this._contextStack.length ? this._contextStack[this._contextStack.length - 1] : null;
+                    let context = this._classStack.length ? this._classStack[this._classStack.length - 1] : null;
                     let name = context ? context.type.name : '';
                     this._transformStack.push(new RelativeScopeTransform(name));
                 } else {
@@ -349,6 +376,10 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
         switch ((<Phrase>node).phraseType) {
 
+            case PhraseType.NamespaceName:
+                this._scopeStack.pop();
+                break;
+
             case PhraseType.FullyQualifiedName:
             case PhraseType.QualifiedName:
             case PhraseType.RelativeQualifiedName:
@@ -358,6 +389,8 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.ScopedPropertyAccessExpression:
             case PhraseType.PropertyAccessExpression:
             case PhraseType.MethodCallExpression:
+            case PhraseType.NamespaceUseClause:
+            case PhraseType.NamespaceUseGroupClause:
                 if (scope) {
                     if (!scope.references) {
                         scope.references = [];
@@ -392,7 +425,8 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.TraitDeclaration:
             case PhraseType.InterfaceDeclaration:
             case PhraseType.AnonymousClassDeclaration:
-                this._contextStack.pop();
+                this.nameResolver.popClass();
+                this._classStack.pop();
                 this._scopeStack.pop();
                 this._variableTable.popScope();
                 break;
@@ -425,16 +459,11 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
         }
     }
 
-    private _nextScopeSymbol() {
-        ++this._scopeSymbolsPos;
-        return this._scopeSymbols.length < this._scopeSymbolsPos ? this._scopeSymbols[this._scopeSymbolsPos] : null;
-    }
-
     private _methodDeclaration() {
-        let symbol = this._nextScopeSymbol();
+        let symbol = this._symbols.shift();
         this._scopeStack.push(symbol);
         this._variableTable.pushScope();
-        let type = this._contextStack[this._contextStack.length - 1];
+        let type = this._classStack[this._classStack.length - 1];
         let lcName = symbol.name.toLowerCase();
         let fn = (x: PhpSymbol) => {
             return x.kind === SymbolKind.Method && lcName === x.name.toLowerCase();
@@ -452,7 +481,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
     }
 
     private _functionDeclaration() {
-        let symbol = this._nextScopeSymbol();
+        let symbol = this._symbols.shift();
         this._scopeStack.push(symbol);
         this._variableTable.pushScope();
         let children = symbol && symbol.children ? symbol.children : [];
@@ -466,7 +495,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
     }
 
     private _anonymousFunctionCreationExpression() {
-        let symbol = this._nextScopeSymbol();
+        let symbol = this._symbols.shift();
         this._scopeStack.push(symbol);
         let carry: string[] = [];
         let children = symbol && symbol.children ? symbol.children : [];
@@ -618,28 +647,9 @@ class NamespaceUseDeclarationTransform implements NodeTransform {
 
 class NamespaceUseClauseTransform implements ReferenceNodeTransform {
 
-    phraseType = PhraseType.NamespaceUseClause;
     reference: Reference;
 
-    constructor() {
-        this.reference = Reference.create(0, '', null);
-    }
-
-    push(transform: NodeTransform) {
-        if(transform.phraseType === PhraseType.NamespaceName) {
-            this.reference.name = (<NamespaceNameTransform>transform).text;
-            this.reference.range = (<NamespaceNameTransform>transform).range;
-        }
-    }
-
-}
-
-class NamespaceUseGroupClauseTransform implements ReferenceNodeTransform {
-
-    phraseType = PhraseType.NamespaceUseGroupClause;
-    reference: Reference;
-
-    constructor() {
+    constructor(public phraseType:PhraseType) {
         this.reference = Reference.create(0, '', null);
     }
 
