@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
+import { PhpSymbol, SymbolKind, SymbolModifier, Reference } from './symbol';
 import { SymbolStore, SymbolTable } from './symbolStore';
 import { ExpressionTypeResolver, VariableTable, VariableTypeResolver } from './typeResolver';
 import { NameResolver } from './nameResolver';
@@ -217,8 +217,8 @@ export class Context {
         return this._nameResolver.classBaseName;
     }
 
-    get namespace() {
-        return this._nameResolver.namespace;
+    get namespaceName() {
+        return this._nameResolver.namespaceName;
     }
 
     get lastNamespaceUseDeclaration() {
@@ -481,6 +481,76 @@ export class Context {
 
     private _isClassDeclaration(node: Phrase | Token) {
         return (<Phrase>node).phraseType === PhraseType.ClassDeclaration;
+    }
+
+}
+
+export class ParseTreeTraverser extends TreeTraverser<Phrase | Token> {
+
+    private _doc: ParsedDocument;
+    private _table:SymbolTable;
+
+    constructor(document: ParsedDocument, symbolTable:SymbolTable) {
+        super([document.tree]);
+        this._doc = document;
+        this._table = symbolTable;
+    }
+
+    get text() {
+        return this._doc.nodeText(this.node);
+    }
+
+    get range() {
+        return this._doc.nodeRange(this.node);
+    }
+
+    get reference() {
+        let scope = this.scope;
+        let range = this.range;
+
+        if(!scope || !range || !scope.references) {
+            return null;
+        }
+
+        let ref:Reference;
+        for(let n = 0; n < scope.references.length; ++n) {
+            ref = scope.references[n];
+            if(util.isInRange(range.start, ref.location.range) === 0) {
+                return ref;
+            }
+        }
+
+        return null;
+    }
+
+    get scope() {
+        let range = this.range;
+        if(!range) {
+            return null;
+        }
+        return this._table.scope(range.start);
+    }
+
+    get nameResolver() {
+
+    }
+
+    position(pos: Position) {
+        let offset = this._doc.offsetAtPosition(pos);
+        let fn = (x: Phrase | Token) => {
+            return (<Token>x).tokenType !== undefined &&
+                offset < (<Token>x).offset + (<Token>x).length &&
+                offset >= (<Token>x).offset;
+        };
+
+        return this.find(fn) as Token;
+    }
+
+    clone() {
+        let spine = this.spine;
+        let traverser = new ParseTreeTraverser(this._doc, this._table);
+        traverser._spine = spine;
+        return traverser;
     }
 
 }

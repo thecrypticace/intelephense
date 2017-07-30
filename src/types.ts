@@ -54,7 +54,7 @@ export interface TreeLike {
 
 export class TreeTraverser<T extends TreeLike> {
 
-    private _spine: T[];
+    protected _spine: T[];
 
     constructor(spine: T[]) {
         this._spine = spine.slice(0);
@@ -115,6 +115,38 @@ export class TreeTraverser<T extends TreeLike> {
 
     }
 
+    child(predicate:Predicate<T>) {
+
+        let parent = this.node;
+        if(!parent || !parent.children) {
+            return null;
+        }
+
+        for(let n = 0; n < parent.children.length; ++n) {
+            if(predicate(<T>parent.children[n])) {
+                this._spine.push(<T>parent.children[n]);
+                return this.node;
+            }
+        }
+
+        return null;
+    }
+
+    nthChild(n:number) {
+        let parent = this.node;
+        if(!parent || !parent.children || n < 0 || n > parent.children.length - 1) {
+            return null;
+        }
+
+        this._spine.push(<T>parent.children[n]);
+        return this.node;
+    }
+
+    childCount() {
+        let node = this.node;
+        return node && node.children ? node.children.length : 0;
+    }
+
     prevSibling() {
 
         if (this._spine.length < 2) {
@@ -122,7 +154,7 @@ export class TreeTraverser<T extends TreeLike> {
         }
 
         let parent = this._spine[this._spine.length - 2];
-        let childIndex = parent.children.indexOf(this);
+        let childIndex = parent.children.indexOf(this.node);
 
         if (childIndex > 0) {
             this._spine.pop();
@@ -141,7 +173,7 @@ export class TreeTraverser<T extends TreeLike> {
         }
 
         let parent = this._spine[this._spine.length - 2];
-        let childIndex = parent.children.indexOf(this);
+        let childIndex = parent.children.indexOf(this.node);
 
         if (childIndex < parent.children.length - 1) {
             this._spine.pop();

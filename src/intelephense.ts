@@ -7,7 +7,7 @@
 import { ParsedDocument, ParsedDocumentStore, ParsedDocumentChangeEventArgs } from './parsedDocument';
 import { SymbolStore, SymbolTable, SymbolTableDto } from './symbolStore';
 import { SymbolProvider } from './symbolProvider';
-import { CompletionProvider, CompletionProviderConfig } from './completionProvider';
+import { CompletionProvider, CompletionOptions } from './completionProvider';
 import { DiagnosticsProvider, PublishDiagnosticsEventArgs } from './diagnosticsProvider';
 import { Debounce, Unsubscribe } from './types';
 import { SignatureHelpProvider } from './signatureHelpProvider';
@@ -74,7 +74,7 @@ export namespace Intelephense {
         diagnosticsProvider.maxItems = value;
     }
 
-    export function setCompletionProviderConfig(config: CompletionProviderConfig) {
+    export function setCompletionProviderConfig(config: CompletionOptions) {
         completionProvider.config = config;
     }
 

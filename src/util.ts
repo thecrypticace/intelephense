@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Position } from 'vscode-languageserver-types';
+import { Position, Range } from 'vscode-languageserver-types';
 
 export function popMany<T>(array: T[], count: number) {
     let popped: T[] = [];
@@ -22,15 +22,18 @@ export function isString(s: any) {
     return typeof (s) === 'string' || s instanceof String;
 }
 
-export function isInRange(position: Position, startRange: Position, endRange: Position) {
+export function isInRange(position: Position, range: Range) {
 
-    if (position.line < startRange.line ||
-        (position.line === startRange.line && position.character < startRange.character)) {
+    let start = range.start;
+    let end = range.end;
+
+    if (position.line < start.line ||
+        (position.line === start.line && position.character < start.character)) {
         return -1;
     }
 
-    if (position.line > endRange.line ||
-        (position.line === endRange.line && position.character > endRange.character)) {
+    if (position.line > end.line ||
+        (position.line === end.line && position.character > end.character)) {
         return 1;
     }
 

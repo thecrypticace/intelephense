@@ -4,20 +4,14 @@
 
 'use strict';
 
-import {
-    Token, TokenType, Phrase, PhraseType,
-    NamespaceName, ScopedExpression, ObjectAccessExpression,
-    NamespaceUseDeclaration, NamespaceUseGroupClause, MethodDeclarationHeader,
-    ClassBaseClause, InterfaceBaseClause, ClassInterfaceClause
-} from 'php7parser';
+import {    Token, TokenType, Phrase, PhraseType} from 'php7parser';
 import {
     PhpSymbol, SymbolKind, SymbolModifier
 } from './symbol';
-import { SymbolStore, SymbolTable, MemberQuery } from './symbolStore';
+import { SymbolStore, SymbolTable } from './symbolStore';
 import { SymbolReader } from './symbolReader';
 import { TypeString } from './typeString';
 import { NameResolver } from './nameResolver';
-import { ExpressionTypeResolver, VariableTypeResolver, VariableTable } from './typeResolver';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Predicate } from './types';
 import { Context } from './context';
@@ -194,7 +188,7 @@ function tokenToSymbolKind(t: Token) {
 
 }
 
-export interface CompletionProviderConfig {
+export interface CompletionOptions {
     maxItems: number
 }
 
@@ -202,13 +196,13 @@ export class CompletionProvider {
 
     private _maxItems: number;
     private _strategies: CompletionStrategy[];
-    private _config: CompletionProviderConfig;
-    private static _defaultConfig: CompletionProviderConfig = { maxItems: 100 };
+    private _config: CompletionOptions;
+    private static _defaultConfig: CompletionOptions = { maxItems: 100 };
 
     constructor(
         public symbolStore: SymbolStore,
         public documentStore: ParsedDocumentStore,
-        config?: CompletionProviderConfig) {
+        config?: CompletionOptions) {
 
         this._config = config ? config : CompletionProvider._defaultConfig;
         this._strategies = [
@@ -229,7 +223,7 @@ export class CompletionProvider {
 
     }
 
-    set config(config: CompletionProviderConfig) {
+    set config(config: CompletionOptions) {
         this._config = config;
         for (let n = 0, l = this._strategies.length; n < l; ++n) {
             this._strategies[n].config = config;
@@ -261,14 +255,14 @@ export class CompletionProvider {
 }
 
 interface CompletionStrategy {
-    config: CompletionProviderConfig;
+    config: CompletionOptions;
     canSuggest(context: Context): boolean;
     completions(context: Context): lsp.CompletionList;
 }
 
 abstract class AbstractNameCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionProviderConfig) { }
+    constructor(public config: CompletionOptions) { }
 
     abstract canSuggest(context: Context): boolean;
 
@@ -286,14 +280,14 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         if (namePhrase && namePhrase.phraseType === PhraseType.RelativeQualifiedName) {
             //symbols share current namespace
             text = text.slice(10); //namespace\
-            let ns = context.namespace;
+            let ns = context.namespaceName;
             let sf = this._symbolFilter;
             pred = (x) => {
                 return sf(x) && x.name.indexOf(ns) === 0;
             };
         }
 
-        let matches = context.symbolStore.match(text, pred, true);
+        let matches = context.symbolStore.match(text, pred);
         if (namePhrase && namePhrase.phraseType === PhraseType.QualifiedName) {
             //keywords and imports
              Array.prototype.push.apply(items, keywordCompletionItems(this._getKeywords(context), text));
@@ -335,7 +329,7 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         let imported:PhpSymbol[] = [];
         for(let n = 0, l = filteredRules.length; n < l; ++n) {
             r = filteredRules[n];
-            s = context.symbolStore.find(r.associated[0].name, pred);
+            s = context.symbolStore.find(r.associated[0].name, pred).shift();
             if(s){
                 merged = PhpSymbol.clone(s);
                 merged.associated = r.associated;
@@ -352,7 +346,7 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         let item = <lsp.CompletionItem>{
             kind: lsp.CompletionItemKind.Class,
             label: PhpSymbol.notFqn(s.name),
-            insertText: createInsertText(s, context.namespace, namePhraseType)
+            insertText: createInsertText(s, context.namespaceName, namePhraseType)
         }
 
         if(s.doc && s.doc.description) {
@@ -478,7 +472,7 @@ class ClassTypeDesignatorCompletion extends AbstractNameCompletion {
         let item = <lsp.CompletionItem>{
             kind: lsp.CompletionItemKind.Constructor,
             label: PhpSymbol.notFqn(s.name),
-            insertText: createInsertText(s, context.namespace, namePhraseType)
+            insertText: createInsertText(s, context.namespaceName, namePhraseType)
         }
 
         if(s.doc && s.doc.description) {
@@ -503,7 +497,7 @@ class ClassTypeDesignatorCompletion extends AbstractNameCompletion {
 
 class SimpleVariableCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionProviderConfig) { }
+    constructor(public config: CompletionOptions) { }
 
     canSuggest(context: Context) {
         let traverser = context.createTraverser();
@@ -680,7 +674,7 @@ class NameCompletion extends AbstractNameCompletion {
 
 class ScopedAccessCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionProviderConfig) { }
+    constructor(public config: CompletionOptions) { }
 
     canSuggest(context: Context) {
         let traverser = context.createTraverser();
@@ -711,7 +705,7 @@ class ScopedAccessCompletion implements CompletionStrategy {
     completions(context: Context) {
 
         let traverser = context.createTraverser();
-        let scopedAccessExpr = traverser.ancestor(this._isScopedAccessExpr) as ScopedExpression;
+        let scopedAccessExpr = traverser.ancestor(this._isScopedAccessExpr);
         let accessee = scopedAccessExpr.scope;
         let type = context.resolveExpressionType(<Phrase>accessee);
 
@@ -800,7 +794,7 @@ class ScopedAccessCompletion implements CompletionStrategy {
 
 class ObjectAccessCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionProviderConfig) { }
+    constructor(public config: CompletionOptions) { }
 
     canSuggest(context: Context) {
         let traverser = context.createTraverser();
@@ -986,7 +980,7 @@ class InterfaceClauseCompletion extends AbstractNameCompletion {
 
 class NamespaceDefinitionCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionProviderConfig) { }
+    constructor(public config: CompletionOptions) { }
 
     canSuggest(context: Context) {
         return context.createTraverser().ancestor(this._isNamespaceDefinition) !== null;
@@ -996,7 +990,7 @@ class NamespaceDefinitionCompletion implements CompletionStrategy {
         let items: lsp.CompletionItem[] = [];
         let text = context.word;
 
-        let matches = uniqueSymbolNames(context.symbolStore.match(text, this._symbolFilter, true));
+        let matches = uniqueSymbolNames(context.symbolStore.match(text, this._symbolFilter));
         let limit = Math.min(matches.length, this.config.maxItems - items.length);
         let isIncomplete = matches.length > this.config.maxItems - items.length;
 
@@ -1031,7 +1025,7 @@ class NamespaceDefinitionCompletion implements CompletionStrategy {
 
 class NamespaceUseClauseCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionProviderConfig) { }
+    constructor(public config: CompletionOptions) { }
 
     canSuggest(context: Context) {
         return context.createTraverser().ancestor(this._isNamespaceUseClause) !== null;
@@ -1041,7 +1035,7 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
 
         let items: lsp.CompletionItem[] = [];
         let text = context.word;
-        let namespaceUseDecl = context.createTraverser().ancestor(this._isNamespaceUseDeclaration) as NamespaceUseDeclaration;
+        let namespaceUseDecl = context.createTraverser().ancestor(this._isNamespaceUseDeclaration) as Phrase;
 
         if (!text) {
             return noCompletionResponse;
@@ -1052,7 +1046,7 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
             return (x.kind & kind) > 0 && !(x.modifiers & SymbolModifier.Use);
         }
 
-        let matches = uniqueSymbolNames(context.symbolStore.match(text, pred, true).slice(0, this.config.maxItems));
+        let matches = uniqueSymbolNames(context.symbolStore.match(text, pred).slice(0, this.config.maxItems));
         for (let n = 0, l = matches.length; n < l; ++n) {
             items.push(this._toCompletionItem(matches[n]));
         }
@@ -1088,7 +1082,7 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
 
 class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionProviderConfig) { }
+    constructor(public config: CompletionOptions) { }
 
     canSuggest(context: Context) {
         return context.createTraverser().ancestor(this._isNamespaceUseGroupClause) !== null;
@@ -1103,16 +1097,18 @@ class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
         }
 
         let traverser = context.createTraverser();
-        let nsUseGroupClause = traverser.ancestor(this._isNamespaceUseGroupClause) as NamespaceUseGroupClause;
-        let nsUseDecl = traverser.ancestor(this._isNamespaceUseDeclaration) as NamespaceUseDeclaration;
-        let kind = tokenToSymbolKind(nsUseGroupClause.kind || nsUseDecl.kind) || SymbolKind.Class;
+        let nsUseGroupClause = traverser.ancestor(this._isNamespaceUseGroupClause) as Phrase;
+        let nsUseGroupClauseModifier = traverser.child(this._isModifier) as Token;
+        let nsUseDecl = traverser.ancestor(this._isNamespaceUseDeclaration) as Phrase;
+        let nsUseDeclModifier = traverser.child(this._isModifier) as Token;
+        let kind = tokenToSymbolKind(nsUseGroupClauseModifier || nsUseDeclModifier) || SymbolKind.Class;
         let prefix = context.nodeText(nsUseDecl.prefix);
 
         let pred = (x) => {
             return (x.kind & kind) > 0 && !(x.modifiers & SymbolModifier.Use) && (!prefix || x.name.indexOf(prefix) === 0);
         };
 
-        let matches = context.symbolStore.match(text, pred, true).slice(0, this.config.maxItems);
+        let matches = context.symbolStore.match(text, pred).slice(0, this.config.maxItems);
         for (let n = 0, l = matches.length; n < l; ++n) {
             items.push(this._toCompletionItem(matches[n], matches[n].name.slice(prefix.length + 1))); //+1 for \
         }
@@ -1144,11 +1140,22 @@ class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
         return (<Phrase>node).phraseType === PhraseType.NamespaceUseDeclaration;
     }
 
+    private _isModifier(node:Phrase|Token) {
+        switch((<Token>node).tokenType) {
+            case TokenType.Class:
+            case TokenType.Function:
+            case TokenType.Const:
+                return true;
+            default:
+                return false;
+        }
+    }
+
 }
 
 class DeclarationBodyCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionProviderConfig) { }
+    constructor(public config: CompletionOptions) { }
 
     private static _phraseTypes = [
         PhraseType.ClassDeclarationBody, PhraseType.InterfaceDeclarationBody, PhraseType.TraitDeclarationBody,
@@ -1174,7 +1181,7 @@ class DeclarationBodyCompletion implements CompletionStrategy {
 
 class MethodDeclarationHeaderCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionProviderConfig) { }
+    constructor(public config: CompletionOptions) { }
 
     canSuggest(context: Context) {
         let traverser = context.createTraverser();
@@ -1189,7 +1196,7 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
         let text = context.word;
         let memberDecl = context.createTraverser().ancestor((x) => {
             return (<Phrase>x).phraseType === PhraseType.MethodDeclarationHeader;
-        }) as MethodDeclarationHeader;
+        }) as Phrase;
 
         let modifiers = SymbolReader.modifierListElementsToSymbolModifier(memberDecl.modifierList ? memberDecl.modifierList.elements : []);
         modifiers &= (SymbolModifier.Public | SymbolModifier.Protected);

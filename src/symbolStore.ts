@@ -4,8 +4,8 @@
 
 'use strict';
 
-import { PhpSymbol, SymbolIndex, SymbolKind, SymbolModifier, Reference, SymbolIdentifier } from './symbol';
-import { TreeTraverser, Predicate, TreeVisitor, Traversable } from './types';
+import { PhpSymbol, SymbolKind, SymbolModifier, Reference, SymbolIdentifier } from './symbol';
+import { TreeTraverser, Predicate, TreeVisitor, Traversable, BinarySearch } from './types';
 import { Position, Location, Range } from 'vscode-languageserver-types';
 import { TypeString } from './typeString';
 import * as builtInSymbols from './builtInSymbols.json';
@@ -13,13 +13,31 @@ import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument'
 import { SymbolReader } from './symbolReader';
 import { NameResolver } from './nameResolver';
 import * as util from './util';
+import {TypeAggregate, MemberMergeStrategy} from './typeAggregate';
 
 export class SymbolTable implements Traversable<PhpSymbol> {
 
-    constructor(
-        public uri: string,
-        public root: PhpSymbol
-    ) { }
+    private _uri: string;
+    private _root: PhpSymbol;
+    private _hash: number;
+
+    constructor(uri: string, root: PhpSymbol) {
+        this._uri = uri;
+        this._root = root;
+        this._hash = util.hash32(uri);
+    }
+
+    get uri() {
+        return this._uri;
+    }
+
+    get root() {
+        return this._root;
+    }
+
+    get hash() {
+        return this._hash;
+    }
 
     get symbols() {
         let traverser = new TreeTraverser([this.root]);
@@ -59,7 +77,7 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         return nameResolver;
     }
 
-    scope(pos:Position) {
+    scope(pos: Position) {
         let traverser = new TreeTraverser([this.root]);
         let visitor = new ScopeVisitor(pos, this.root);
         traverser.traverse(visitor);
@@ -81,6 +99,20 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         return this.filter(pred).pop();
     }
 
+    references(filter?: Predicate<Reference>) {
+        let traverser = new TreeTraverser([this.root]);
+        let visitor = new ReferencesVisitor(filter);
+        traverser.traverse(visitor);
+        return visitor.references;
+    }
+
+    contains(identifier:SymbolIdentifier) {
+        let traverser = new TreeTraverser([this.root]);
+        let visitor = new ContainsVisitor(identifier);
+        traverser.traverse(visitor);
+        return visitor.found;
+    }
+
     toDto() {
         return <SymbolTableDto>{
             uri: this.uri,
@@ -91,6 +123,10 @@ export class SymbolTable implements Traversable<PhpSymbol> {
     private _isScopeSymbol(s: PhpSymbol) {
         const mask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.None | SymbolKind.Function | SymbolKind.Method;
         return (s.kind & mask) > 0;
+    }
+
+    private _hasReferences(s: PhpSymbol) {
+        return s.references !== undefined;
     }
 
     static fromDto(dto: SymbolTableDto) {
@@ -132,13 +168,15 @@ export class SymbolTable implements Traversable<PhpSymbol> {
 
 export class SymbolStore {
 
-    private _map: { [index: string]: SymbolTable };
-    private _index: SymbolIndex;
+    private _tableIndex: SymbolTableIndex;
+    private _symbolIndex: NameIndex<PhpSymbol>;
+    private _referenceIndex: NameIndex<Reference>;
     private _symbolCount: number;
 
     constructor() {
-        this._map = {};
-        this._index = new SymbolIndex();
+        this._tableIndex = new SymbolTableIndex();
+        this._symbolIndex = new NameIndex<PhpSymbol>(this._symbolKeys);
+        this._referenceIndex = new NameIndex<Reference>(this._referenceKeys);
         this._symbolCount = 0;
     }
 
@@ -148,11 +186,11 @@ export class SymbolStore {
     };
 
     getSymbolTable(uri: string) {
-        return this._map[uri];
+        return this._tableIndex.find(uri);
     }
 
     get tableCount() {
-        return Object.keys(this._map).length;
+        return this._tableIndex.count();
     }
 
     get symbolCount() {
@@ -160,22 +198,20 @@ export class SymbolStore {
     }
 
     add(symbolTable: SymbolTable) {
-        if (this.getSymbolTable(symbolTable.uri)) {
-            throw new Error(`Duplicate key ${symbolTable.uri}`);
-        }
-        this._map[symbolTable.uri] = symbolTable;
-        this._index.addMany(this._indexSymbols(symbolTable.root));
+        this._tableIndex.add(symbolTable);
+        this._symbolIndex.addMany(this._indexSymbols(symbolTable.root));
+        this._referenceIndex.addMany(symbolTable.references(this._indexableReferenceFilter));
         this._symbolCount += symbolTable.count;
     }
 
     remove(uri: string) {
-        let symbolTable = this.getSymbolTable(uri);
+        let symbolTable = this._tableIndex.remove(uri);
         if (!symbolTable) {
             return;
         }
-        this._index.removeMany(this._indexSymbols(symbolTable.root));
+        this._symbolIndex.removeMany(this._indexSymbols(symbolTable.root));
+        this._referenceIndex.removeMany(symbolTable.references(this._indexableReferenceFilter));
         this._symbolCount -= symbolTable.count;
-        delete this._map[uri];
     }
 
     /**
@@ -188,7 +224,7 @@ export class SymbolStore {
     find(text: string, filter?: Predicate<PhpSymbol>) {
         let lcText = text.toLowerCase();
         let kindMask = SymbolKind.Constant | SymbolKind.Variable;
-        let result = this._index.find(text);
+        let result = this._symbolIndex.find(text);
         let symbols: PhpSymbol[] = [];
         let s: PhpSymbol;
 
@@ -226,7 +262,7 @@ export class SymbolStore {
 
         let matches: PhpSymbol[] = [];
         for (let n = 0; n < substrings.length; ++n) {
-            Array.prototype.push.apply(matches, this._index.match(substrings[n]));
+            Array.prototype.push.apply(matches, this._symbolIndex.match(substrings[n]));
         }
 
         matches = this._sortMatches(text, matches);
@@ -248,12 +284,104 @@ export class SymbolStore {
         return filtered;
     }
 
-    findSymbolsByReference(ref:Reference): PhpSymbol[] {
+    findSymbolsByReference(ref: Reference, memberMergeStrategy:MemberMergeStrategy): PhpSymbol[] {
+        if (!ref) {
+            return [];
+        }
+
+        let symbols: PhpSymbol[];
+        let fn: Predicate<PhpSymbol>;
+        let lcName: string;
+        let table: SymbolTable;
+
+        switch (ref.kind) {
+            case SymbolKind.Class:
+            case SymbolKind.Interface:
+            case SymbolKind.Trait:
+                fn = (x) => {
+                    return (x.kind & (SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait)) > 0;
+                };
+                symbols = this.find(ref.name, fn);
+                break;
+
+            case SymbolKind.Function:
+            case SymbolKind.Constant:
+                fn = (x) => {
+                    return x.kind === ref.kind;
+                };
+                symbols = this.find(ref.name, fn);
+                if (symbols.length < 1 && ref.altName) {
+                    symbols = this.find(ref.altName, fn);
+                }
+                break;
+
+            case SymbolKind.Method:
+                lcName = ref.name.toLowerCase();
+                fn = (x) => {
+                    return x.kind === SymbolKind.Method && x.name.toLowerCase() === lcName;
+                };
+                symbols = this.findMembers(ref.scope, memberMergeStrategy, fn);
+                break;
+
+            case SymbolKind.Property:
+                fn = (x) => {
+                    return x.kind === SymbolKind.Property && x.name.slice(1) === ref.name;
+                };
+                symbols = this.findMembers(ref.scope, memberMergeStrategy, fn);
+                break;
+
+            case SymbolKind.ClassConstant:
+                fn = (x) => {
+                    return x.kind === SymbolKind.ClassConstant && x.name === ref.name;
+                };
+                symbols = this.findMembers(ref.scope, memberMergeStrategy, fn);
+                break;
+
+            case SymbolKind.Variable:
+                table = this._tableIndex.findByIdentifier(ref);
+                if (table) {
+                    let scope = table.scope(ref.location.range.start);
+                    
+                    fn = (x) => {
+                        return (x.kind & (SymbolKind.Parameter | SymbolKind.Variable)) > 0 &&
+                            x.name === ref.name;
+                    }
+                    let s = scope.children ? scope.children.find(fn) : null;
+                    if (s) {
+                        symbols = [s];
+                    }
+                }
+                break;
+
+            default:
+                break;
+
+        }
+
+        return symbols || [];
+    }
+
+    findMembers(scope: string, memberMergeStrategy:MemberMergeStrategy, predicate?: Predicate<PhpSymbol>) {
+
+        let fqnArray = TypeString.atomicClassArray(scope);
+        let type: TypeAggregate;
+        let members = new Set<PhpSymbol>();
+        for (let n = 0; n < fqnArray.length; ++n) {
+            type = TypeAggregate.create(this, fqnArray[n], memberMergeStrategy);
+            if (type) {
+                Set.prototype.add.apply(members, type.members(predicate));
+            }
+        }
+        return Array.from(members);
+    }
+
+    findReferences(identifier: SymbolIdentifier): Reference[] {
 
     }
 
-    findReferences(identifier:SymbolIdentifier):Reference[] {
-
+    identifierLocation(identifier: SymbolIdentifier): Location {
+        let table = this._tableIndex.findByIdentifier(identifier);
+        return table ? Location.create(table.uri, identifier.location.range) : null;
     }
 
     private _sortMatches(query: string, matches: PhpSymbol[]) {
@@ -307,6 +435,10 @@ export class SymbolStore {
 
     }
 
+    private _indexableReferenceFilter(ref: Reference) {
+        return ref.kind && ref.kind !== SymbolKind.Parameter && ref.kind !== SymbolKind.Variable;
+    }
+
     private _indexFilter(s: PhpSymbol) {
         return s.kind !== SymbolKind.Parameter &&
             (s.kind !== SymbolKind.Variable || !s.scope) && //script level vars
@@ -314,7 +446,49 @@ export class SymbolStore {
             s.name.length > 0;
     }
 
+    private _symbolKeys(s: PhpSymbol) {
 
+        if (s.kind === SymbolKind.Namespace) {
+            let lcName = s.name.toLowerCase();
+            let keys = new Set<string>();
+            keys.add(lcName);
+            Set.prototype.add.apply(keys, lcName.split('\\').filter((s) => { return s.length > 0 }));
+            return Array.from(keys);
+        }
+
+        let notFqnPos = s.name.lastIndexOf('\\') + 1;
+        let notFqn = s.name.slice(notFqnPos);
+        let lcNotFqn = notFqn.toLowerCase();
+        let lcFqn = s.name.toLowerCase();
+
+        let keys = util.trigrams(lcNotFqn);
+        if (lcNotFqn) {
+            keys.add(lcNotFqn);
+        }
+
+        keys.add(lcFqn);
+
+        let acronym = util.acronym(notFqn);
+        if (acronym.length > 1) {
+            keys.add(acronym);
+        }
+        return Array.from(keys);
+    }
+
+    private _referenceKeys(ref: Reference) {
+
+        let lcName = ref.name.toLowerCase();
+        let keys = [lcName];
+        if (ref.altName) {
+            let lcAlt = ref.altName.toLowerCase();
+            if (lcAlt !== lcName && lcAlt !== 'static' && lcAlt !== 'self' && lcAlt !== 'parent') {
+                keys.push(lcAlt);
+            }
+        }
+
+        return keys;
+
+    }
 
 }
 
@@ -360,10 +534,10 @@ class NameResolverVisitor implements TreeVisitor<PhpSymbol> {
 class ScopeVisitor implements TreeVisitor<PhpSymbol> {
 
     haltTraverse = false;
-    private _scope:PhpSymbol;
+    private _scope: PhpSymbol;
     private _kindMask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.Function | SymbolKind.Method;
 
-    constructor(public pos:Position, defaultScope:PhpSymbol) { 
+    constructor(public pos: Position, defaultScope: PhpSymbol) {
         this._scope = defaultScope;
     }
 
@@ -371,21 +545,21 @@ class ScopeVisitor implements TreeVisitor<PhpSymbol> {
         return this._scope;
     }
 
-    preorder(node:PhpSymbol, spine:PhpSymbol[]) {
+    preorder(node: PhpSymbol, spine: PhpSymbol[]) {
 
         if (node.location && node.location.range.start.line > this.pos.line) {
             this.haltTraverse = true;
             return false;
         }
 
-        if(node.location && util.isInRange(this.pos, node.location.range.start, node.location.range.end) !== 0) {
+        if (node.location && util.isInRange(this.pos, node.location.range) !== 0) {
             return false;
         }
 
-        if(
-            (node.kind & this._kindMask) > 0 && 
-            !(node.modifiers & SymbolModifier.Use) && 
-            node.location && util.isInRange(this.pos, node.location.range.start, node.location.range.end) === 0
+        if (
+            (node.kind & this._kindMask) > 0 &&
+            !(node.modifiers & SymbolModifier.Use) &&
+            node.location && util.isInRange(this.pos, node.location.range) === 0
         ) {
             this._scope = node;
         }
@@ -393,4 +567,332 @@ class ScopeVisitor implements TreeVisitor<PhpSymbol> {
         return true;
     }
 
+}
+
+class ReferencesVisitor implements TreeVisitor<PhpSymbol> {
+
+    private _filter: Predicate<Reference>;
+    private _refs: Reference[];
+
+    constructor(filter?: Predicate<Reference>) {
+        this._filter = filter;
+        this._refs = [];
+    }
+
+    get references() {
+        return this._refs;
+    }
+
+    preorder(node: PhpSymbol, spine: PhpSymbol[]) {
+
+        if (!node.references) {
+            return true;
+        }
+
+        if (this._filter) {
+            let r: Reference;
+            for (let n = 0; n < node.references.length; ++n) {
+                r = node.references[n];
+                if (this._filter(r)) {
+                    this._refs.push(r);
+                }
+            }
+
+        } else {
+            Array.prototype.push.apply(this._refs, node.references);
+        }
+
+        return true;
+
+    }
+
+}
+
+class ContainsVisitor implements TreeVisitor<PhpSymbol> {
+
+    haltTraverse = false;
+    found = false;
+    private _identifier:SymbolIdentifier;
+
+    constructor(identifier:SymbolIdentifier) {
+        this._identifier = identifier;
+        if(!identifier.location) {
+            throw new Error('Invalid Argument');
+        }
+    }
+
+    preorder(node:PhpSymbol, spine:PhpSymbol[]) {
+
+        if(node === this._identifier) {
+            this.found = true;
+            this.haltTraverse = true;
+            return false;
+        }
+
+        if(node.location && util.isInRange(this._identifier.location.range.start, node.location.range) !== 0) {
+            return false;
+        }
+
+        if(node.references && node.references.indexOf(this._identifier) > -1) {
+            this.found = true;
+            this.haltTraverse = true;
+            return false;
+        }
+
+        return true;
+
+    }
+
+}
+
+interface NameIndexNode<T> {
+    key: string;
+    items: T[];
+}
+
+type KeysDelegate<T> = (t: T) => string[];
+
+class NameIndex<T> {
+
+    private _keysDelegate: KeysDelegate<T>;
+    private _nodeArray: NameIndexNode<T>[];
+    private _binarySearch: BinarySearch<NameIndexNode<T>>;
+    private _collator: Intl.Collator;
+
+    constructor(keysDelegate: KeysDelegate<T>) {
+        this._keysDelegate = keysDelegate;
+        this._nodeArray = [];
+        this._binarySearch = new BinarySearch<NameIndexNode<T>>(this._nodeArray);
+        this._collator = new Intl.Collator('en');
+    }
+
+    add(item: T) {
+
+        let suffixes = this._keysDelegate(item);
+        let node: NameIndexNode<T>;
+
+        for (let n = 0; n < suffixes.length; ++n) {
+
+            node = this._nodeFind(suffixes[n]);
+
+            if (node) {
+                node.items.push(item);
+            } else {
+                this._insertNode({ key: suffixes[n], items: [item] });
+            }
+        }
+
+    }
+
+    addMany(items: T[]) {
+        for (let n = 0; n < items.length; ++n) {
+            this.add(items[n]);
+        }
+    }
+
+    remove(item: T) {
+
+        let suffixes = this._keysDelegate(item);
+        let node: NameIndexNode<T>;
+        let i: number;
+
+        for (let n = 0; n < suffixes.length; ++n) {
+
+            node = this._nodeFind(suffixes[n]);
+            if (!node) {
+                continue;
+            }
+
+            i = node.items.indexOf(item);
+
+            if (i !== -1) {
+                node.items.splice(i, 1);
+                if (!node.items.length) {
+                    //uneccessary? save a lookup and splice
+                    //this._deleteNode(node);
+                }
+            }
+
+        }
+
+    }
+
+    removeMany(items: T[]) {
+        for (let n = 0; n < items.length; ++n) {
+            this.remove(items[n]);
+        }
+    }
+
+    /**
+     * Matches all items that are prefixed with text
+     * @param text 
+     */
+    match(text: string) {
+
+        text = text.toLowerCase();
+        let nodes = this._nodeMatch(text);
+        let matches = new Set<PhpSymbol>();
+
+        for (let n = 0; n < nodes.length; ++n) {
+            Set.prototype.add.apply(matches, nodes[n].items);
+        }
+
+        return Array.from(matches);
+
+    }
+
+    /**
+     * Finds all items that match (case insensitive) text exactly
+     * @param text 
+     */
+    find(text: string) {
+        let node = this._nodeFind(text.toLowerCase());
+        return node ? node.items : [];
+    }
+
+    private _nodeMatch(lcText: string) {
+
+        let collator = this._collator;
+        let compareLowerFn = (n: NameIndexNode<T>) => {
+            return collator.compare(n.key, lcText);
+        };
+        let compareUpperFn = (n: NameIndexNode<T>) => {
+            return n.key.slice(0, lcText.length) === lcText ? -1 : 1;
+        }
+
+        return this._binarySearch.range(compareLowerFn, compareUpperFn);
+
+    }
+
+    private _nodeFind(lcText: string) {
+
+        let collator = this._collator;
+        let compareFn = (n: NameIndexNode<T>) => {
+            return collator.compare(n.key, lcText);
+        }
+
+        return this._binarySearch.find(compareFn);
+
+    }
+
+    private _insertNode(node: NameIndexNode<T>) {
+
+        let collator = this._collator;
+        let rank = this._binarySearch.rank((n) => {
+            return collator.compare(n.key, node.key);
+        });
+
+        this._nodeArray.splice(rank, 0, node);
+
+    }
+
+    private _deleteNode(node: NameIndexNode<T>) {
+
+        let collator = this._collator;
+        let rank = this._binarySearch.rank((n) => {
+            return collator.compare(n.key, node.key);
+        });
+
+        if (this._nodeArray[rank] === node) {
+            this._nodeArray.splice(rank, 1);
+        }
+
+    }
+
+}
+
+class SymbolTableIndex {
+
+    private _tables: SymbolTableIndexNode[];
+    private _search: BinarySearch<SymbolTableIndexNode>;
+    private _count = 0;
+
+    constructor() {
+        this._tables = [];
+        this._search = new BinarySearch<SymbolTableIndexNode>(this._tables);
+    }
+
+    count() {
+        return this._count;
+    }
+
+    add(table: SymbolTable) {
+        let fn = this._createCompareFn(table.uri);
+        let search = this._search.search(fn);
+        if (search.isExactMatch) {
+            let node = this._tables[search.rank];
+            if (node.tables.find(this._createUriFindFn(table.uri))) {
+                --this._count;
+                throw new Error(`Duplicate key ${table.uri}`);
+            }
+            node.tables.push(table);
+        } else {
+            let node = <SymbolTableIndexNode>{ hash: table.hash, tables: [table] };
+            this._tables.splice(search.rank, 0, node);
+        }
+        ++this._count;
+    }
+
+    remove(uri: string) {
+        let fn = this._createCompareFn(uri);
+        let node = this._search.find(fn);
+        if (node) {
+            let i = node.tables.findIndex(this._createUriFindFn(uri));
+            if (i > -1) {
+                --this._count;
+                return node.tables.splice(i, 1).pop();
+            }
+        }
+    }
+
+    find(uri: string) {
+        let fn = this._createCompareFn(uri);
+        let node = this._search.find(fn);
+        return node ? node.tables.find(this._createUriFindFn(uri)) : null;
+    }
+
+    findByIdentifier(i: SymbolIdentifier) {
+        if (!i.location) {
+            return null;
+        }
+
+        let node = this._search.find((x) => {
+            return x.hash - i.location.uriHash;
+        });
+
+        if (!node || !node.tables.length) {
+            return null;
+        } else if (node.tables.length === 1) {
+            return node.tables[0];
+        } else {
+            let table: SymbolTable;
+            for (let n = 0; n < node.tables.length; ++n) {
+                table = node.tables[n];
+                if (table.contains(i)) {
+                    return table;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private _createCompareFn(uri: string) {
+        let hash = util.hash32(uri);
+        return (x: SymbolTableIndexNode) => {
+            return x.hash - hash;
+        };
+    }
+
+    private _createUriFindFn(uri: string) {
+        return (x: SymbolTable) => {
+            return x.uri === uri;
+        };
+    }
+
+}
+
+interface SymbolTableIndexNode {
+    hash: number;
+    tables: SymbolTable[];
 }

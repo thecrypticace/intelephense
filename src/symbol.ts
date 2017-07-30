@@ -56,7 +56,6 @@ export namespace PhpSymbolDoc {
 }
 
 export interface PhpSymbol extends SymbolIdentifier {
-    location?: Location;
     modifiers?: SymbolModifier;
     doc?: PhpSymbolDoc;
     type?: string;
@@ -70,6 +69,12 @@ export interface SymbolIdentifier {
     kind:SymbolKind;
     name:string;
     scope?:string;
+    location:HashedLocation;
+}
+
+export interface HashedLocation {
+    uriHash: number;
+    range:Range;
 }
 
 export namespace PhpSymbol {
@@ -174,7 +179,7 @@ export namespace PhpSymbol {
         return symbols;
     }
 
-    export function create(kind: SymbolKind, name: string, location?: Location): PhpSymbol {
+    export function create(kind: SymbolKind, name: string, location?: HashedLocation): PhpSymbol {
         return {
             kind: kind,
             name: name,
@@ -185,17 +190,16 @@ export namespace PhpSymbol {
 }
 
 export interface Reference extends SymbolIdentifier {
-    range: Range;
     type?: string;
     altName?: string;
 }
 
 export namespace Reference {
-    export function create(kind: SymbolKind, name: string, range: Range) {
+    export function create(kind: SymbolKind, name: string, location: HashedLocation) : Reference {
         return {
             kind: kind,
             name: name,
-            range: range
+            location: location
         };
     }
 
@@ -289,7 +293,7 @@ export namespace Reference {
                     fn = (x) => {
                         return ((x.kind === SymbolKind.Function && (x.modifiers & SymbolModifier.Anonymous) > 0) ||
                             x.kind === SymbolKind.Method) &&
-                            x.location && util.isInRange(ref.range.start, x.location.range.start, x.location.range.end) === 0;
+                            x.location && util.isInRange(ref.range.start, x.location.range) === 0;
                     };
                     let scope = table.find(fn);
                     if (!scope) {

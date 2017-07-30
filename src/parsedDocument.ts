@@ -25,28 +25,6 @@ export interface ParsedDocumentChangeEventArgs {
     parsedDocument: ParsedDocument;
 }
 
-export class ParseTreeTraverser extends TreeTraverser<Phrase | Token> {
-
-    private _doc: ParsedDocument;
-
-    constructor(document: ParsedDocument) {
-        super([document.tree]);
-        this._doc = document;
-    }
-
-    position(pos: lsp.Position) {
-        let offset = this._doc.offsetAtPosition(pos);
-        let fn = (x: Phrase | Token) => {
-            return (<Token>x).tokenType !== undefined &&
-                offset < (<Token>x).offset + (<Token>x).length &&
-                offset >= (<Token>x).offset;
-        };
-
-        return this.find(fn) as Token;
-    }
-
-}
-
 export class ParsedDocument implements Traversable<Phrase | Token>{
 
     private static _wordRegex = /[$a-zA-Z_\x80-\xff][\\a-zA-Z0-9_\x80-\xff]*$/;

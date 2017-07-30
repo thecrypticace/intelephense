@@ -8,17 +8,24 @@ import {PhpSymbol, SymbolKind, SymbolModifier} from './symbol';
 import {SymbolStore} from './symbolStore';
 import {Predicate} from './types';
 
+export const enum MemberMergeStrategy {
+    None,
+    First,
+    Documented,
+}
 
 export class TypeAggregate {
 
     private _symbol: PhpSymbol;
     private _associated: PhpSymbol[];
+    private _memberMergeStrategy:MemberMergeStrategy;
 
-    constructor(public symbolStore: SymbolStore, symbol: PhpSymbol) {
+    constructor(public symbolStore: SymbolStore, symbol: PhpSymbol, memberMergeStrategy:MemberMergeStrategy) {
         if (!symbol || !(symbol.kind & (SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait))) {
             throw new Error('Invalid Argument');
         }
         this._symbol = symbol;
+        this._memberMergeStrategy = memberMergeStrategy;
     }
 
     get type() {
@@ -31,7 +38,7 @@ export class TypeAggregate {
         });
     }
 
-    members(predicate: Predicate<PhpSymbol>) {
+    members(predicate?: Predicate<PhpSymbol>) {
 
         let associated = this._getAssociated().slice(0);
         associated.unshift(this._symbol);
@@ -54,13 +61,13 @@ export class TypeAggregate {
      * @param associated 
      * @param predicate 
      */
-    private _classMembers(associated: PhpSymbol[], predicate: Predicate<PhpSymbol>) {
+    private _classMembers(associated: PhpSymbol[], predicate?: Predicate<PhpSymbol>) {
 
         let members: PhpSymbol[] = [];
         let s: PhpSymbol;
         let traits: PhpSymbol[] = [];
         let noPrivate = (x:PhpSymbol)=> {
-            return !(x.modifiers & SymbolModifier.Private) && predicate(x);
+            return !(x.modifiers & SymbolModifier.Private) && (!predicate || predicate(x));
         };
 
         for (let n = 0; n < associated.length; ++n) {
@@ -68,7 +75,7 @@ export class TypeAggregate {
             if (s.kind === SymbolKind.Trait) {
                 traits.push(s);
             } else if (s.children) {
-                Array.prototype.push.apply(members, s.children.filter(predicate));
+                Array.prototype.push.apply(members, predicate ? s.children.filter(predicate): s.children);
             }
 
             predicate = noPrivate;
@@ -82,19 +89,19 @@ export class TypeAggregate {
 
     }
 
-    private _interfaceMembers(interfaces: PhpSymbol[], predicate: Predicate<PhpSymbol>) {
+    private _interfaceMembers(interfaces: PhpSymbol[], predicate?: Predicate<PhpSymbol>) {
         let members: PhpSymbol[] = [];
         let s: PhpSymbol;
         for (let n = 0; n < interfaces.length; ++n) {
             s = interfaces[n];
             if (s.children) {
-                Array.prototype.push.apply(members, s.children.filter(predicate));
+                Array.prototype.push.apply(members, predicate ? s.children.filter(predicate) : s.children);
             }
         }
         return members;
     }
 
-    private _traitMembers(traits: PhpSymbol[], predicate: Predicate<PhpSymbol>) {
+    private _traitMembers(traits: PhpSymbol[], predicate?: Predicate<PhpSymbol>) {
         //@todo support trait precendence and alias here
         return this._interfaceMembers(traits, predicate);
     }
@@ -106,13 +113,17 @@ export class TypeAggregate {
         let s: PhpSymbol;
         let index: number;
 
+        if(this._memberMergeStrategy === MemberMergeStrategy.None) {
+            return symbols;
+        }
+
         for (let n = 0; n < symbols.length; ++n) {
             s = symbols[n];
             index = map[s.name];
             if (index === undefined) {
                 merged.push(s);
                 map[s.name] = merged.length - 1;
-            } else if (!merged[index].doc && s.doc) {
+            } else if (this._memberMergeStrategy === MemberMergeStrategy.Documented && !merged[index].doc && s.doc) {
                 merged[index] = s;
             }
 
@@ -159,7 +170,7 @@ export class TypeAggregate {
         return (s.kind & mask) > 0;
     }
 
-    static create(symbolStore:SymbolStore, fqn:string) {
+    static create(symbolStore:SymbolStore, fqn:string, memberMergeStrategy:MemberMergeStrategy) {
 
         if (!fqn) {
             return null;
@@ -170,7 +181,7 @@ export class TypeAggregate {
             return null;
         }
 
-        return new TypeAggregate(symbolStore, symbol);
+        return new TypeAggregate(symbolStore, symbol, memberMergeStrategy);
 
     
     }
