@@ -79,7 +79,14 @@ export class SymbolTable implements Traversable<PhpSymbol> {
 
     scope(pos: Position) {
         let traverser = new TreeTraverser([this.root]);
-        let visitor = new ScopeVisitor(pos, this.root);
+        let visitor = new ScopeVisitor(pos, this.root, false);
+        traverser.traverse(visitor);
+        return visitor.scope;
+    }
+
+    absoluteScope(pos:Position) {
+        let traverser = new TreeTraverser([this.root]);
+        let visitor = new ScopeVisitor(pos, this.root, true);
         traverser.traverse(visitor);
         return visitor.scope;
     }
@@ -353,6 +360,13 @@ export class SymbolStore {
                 }
                 break;
 
+            case SymbolKind.Constructor:
+                fn = (x) => {
+                    return x.kind === SymbolKind.Method && x.name.toLowerCase() === '__construct';
+                };
+                symbols = this.findMembers(ref.scope, memberMergeStrategy, fn);
+                break;
+
             default:
                 break;
 
@@ -375,13 +389,74 @@ export class SymbolStore {
         return Array.from(members);
     }
 
-    findReferences(identifier: SymbolIdentifier): Reference[] {
+    findReferencesBySymbol(s: PhpSymbol): Reference[] {
+
+        switch(s.kind) {
+            case SymbolKind.Variable:
+
+                break;
+            
+            case SymbolKind.Method:
+                //handle __construct
+
+            case SymbolKind.Class:
+            case SymbolKind.Interface:
+            case SymbolKind.Trait:
+
+        }
+        if(s.kind === SymbolKind.Variable) {
+            let table = this._tableIndex.findByIdentifier(s);
+            let scope = table.scope(s.location.range.start);
+            
+            if(!scope.references) {
+                return [];
+            }
+            
+            let refs = scope.references.filter((x)=>{
+                return x.kind === SymbolKind.Variable && x.name === s.name;
+            });
+
+            if()
+
+        }
+
+        let matches = this._referenceIndex.find(s.name)
 
     }
 
     identifierLocation(identifier: SymbolIdentifier): Location {
         let table = this._tableIndex.findByIdentifier(identifier);
         return table ? Location.create(table.uri, identifier.location.range) : null;
+    }
+
+    referenceToTypeString(ref: Reference) {
+
+        if (!ref) {
+            return '';
+        }
+
+        switch (ref.kind) {
+            case SymbolKind.Class:
+            case SymbolKind.Interface:
+            case SymbolKind.Trait:
+            case SymbolKind.Constructor:
+                return ref.name;
+
+            case SymbolKind.Function:
+            case SymbolKind.Method:
+            case SymbolKind.Property:
+                return this.findSymbolsByReference(ref, MemberMergeStrategy.Documented).reduce<string>((carry, val) => {
+                    return TypeString.merge(carry, PhpSymbol.type(val));
+                }, '');
+
+            case SymbolKind.Variable:
+                return ref.type || '';
+
+            default:
+                return '';
+
+
+        }
     }
 
     private _sortMatches(query: string, matches: PhpSymbol[]) {
@@ -536,9 +611,11 @@ class ScopeVisitor implements TreeVisitor<PhpSymbol> {
     haltTraverse = false;
     private _scope: PhpSymbol;
     private _kindMask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.Function | SymbolKind.Method;
+    private _absolute = false;
 
-    constructor(public pos: Position, defaultScope: PhpSymbol) {
+    constructor(public pos: Position, defaultScope: PhpSymbol, absolute:boolean) {
         this._scope = defaultScope;
+        this._absolute = absolute;
     }
 
     get scope() {
@@ -559,7 +636,8 @@ class ScopeVisitor implements TreeVisitor<PhpSymbol> {
         if (
             (node.kind & this._kindMask) > 0 &&
             !(node.modifiers & SymbolModifier.Use) &&
-            node.location && util.isInRange(this.pos, node.location.range) === 0
+            node.location && util.isInRange(this.pos, node.location.range) === 0 &&
+            (!this._absolute || !(node.modifiers & SymbolModifier.Anonymous))
         ) {
             this._scope = node;
         }

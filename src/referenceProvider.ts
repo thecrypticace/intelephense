@@ -40,7 +40,7 @@ export class ReferenceProvider {
             return locations;
         }
 
-        let references = this.symbolStore.findReferences(identifier);
+        let references = this.symbolStore.findReferencesBySymbol(identifier);
         for(let n = 0; n < references.length; ++n) {
             locations.push(references[n].location);
         }
