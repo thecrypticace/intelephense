@@ -73,7 +73,7 @@ export class SymbolProvider {
         let si: lsp.SymbolInformation = {
             kind: null,
             name: s.name,
-            location: s.location,
+            location: this.symbolStore.identifierLocation(s),
             containerName: s.scope
         };
 
