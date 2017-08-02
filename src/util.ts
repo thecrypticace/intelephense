@@ -5,6 +5,7 @@
 'use strict';
 
 import { Position, Range } from 'vscode-languageserver-types';
+import { Predicate } from './types';
 
 export function popMany<T>(array: T[], count: number) {
     let popped: T[] = [];
@@ -138,4 +139,41 @@ export function hash32(text: string) {
         hash |= 0; // Convert to 32bit integer
     }
     return hash;
+}
+
+export function filter<T>(items: T[], fn: Predicate<T>) {
+
+    let filtered: T[] = [];
+
+    if (!items) {
+        return filtered;
+    }
+
+    let item: T;
+    for (let n = 0, l = items.length; n < l; ++n) {
+        item = items[n];
+        if (fn(item)) {
+            filtered.push(item);
+        }
+    }
+
+    return filtered;
+
+}
+
+export function find<T>(items:T[], fn:Predicate<T>) {
+
+    if(!items) {
+        return undefined;
+    }
+
+    let item:T;
+    for(let n = 0, l = items.length; n < l; ++n) {
+        item = items[n];
+        if(fn(item)) {
+            return item;
+        }
+    }
+
+    return undefined;
 }

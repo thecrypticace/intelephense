@@ -35,7 +35,7 @@ export class DefinitionProvider {
             return null;
         }
 
-        let symbols = this.symbolStore.findSymbolsByReference(ref, MemberMergeStrategy.First);
+        let symbols = this.symbolStore.findSymbolsByReference(ref, MemberMergeStrategy.Override);
         let locations:Location[] = [];
         let s:PhpSymbol;
         let loc:Location;

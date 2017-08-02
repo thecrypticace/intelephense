@@ -496,6 +496,14 @@ export class ParseTreeTraverser extends TreeTraverser<Phrase | Token> {
         this._table = symbolTable;
     }
 
+    get document() {
+        return this._doc;
+    }
+
+    get symbolTable() {
+        return this._table;
+    }
+
     get text() {
         return this._doc.nodeText(this.node);
     }
@@ -551,6 +559,46 @@ export class ParseTreeTraverser extends TreeTraverser<Phrase | Token> {
         let traverser = new ParseTreeTraverser(this._doc, this._table);
         traverser._spine = spine;
         return traverser;
+    }
+
+    /**
+     * True if current node is the name part of a declaration
+     */
+    get isDeclarationName() {
+
+        let traverser = this.clone();
+        let t = traverser.node as Token;
+        let parent = traverser.parent() as Phrase;
+
+        if(!t || !parent) {
+            return false;
+        }
+
+        return ((t.tokenType === TokenType.Name || t.tokenType === TokenType.VariableName) && this._isDeclarationPhrase(parent)) ||
+            (parent.phraseType === PhraseType.Identifier && this._isDeclarationPhrase(<Phrase>traverser.parent()));
+
+    }
+
+    private _isDeclarationPhrase(node:Phrase) {
+        
+        if(!node) {
+            return false;
+        }
+
+        switch(node.phraseType) {
+            case PhraseType.ClassDeclarationHeader:
+            case PhraseType.TraitDeclarationHeader:
+            case PhraseType.InterfaceDeclarationHeader:
+            case PhraseType.PropertyElement:
+            case PhraseType.ConstElement:
+            case PhraseType.ParameterDeclaration:
+            case PhraseType.FunctionDeclarationHeader:
+            case PhraseType.MethodDeclarationHeader:
+            case PhraseType.ClassConstElement:
+                return true;
+            default:
+                return false;
+        }
     }
 
 }

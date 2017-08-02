@@ -13,7 +13,7 @@ import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument'
 import { SymbolReader } from './symbolReader';
 import { NameResolver } from './nameResolver';
 import * as util from './util';
-import {TypeAggregate, MemberMergeStrategy} from './typeAggregate';
+import { TypeAggregate, MemberMergeStrategy } from './typeAggregate';
 
 export class SymbolTable implements Traversable<PhpSymbol> {
 
@@ -53,6 +53,18 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         return traverser.count() - 1;
     }
 
+    parent(s: PhpSymbol) {
+        let traverser = new TreeTraverser([this.root]);
+        let fn = (x: PhpSymbol) => {
+            return x === s;
+        };
+        if (!traverser.find(fn)) {
+            return null;
+        }
+
+        return traverser.parent();
+    }
+
     traverse(visitor: TreeVisitor<PhpSymbol>) {
         let traverser = new TreeTraverser([this.root]);
         traverser.traverse(visitor);
@@ -84,7 +96,7 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         return visitor.scope;
     }
 
-    absoluteScope(pos:Position) {
+    absoluteScope(pos: Position) {
         let traverser = new TreeTraverser([this.root]);
         let visitor = new ScopeVisitor(pos, this.root, true);
         traverser.traverse(visitor);
@@ -113,7 +125,7 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         return visitor.references;
     }
 
-    contains(identifier:SymbolIdentifier) {
+    contains(identifier: SymbolIdentifier) {
         let traverser = new TreeTraverser([this.root]);
         let visitor = new ContainsVisitor(identifier);
         traverser.traverse(visitor);
@@ -229,6 +241,11 @@ export class SymbolStore {
      * @param filter 
      */
     find(text: string, filter?: Predicate<PhpSymbol>) {
+
+        if(!text) {
+            return [];
+        }
+
         let lcText = text.toLowerCase();
         let kindMask = SymbolKind.Constant | SymbolKind.Variable;
         let result = this._symbolIndex.find(text);
@@ -291,7 +308,7 @@ export class SymbolStore {
         return filtered;
     }
 
-    findSymbolsByReference(ref: Reference, memberMergeStrategy:MemberMergeStrategy): PhpSymbol[] {
+    findSymbolsByReference(ref: Reference, memberMergeStrategy: MemberMergeStrategy): PhpSymbol[] {
         if (!ref) {
             return [];
         }
@@ -348,7 +365,7 @@ export class SymbolStore {
                 table = this._tableIndex.findByIdentifier(ref);
                 if (table) {
                     let scope = table.scope(ref.location.range.start);
-                    
+
                     fn = (x) => {
                         return (x.kind & (SymbolKind.Parameter | SymbolKind.Variable)) > 0 &&
                             x.name === ref.name;
@@ -375,7 +392,7 @@ export class SymbolStore {
         return symbols || [];
     }
 
-    findMembers(scope: string, memberMergeStrategy:MemberMergeStrategy, predicate?: Predicate<PhpSymbol>) {
+    findMembers(scope: string, memberMergeStrategy: MemberMergeStrategy, predicate?: Predicate<PhpSymbol>) {
 
         let fqnArray = TypeString.atomicClassArray(scope);
         let type: TypeAggregate;
@@ -389,34 +406,100 @@ export class SymbolStore {
         return Array.from(members);
     }
 
-    findReferencesBySymbol(s: PhpSymbol): Reference[] {
+    findBaseMember(symbol:PhpSymbol) {
 
-        switch(s.kind) {
+        if(
+            !symbol || !symbol.scope ||
+            !(symbol.kind & (SymbolKind.Property | SymbolKind.Method | SymbolKind.ClassConstant)) || 
+            (symbol.modifiers & SymbolModifier.Private) > 0
+        ) {
+            return symbol;
+        }
+
+        let fn:Predicate<PhpSymbol>;
+        
+        if(symbol.kind === SymbolKind.Method) {
+            let name = symbol.name.toLowerCase();
+            fn = (s:PhpSymbol)=>{
+                return s.kind === symbol.kind && s.modifiers === symbol.modifiers && name === s.name.toLowerCase();
+            };
+        } else {
+            fn = (s:PhpSymbol)=>{
+                return s.kind === symbol.kind && s.modifiers === symbol.modifiers && symbol.name === s.name;
+            };
+        }
+
+        return this.findMembers(symbol.scope, MemberMergeStrategy.Base, fn).shift() || symbol;
+
+    }
+
+    findOverrides(baseSymbol: PhpSymbol) : PhpSymbol[] {
+
+        if (
+            !baseSymbol ||
+            !(baseSymbol.kind & (SymbolKind.Property | SymbolKind.Method | SymbolKind.ClassConstant)) ||
+            (baseSymbol.modifiers & SymbolModifier.Private) > 0
+        ) {
+            return [];
+        }
+
+        let baseTypeName = baseSymbol.scope ? baseSymbol.scope : '';
+        let baseType = this.find(baseTypeName, PhpSymbol.isClassLike).shift();
+        if(!baseType || baseType.kind === SymbolKind.Trait) {
+            return [];
+        }
+        let store = this;
+        let filterFn = (s:PhpSymbol) => {
+            
+            if(s.kind !== baseSymbol.kind || s.modifiers !== baseSymbol.modifiers || s === baseSymbol) {
+                return false;
+            }
+            
+            let type = store.find(s.scope).shift();
+            if(!type) {
+                return false;
+            }
+
+            if(PhpSymbol.isAssociated(type, baseTypeName)) {
+                return true;
+            }
+
+            let aggregate = new TypeAggregate(store, type, MemberMergeStrategy.None);
+            return aggregate.isAssociated(baseTypeName);
+
+        };
+        return this.find(baseSymbol.name, filterFn);
+
+    }
+
+    findReferences(name: string, filter?: Predicate<Reference>): Reference[] {
+
+        switch (s.kind) {
             case SymbolKind.Variable:
 
                 break;
-            
+
             case SymbolKind.Method:
-                //handle __construct
+            //handle __construct
 
             case SymbolKind.Class:
             case SymbolKind.Interface:
             case SymbolKind.Trait:
 
         }
-        if(s.kind === SymbolKind.Variable) {
+        if (s.kind === SymbolKind.Variable) {
             let table = this._tableIndex.findByIdentifier(s);
             let scope = table.scope(s.location.range.start);
-            
-            if(!scope.references) {
+
+            if (!scope.references) {
                 return [];
             }
-            
-            let refs = scope.references.filter((x)=>{
+
+            let refs = scope.references.filter((x) => {
                 return x.kind === SymbolKind.Variable && x.name === s.name;
             });
 
-            if()
+            if ()
 
         }
 
@@ -613,7 +696,7 @@ class ScopeVisitor implements TreeVisitor<PhpSymbol> {
     private _kindMask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.Function | SymbolKind.Method;
     private _absolute = false;
 
-    constructor(public pos: Position, defaultScope: PhpSymbol, absolute:boolean) {
+    constructor(public pos: Position, defaultScope: PhpSymbol, absolute: boolean) {
         this._scope = defaultScope;
         this._absolute = absolute;
     }
@@ -690,28 +773,28 @@ class ContainsVisitor implements TreeVisitor<PhpSymbol> {
 
     haltTraverse = false;
     found = false;
-    private _identifier:SymbolIdentifier;
+    private _identifier: SymbolIdentifier;
 
-    constructor(identifier:SymbolIdentifier) {
+    constructor(identifier: SymbolIdentifier) {
         this._identifier = identifier;
-        if(!identifier.location) {
+        if (!identifier.location) {
             throw new Error('Invalid Argument');
         }
     }
 
-    preorder(node:PhpSymbol, spine:PhpSymbol[]) {
+    preorder(node: PhpSymbol, spine: PhpSymbol[]) {
 
-        if(node === this._identifier) {
+        if (node === this._identifier) {
             this.found = true;
             this.haltTraverse = true;
             return false;
         }
 
-        if(node.location && util.isInRange(this._identifier.location.range.start, node.location.range) !== 0) {
+        if (node.location && util.isInRange(this._identifier.location.range.start, node.location.range) !== 0) {
             return false;
         }
 
-        if(node.references && node.references.indexOf(this._identifier) > -1) {
+        if (node.references && node.references.indexOf(this._identifier) > -1) {
             this.found = true;
             this.haltTraverse = true;
             return false;

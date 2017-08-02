@@ -7,6 +7,7 @@
 import { TypeString } from './typeString';
 import { BinarySearch } from './types';
 import { Location, Range } from 'vscode-languageserver-types';
+import { Predicate } from './types';
 import * as util from './util';
 
 export const enum SymbolKind {
@@ -63,25 +64,29 @@ export interface PhpSymbol extends SymbolIdentifier {
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
     value?: string;
-    references?:Reference[];
+    references?: Reference[];
 }
 
 export interface SymbolIdentifier {
-    kind:SymbolKind;
-    name:string;
-    scope?:string;
-    location?:HashedLocation;
+    kind: SymbolKind;
+    name: string;
+    scope?: string;
+    location?: HashedLocation;
 }
 
 export interface HashedLocation {
     uriHash: number;
-    range:Range;
+    range: Range;
 }
 
 export namespace PhpSymbol {
 
     function isParameter(s: PhpSymbol) {
         return s.kind === SymbolKind.Parameter;
+    }
+
+    export function isClassLike(s:PhpSymbol) {
+        return (s.kind & (SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait)) > 0;
     }
 
     export function signatureString(s: PhpSymbol) {
@@ -188,6 +193,31 @@ export namespace PhpSymbol {
         };
     }
 
+    export function filterReferences(symbol: PhpSymbol, fn: Predicate<Reference>) {
+
+        if (!symbol || !symbol.references) {
+            return [];
+        }
+
+        return util.filter<Reference>(symbol.references, fn);
+    }
+
+    export function filterChildren(symbol: PhpSymbol, fn: Predicate<PhpSymbol>) {
+        if (!symbol || !symbol.children) {
+            return [];
+        }
+
+        return util.filter<PhpSymbol>(symbol.children, fn);
+    }
+
+    export function isAssociated(symbol:PhpSymbol, name:string) {
+        let lcName = name.toLowerCase();
+        let fn = (x:PhpSymbol) => {
+            return lcName === x.name.toLowerCase();
+        }
+        return util.find(symbol.associated, fn);
+    }
+
 }
 
 export interface Reference extends SymbolIdentifier {
@@ -196,7 +226,7 @@ export interface Reference extends SymbolIdentifier {
 }
 
 export namespace Reference {
-    export function create(kind: SymbolKind, name: string, location: HashedLocation) : Reference {
+    export function create(kind: SymbolKind, name: string, location: HashedLocation): Reference {
         return {
             kind: kind,
             name: name,

@@ -7,11 +7,13 @@
 import {PhpSymbol, SymbolKind, SymbolModifier} from './symbol';
 import {SymbolStore} from './symbolStore';
 import {Predicate} from './types';
+import * as util from './util';
 
 export const enum MemberMergeStrategy {
     None,
-    First,
-    Documented,
+    Override, //first matching member encountered is chosen ie prefer overrides
+    Documented, //prefer first unless base has 
+    Base //last matching member encountered ie prefer base
 }
 
 export class TypeAggregate {
@@ -32,10 +34,20 @@ export class TypeAggregate {
         return this._symbol;
     }
 
-    associated(fqn: string) {
-        return this._getAssociated().find((x) => {
-            return x.name === fqn;
-        });
+    isAssociated(name:string) {
+        if(!name) {
+            return false;
+        }
+        let lcName = name.toLowerCase();
+        let fn = (x:PhpSymbol) => {
+            return x.name.toLowerCase() === lcName;
+        }
+        return this.associated(fn).length > 0;
+    }
+
+    associated(filter?:Predicate<PhpSymbol>) {
+        let assoc = this._getAssociated();
+        return filter ? util.filter(assoc, filter) : assoc;
     }
 
     members(predicate?: Predicate<PhpSymbol>) {
@@ -125,6 +137,8 @@ export class TypeAggregate {
                 map[s.name] = merged.length - 1;
             } else if (this._memberMergeStrategy === MemberMergeStrategy.Documented && !merged[index].doc && s.doc) {
                 merged[index] = s;
+            } else if(this._memberMergeStrategy === MemberMergeStrategy.Base) {
+                merged[index] = s;
             }
 
         }
@@ -147,11 +161,10 @@ export class TypeAggregate {
         let queue: PhpSymbol[] = [];
         let stub: PhpSymbol;
         Array.prototype.push.apply(queue, symbol.associated);
-        let predicate = TypeAggregate._classInterfaceTraitFilter;
 
         while ((stub = queue.shift())) {
 
-            symbol = this.symbolStore.find(stub.name, predicate).shift();
+            symbol = this.symbolStore.find(stub.name, PhpSymbol.isClassLike).shift();
             if (!symbol || this._associated.indexOf(symbol) > -1) {
                 continue;
             }
@@ -163,11 +176,6 @@ export class TypeAggregate {
 
         return this._associated;
 
-    }
-
-    private static _classInterfaceTraitFilter(s: PhpSymbol) {
-        const mask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait;
-        return (s.kind & mask) > 0;
     }
 
     static create(symbolStore:SymbolStore, fqn:string, memberMergeStrategy:MemberMergeStrategy) {
