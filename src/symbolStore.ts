@@ -474,36 +474,25 @@ export class SymbolStore {
 
     findReferences(name: string, filter?: Predicate<Reference>): Reference[] {
 
-        switch (s.kind) {
-            case SymbolKind.Variable:
-
-                break;
-
-            case SymbolKind.Method:
-            //handle __construct
-
-            case SymbolKind.Class:
-            case SymbolKind.Interface:
-            case SymbolKind.Trait:
-
+        if(!name) {
+            return [];
         }
-        if (s.kind === SymbolKind.Variable) {
-            let table = this._tableIndex.findByIdentifier(s);
-            let scope = table.scope(s.location.range.start);
 
-            if (!scope.references) {
-                return [];
+        let matches = this._referenceIndex.find(name);
+        let filtered:Reference[] = [];
+        let match:Reference;
+        const caseSensitiveKindMask = SymbolKind.Property | SymbolKind.Variable | SymbolKind.Constant | SymbolKind.ClassConstant;
+
+        for(let n = 0; n < matches.length; ++n) {
+            match = matches[n];
+            if(!filter || filter(match)){
+                if(!(match.kind & caseSensitiveKindMask) || name === match.name){
+                    filtered.push(match);    
+                }
             }
-
-            let refs = scope.references.filter((x) => {
-                return x.kind === SymbolKind.Variable && x.name === s.name;
-            });
-
-            if ()
-
         }
 
-        let matches = this._referenceIndex.find(s.name)
+        return filtered;
 
     }
 
