@@ -4,7 +4,8 @@
 
 'use strict';
 
-import { TreeVisitor, MultiVisitor } from './types';
+import { TreeVisitor, MultiVisitor, HashedLocation
+ } from './types';
 import { Phrase, Token, PhraseType, TokenType } from 'php7parser';
 import { SymbolKind, PhpSymbol, SymbolModifier, Reference } from './symbol';
 import { SymbolStore, SymbolTable } from './symbolStore';
@@ -12,11 +13,10 @@ import { ParsedDocument, NodeTransform } from './parsedDocument';
 import { NameResolver } from './nameResolver';
 import { Predicate, BinarySearch, BinarySearchResult } from './types';
 import { NameResolverVisitor } from './nameResolverVisitor';
-import { ParseTreeHelper } from './parseTreeHelper';
 import * as lsp from 'vscode-languageserver-types';
 import { isInRange } from './util';
 import { TypeString } from './typeString';
-import { TypeAggregate } from './typeAggregate';
+import { TypeAggregate, MemberMergeStrategy } from './typeAggregate';
 import * as util from './util';
 
 interface TypeNodeTransform extends NodeTransform {
@@ -134,7 +134,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
                     let s = this._symbols.shift();
                     this._scopeStack.push(s);
                     this.nameResolver.pushClass(s);
-                    this._classStack.push(new TypeAggregate(this.symbolStore, s));
+                    this._classStack.push(new TypeAggregate(this.symbolStore, s, MemberMergeStrategy.Documented));
                     this._variableTable.pushScope();
                     this._variableTable.setVariable(Variable.create('$this', s.name));
                 }
@@ -188,19 +188,19 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.QualifiedName:
                 this._transformStack.push(
-                    new QualifiedNameTransform(this._nameSymbolType(<Phrase>parent), this.doc.nodeRange(node), this.nameResolver)
+                    new QualifiedNameTransform(this._nameSymbolType(<Phrase>parent), this.doc.nodeLocation(node), this.nameResolver)
                 );
                 break;
 
             case PhraseType.FullyQualifiedName:
                 this._transformStack.push(
-                    new FullyQualifiedNameTransform(this._nameSymbolType(<Phrase>parent), this.doc.nodeRange(node))
+                    new FullyQualifiedNameTransform(this._nameSymbolType(<Phrase>parent), this.doc.nodeLocation(node))
                 );
                 break;
 
             case PhraseType.RelativeQualifiedName:
                 this._transformStack.push(
-                    new RelativeQualifiedNameTransform(this._nameSymbolType(<Phrase>parent), this.doc.nodeRange(node), this.nameResolver)
+                    new RelativeQualifiedNameTransform(this._nameSymbolType(<Phrase>parent), this.doc.nodeLocation(node), this.nameResolver)
                 );
                 break;
 
@@ -209,7 +209,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case PhraseType.SimpleVariable:
-                this._transformStack.push(new SimpleVariableTransform(this.doc.nodeRange(node), this._variableTable));
+                this._transformStack.push(new SimpleVariableTransform(this.doc.nodeLocation(node), this._variableTable));
                 break;
 
             case PhraseType.ListIntrinsic:
@@ -267,7 +267,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case PhraseType.ScopedMemberName:
-                this._transformStack.push(new ScopedMemberNameTransform(this.doc.nodeRange(node)));
+                this._transformStack.push(new ScopedMemberNameTransform(this.doc.nodeLocation(node)));
                 break;
 
             case PhraseType.Identifier:
@@ -291,7 +291,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case PhraseType.MemberName:
-                this._transformStack.push(new MemberNameTransform(this.doc.nodeRange(node)));
+                this._transformStack.push(new MemberNameTransform(this.doc.nodeLocation(node)));
                 break;
 
             case PhraseType.ObjectCreationExpression:
@@ -520,7 +520,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
     }
 
     private _referenceSymbols: ReferenceSymbolDelegate = (ref) => {
-        return Reference.findSymbols(ref, this.symbolStore, this.doc.uri);
+        return this.symbolStore.findSymbolsByReference(ref, MemberMergeStrategy.Documented);
     }
 
 }
@@ -569,8 +569,8 @@ class NamespaceNameTransform implements NodeTransform {
         this._parts = [];
      }
 
-    get range() {
-        return this.document.nodeRange(this.node);
+    get location() {
+        return this.document.nodeLocation(this.node);
     }
 
     push(transform: NodeTransform) {
@@ -660,7 +660,7 @@ class NamespaceUseClauseTransform implements ReferenceNodeTransform {
             this.reference.kind = SymbolKind.Constant;
         } else if(transform.phraseType === PhraseType.NamespaceName) {
             this.reference.name = (<NamespaceNameTransform>transform).text;
-            this.reference.range = (<NamespaceNameTransform>transform).range;
+            this.reference.location = (<NamespaceNameTransform>transform).location;
         }
     }
 
@@ -1163,9 +1163,9 @@ class SimpleVariableTransform implements TypeNodeTransform, ReferenceNodeTransfo
     reference: Reference;
     private _varTable: VariableTable;
 
-    constructor(range: lsp.Range, varTable: VariableTable) {
+    constructor(loc: HashedLocation, varTable: VariableTable) {
         this._varTable = varTable;
-        this.reference = Reference.create(SymbolKind.Variable, '', range);
+        this.reference = Reference.create(SymbolKind.Variable, '', loc);
     }
 
     push(transform: NodeTransform) {
@@ -1186,8 +1186,8 @@ class FullyQualifiedNameTransform implements TypeNodeTransform, ReferenceNodeTra
     phraseType = PhraseType.FullyQualifiedName;
     reference: Reference;
 
-    constructor(symbolKind: SymbolKind, range: lsp.Range) {
-        this.reference = Reference.create(symbolKind, '', range);
+    constructor(symbolKind: SymbolKind, loc: HashedLocation) {
+        this.reference = Reference.create(symbolKind, '', loc);
     }
 
     push(transform: NodeTransform) {
@@ -1210,8 +1210,8 @@ class QualifiedNameTransform implements TypeNodeTransform, ReferenceNodeTransfor
     reference: Reference;
     private _nameResolver: NameResolver;
 
-    constructor(symbolKind: SymbolKind, range: lsp.Range, nameResolver: NameResolver) {
-        this.reference = Reference.create(symbolKind, '', range);
+    constructor(symbolKind: SymbolKind, loc:HashedLocation, nameResolver: NameResolver) {
+        this.reference = Reference.create(symbolKind, '', loc);
         this._nameResolver = nameResolver;
     }
 
@@ -1242,8 +1242,8 @@ class RelativeQualifiedNameTransform implements TypeNodeTransform, ReferenceNode
     reference: Reference;
     private _nameResolver: NameResolver;
 
-    constructor(symbolKind: SymbolKind, range: lsp.Range, nameResolver: NameResolver) {
-        this.reference = Reference.create(symbolKind, '', range);
+    constructor(symbolKind: SymbolKind, loc:HashedLocation, nameResolver: NameResolver) {
+        this.reference = Reference.create(symbolKind, '', loc);
         this._nameResolver = nameResolver;
     }
 
@@ -1266,8 +1266,8 @@ class MemberNameTransform implements ReferenceNodeTransform {
     phraseType = PhraseType.MemberName;
     reference: Reference;
 
-    constructor(range: lsp.Range) {
-        this.reference = Reference.create(SymbolKind.None, '', range);
+    constructor(loc: HashedLocation) {
+        this.reference = Reference.create(SymbolKind.None, '', loc);
     }
 
     push(transform: NodeTransform) {
@@ -1283,8 +1283,8 @@ class ScopedMemberNameTransform implements ReferenceNodeTransform {
     phraseType = PhraseType.ScopedMemberName;
     reference: Reference;
 
-    constructor(range: lsp.Range) {
-        this.reference = Reference.create(SymbolKind.None, '', range);
+    constructor(loc:HashedLocation) {
+        this.reference = Reference.create(SymbolKind.None, '', loc);
     }
 
     push(transform: NodeTransform) {
@@ -1346,43 +1346,6 @@ class MemberAccessExpressionTransform implements TypeNodeTransform, ReferenceNod
 
     get type() {
         return this.referenceSymbolDelegate(this.reference).reduce(symbolsToTypeReduceFn, '');
-    }
-
-}
-
-
-export class DocumentReferences {
-
-    private _references: Reference[];
-    private _uri: string;
-    private _search: BinarySearch<Reference>;
-
-    constructor(uri: string, references: Reference[]) {
-        this._uri = uri;
-        this._references = references;
-        this._search = new BinarySearch(this._references);
-    }
-
-    filter(predicate: Predicate<Reference>) {
-        let matches: Reference[] = [];
-        let ref: Reference;
-        for (let n = 0, l = this._references.length; n < l; ++n) {
-            ref = this._references[n];
-            if (predicate(ref)) {
-                matches.push(ref);
-            }
-        }
-        return matches;
-    }
-
-    referenceAtPosition(position: lsp.Position) {
-
-        let fn = (x: Reference) => {
-            return isInRange(position, x.range.start, x.range.end);
-        }
-
-        return this._search.find(fn);
-
     }
 
 }

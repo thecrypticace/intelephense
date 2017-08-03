@@ -4,6 +4,8 @@
 
 'use strict';
 
+import {Range} from 'vscode-languageserver-types';
+
 export interface Predicate<T> {
     (t: T): boolean;
 }
@@ -45,6 +47,20 @@ export class Event<T> {
         }
     }
 
+}
+
+export interface HashedLocation {
+    uriHash: number;
+    range: Range;
+}
+
+export namespace HashedLocation {
+    export function create(uriHash:number, range:Range) {
+        return <HashedLocation>{
+            uriHash:uriHash,
+            range:range
+        };
+    }
 }
 
 export interface TreeLike {
