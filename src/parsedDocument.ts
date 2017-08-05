@@ -304,20 +304,37 @@ export namespace ParsedDocument {
         return !isNaN(parseFloat(n)) && isFinite(n);
     }
 
-    export function firstPhraseOfType(type: PhraseType, nodes: (Phrase | Token)[]) {
+    export function findChild(parent:Phrase, fn:Predicate<Phrase|Token>) {
 
-        if(!nodes) {
-            return null;
+        if(!parent || !parent.children) {
+            return undefined;
         }
 
-        let child: Phrase;
-        for (let n = 0, l = nodes.length; n < l; ++n) {
-            child = nodes[n] as Phrase;
-            if (child.phraseType === type) {
+        let child: Phrase|Token;
+        for (let n = 0, l = parent.children.length; n < l; ++n) {
+            child = parent.children[n];
+            if (fn(child)) {
                 return child;
             }
         }
-        return null;
+        return undefined;
+    }
+
+    export function filterChildren(parent:Phrase, fn:Predicate<Phrase|Token>) {
+
+        let filtered:(Phrase|Token)[] = [];
+        if(!parent || !parent.children) {
+            return filtered;
+        }
+
+        let child:Phrase|Token;
+        for(let n = 0, l = parent.children.length; n < l; ++n) {
+            child = parent.children[n];
+            if(fn(child)){
+                filtered.push(child);
+            }
+        }
+        return filtered;
     }
 
     export function isNamePhrase(node: Phrase | Token) {

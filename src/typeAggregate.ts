@@ -4,15 +4,15 @@
 
 'use strict';
 
-import {PhpSymbol, SymbolKind, SymbolModifier} from './symbol';
-import {SymbolStore} from './symbolStore';
-import {Predicate} from './types';
+import { PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
+import { SymbolStore } from './symbolStore';
+import { Predicate } from './types';
 import * as util from './util';
 
 export const enum MemberMergeStrategy {
-    None,
+    None, //returns all symbols
     Override, //first matching member encountered is chosen ie prefer overrides
-    Documented, //prefer first unless base has 
+    Documented, //prefer first unless it has no doc and base does
     Base //last matching member encountered ie prefer base
 }
 
@@ -20,44 +20,42 @@ export class TypeAggregate {
 
     private _symbol: PhpSymbol;
     private _associated: PhpSymbol[];
-    private _memberMergeStrategy:MemberMergeStrategy;
 
-    constructor(public symbolStore: SymbolStore, symbol: PhpSymbol, memberMergeStrategy:MemberMergeStrategy) {
+    constructor(public symbolStore: SymbolStore, symbol: PhpSymbol) {
         if (!symbol || !(symbol.kind & (SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait))) {
             throw new Error('Invalid Argument');
         }
         this._symbol = symbol;
-        this._memberMergeStrategy = memberMergeStrategy;
     }
 
     get type() {
         return this._symbol;
     }
 
-    isAssociated(name:string) {
-        if(!name) {
+    isAssociated(name: string) {
+        if (!name) {
             return false;
         }
         let lcName = name.toLowerCase();
-        let fn = (x:PhpSymbol) => {
+        let fn = (x: PhpSymbol) => {
             return x.name.toLowerCase() === lcName;
         }
         return this.associated(fn).length > 0;
     }
 
-    associated(filter?:Predicate<PhpSymbol>) {
+    associated(filter?: Predicate<PhpSymbol>) {
         let assoc = this._getAssociated();
         return filter ? util.filter(assoc, filter) : assoc;
     }
 
-    members(predicate?: Predicate<PhpSymbol>) {
+    members(mergeStrategy: MemberMergeStrategy, predicate?: Predicate<PhpSymbol>) {
 
         let associated = this._getAssociated().slice(0);
         associated.unshift(this._symbol);
 
         switch (this._symbol.kind) {
             case SymbolKind.Class:
-                return this._classMembers(associated, predicate);
+                return this._classMembers(associated, mergeStrategy, predicate);
             case SymbolKind.Interface:
                 return this._interfaceMembers(associated, predicate);
             case SymbolKind.Trait:
@@ -73,12 +71,12 @@ export class TypeAggregate {
      * @param associated 
      * @param predicate 
      */
-    private _classMembers(associated: PhpSymbol[], predicate?: Predicate<PhpSymbol>) {
+    private _classMembers(associated: PhpSymbol[], strategy:MemberMergeStrategy, predicate?: Predicate<PhpSymbol>) {
 
         let members: PhpSymbol[] = [];
         let s: PhpSymbol;
         let traits: PhpSymbol[] = [];
-        let noPrivate = (x:PhpSymbol)=> {
+        let noPrivate = (x: PhpSymbol) => {
             return !(x.modifiers & SymbolModifier.Private) && (!predicate || predicate(x));
         };
 
@@ -87,14 +85,14 @@ export class TypeAggregate {
             if (s.kind === SymbolKind.Trait) {
                 traits.push(s);
             } else if (s.children) {
-                Array.prototype.push.apply(members, predicate ? s.children.filter(predicate): s.children);
+                Array.prototype.push.apply(members, predicate ? s.children.filter(predicate) : s.children);
             }
 
             predicate = noPrivate;
         }
 
         predicate = noPrivate;
-        members = this._mergeMembers(members);
+        members = this._mergeMembers(members, strategy);
         //@todo trait precendence/alias
         Array.prototype.push.apply(members, this._traitMembers(traits, predicate));
         return members;
@@ -118,14 +116,14 @@ export class TypeAggregate {
         return this._interfaceMembers(traits, predicate);
     }
 
-    private _mergeMembers(symbols: PhpSymbol[]) {
+    private _mergeMembers(symbols: PhpSymbol[], strategy: MemberMergeStrategy) {
 
         let map: { [index: string]: number } = {};
         let merged: PhpSymbol[] = [];
         let s: PhpSymbol;
         let index: number;
 
-        if(this._memberMergeStrategy === MemberMergeStrategy.None) {
+        if (strategy === MemberMergeStrategy.None) {
             return symbols;
         }
 
@@ -135,12 +133,13 @@ export class TypeAggregate {
             if (index === undefined) {
                 merged.push(s);
                 map[s.name] = merged.length - 1;
-            } else if (this._memberMergeStrategy === MemberMergeStrategy.Documented && !merged[index].doc && s.doc) {
-                merged[index] = s;
-            } else if(this._memberMergeStrategy === MemberMergeStrategy.Base) {
+            } else if (
+                ((merged[index].modifiers & SymbolModifier.Magic) > 0 && !(s.modifiers & SymbolModifier.Magic)) || //always prefer non magic
+                (strategy === MemberMergeStrategy.Documented && !merged[index].doc && s.doc) ||
+                (strategy === MemberMergeStrategy.Base)
+            ) {
                 merged[index] = s;
             }
-
         }
 
         return merged;
@@ -178,20 +177,19 @@ export class TypeAggregate {
 
     }
 
-    static create(symbolStore:SymbolStore, fqn:string, memberMergeStrategy:MemberMergeStrategy) {
+    static create(symbolStore: SymbolStore, fqn: string) {
 
         if (!fqn) {
             return null;
         }
 
-        let symbol = symbolStore.find(fqn, TypeAggregate._classInterfaceTraitFilter).shift();
+        let symbol = symbolStore.find(fqn, PhpSymbol.isClassLike).shift();
         if (!symbol) {
             return null;
         }
 
-        return new TypeAggregate(symbolStore, symbol, memberMergeStrategy);
+        return new TypeAggregate(symbolStore, symbol);
 
-    
     }
 
 }

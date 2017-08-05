@@ -106,7 +106,7 @@ export function importSymbol(
         if (context.lastNamespaceUseDeclaration) {
             appendAfterRange = doc.nodeRange(context.lastNamespaceUseDeclaration);
             importText = '\n' + util.whitespace(appendAfterRange.start.character) + importText;
-        } else if (context.namespaceDefinition && !ParsedDocument.firstPhraseOfType(PhraseType.StatementList, context.namespaceDefinition.children)) {
+        } else if (context.namespaceDefinition && !ParsedDocument.findChild(PhraseType.StatementList, context.namespaceDefinition.children)) {
             appendAfterRange = doc.nodeRange(context.namespaceDefinition);
             importText = '\n\n' + util.whitespace(appendAfterRange.start.character) + importText;
         } else if (context.openingInlineText) {

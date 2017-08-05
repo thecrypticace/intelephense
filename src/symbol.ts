@@ -188,21 +188,29 @@ export namespace PhpSymbol {
         };
     }
 
-    export function filterReferences(symbol: PhpSymbol, fn: Predicate<Reference>) {
+    export function filterReferences(parent: PhpSymbol, fn: Predicate<Reference>) {
 
-        if (!symbol || !symbol.references) {
+        if (!parent || !parent.references) {
             return [];
         }
 
-        return util.filter<Reference>(symbol.references, fn);
+        return util.filter<Reference>(parent.references, fn);
     }
 
-    export function filterChildren(symbol: PhpSymbol, fn: Predicate<PhpSymbol>) {
-        if (!symbol || !symbol.children) {
+    export function filterChildren(parent: PhpSymbol, fn: Predicate<PhpSymbol>) {
+        if (!parent || !parent.children) {
             return [];
         }
 
-        return util.filter<PhpSymbol>(symbol.children, fn);
+        return util.filter<PhpSymbol>(parent.children, fn);
+    }
+
+    export function findChild(parent:PhpSymbol, fn:Predicate<PhpSymbol>) {
+        if(!parent || !parent.children) {
+            return undefined;
+        }
+
+        return util.find<PhpSymbol>(parent.children, fn);
     }
 
     export function isAssociated(symbol:PhpSymbol, name:string) {

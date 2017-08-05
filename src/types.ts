@@ -151,7 +151,7 @@ export class TreeTraverser<T extends TreeLike> {
     nthChild(n:number) {
         let parent = this.node;
         if(!parent || !parent.children || n < 0 || n > parent.children.length - 1) {
-            return null;
+            return undefined;
         }
 
         this._spine.push(<T>parent.children[n]);

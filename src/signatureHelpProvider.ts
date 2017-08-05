@@ -7,11 +7,12 @@
 import * as lsp from 'vscode-languageserver-types';
 import { SymbolKind, PhpSymbol, SymbolModifier } from './symbol';
 import { SymbolStore } from './symbolStore';
-import { Context } from './context';
+import { ParseTreeTraverser } from './context';
 import { TypeString } from './typeString';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Phrase, PhraseType, Token, TokenType } from 'php7parser';
 import * as util from './util';
+import { MemberMergeStrategy } from './typeAggregate';
 
 
 export class SignatureHelpProvider {
@@ -21,20 +22,24 @@ export class SignatureHelpProvider {
     provideSignatureHelp(uri: string, position: lsp.Position) {
 
         let doc = this.docStore.find(uri);
-        if (!doc) {
+        let table = this.symbolStore.getSymbolTable(uri);
+        if (!doc || !table) {
             return null;
         }
 
-        let context = new Context(this.symbolStore, doc, position);
-        let traverser = context.createTraverser();
+        let traverser = new ParseTreeTraverser(doc, table);
+        let token = traverser.position(position);
         let callableExpr = traverser.ancestor(this._isCallablePhrase) as Phrase;
 
-        if (!callableExpr || ParsedDocument.isToken(context.token, [TokenType.CloseParenthesis])) {
+        if (!callableExpr || !token || token.tokenType === TokenType.CloseParenthesis) {
             return null;
         }
 
-        let symbol = this._getSymbol(callableExpr, context);
-        let argNumber = this._getArgumentNumber(ParsedDocument.firstPhraseOfType(PhraseType.ArgumentExpressionList, callableExpr.children), context);
+        let symbol = this._getSymbol(traverser.clone());
+        let delimFilterFn = (x:Phrase|Token) => {
+            return (<Token>x).tokenType === TokenType.Comma && (<Token>x).offset <= token.offset;
+        };
+        let argNumber = ParsedDocument.filterChildren(<Phrase>ParsedDocument.findChild(callableExpr, this._isArgExprList), delimFilterFn).length;
 
         return symbol ? this._createSignatureHelp(symbol, argNumber) : null;
 
@@ -142,142 +147,33 @@ export class SignatureHelpProvider {
         return info;
     }
 
-    private _getSymbol(callableExpr: Phrase, context: Context) {
-        switch (callableExpr.phraseType) {
+    private _getSymbol(traverser:ParseTreeTraverser) {
+        let expr = traverser.node as Phrase;
+        switch (expr.phraseType) {
             case PhraseType.FunctionCallExpression:
-                return this._functionCallExpressionSymbol(callableExpr, context);
+                if(traverser.child(this._isNamePhrase)){
+                    return this.symbolStore.findSymbolsByReference(traverser.reference).shift();
+                }
+                return undefined;
             case PhraseType.MethodCallExpression:
-                return this._methodCallExpressionSymbol(callableExpr, context);
+                if(traverser.child(this._isMemberName) && traverser.child(this._isNameToken)) {
+                    return this.symbolStore.findSymbolsByReference(traverser.reference).shift();
+                }
+                return undefined;
             case PhraseType.ScopedCallExpression:
-                return this._scopedCallExpressionSymbol(callableExpr, context);
+                if(traverser.child(this._isScopedMemberName) && traverser.child(this._isIdentifier)) {
+                    return this.symbolStore.findSymbolsByReference(traverser.reference).shift();
+                }
+                return undefined;
             case PhraseType.ObjectCreationExpression:
-                return this._objectCreationExpressionSymbol(callableExpr, context);
+                if(traverser.child(this._isClassTypeDesignator) && traverser.child(this._isNamePhraseOrRelativeScope)) {
+                    return this.symbolStore.findSymbolsByReference(traverser.reference).shift();
+                }
+                return undefined;
+                
             default:
                 throw new Error('Invalid Argument');
         }
-    }
-
-    private _functionCallExpressionSymbol(phrase: Phrase, context: Context) {
-
-        let firstChild = phrase.children && phrase.children.length > 0 ? phrase.children[0] : null;
-        if(!firstChild || !ParsedDocument.isPhrase(firstChild, [PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName])) {
-            return null;
-        }
-
-        let range = context.document.nodeRange(firstChild);
-        if(!range) {
-            return null;
-        }
-
-        let refContext = new Context(this.symbolStore, context.document, range.end);
-        let ref = refContext.reference;
-
-        if(!ref) {
-            return null;
-        }
-
-        return this.symbolStore.findSymbolsByReference(ref).shift();
-
-    }
-
-    private _methodCallExpressionSymbol(phrase: Phrase, context: Context) {
-
-        if(!phrase.children) {
-            return null;
-        }
-
-        let memberName = ParsedDocument.firstPhraseOfType(PhraseType.MemberName, phrase.children);
-        if(!memberName || !memberName.children || !memberName.children.length || (<Token>memberName.children[0]).tokenType !== TokenType.Name) {
-            return null;
-        }
-
-        let range = context.document.nodeRange(memberName);
-        if(!range) {
-            return null;
-        }
-
-        let refContext = new Context(this.symbolStore, context.document, range.end);
-        let ref = refContext.reference;
-
-        if(!ref){
-            return null;
-        }
-
-        return this.symbolStore.findSymbolsByReference(ref).shift();
-
-    }
-
-    private _scopedCallExpressionSymbol(phrase: Phrase, context: Context) {
-
-        if(!phrase.children) {
-            return null;
-        }
-
-        let memberName = ParsedDocument.firstPhraseOfType(PhraseType.ScopedMemberName, phrase.children);
-        if(!memberName || !memberName.children || !memberName.children.length || (<Phrase>memberName.children[0]).phraseType !== PhraseType.Identifier) {
-            return null;
-        }
-
-        let range = context.document.nodeRange(memberName);
-        if(!range) {
-            return null;
-        }
-
-        let refContext = new Context(this.symbolStore, context.document, range.end);
-        let ref = refContext.reference;
-
-        if(!ref){
-            return null;
-        }
-
-        return this.symbolStore.findSymbolsByReference(ref).shift();
-
-    }
-
-    private _objectCreationExpressionSymbol(phrase: Phrase, context: Context) {
-
-        if(!phrase.children) {
-            return null;
-        }
-
-        let typeDesignator = ParsedDocument.firstPhraseOfType(PhraseType.ClassTypeDesignator, phrase.children);
-        if(
-            !typeDesignator || 
-            !typeDesignator.children || 
-            typeDesignator.children.length !== 1 || 
-            ParsedDocument.isPhrase(typeDesignator.children[0], [PhraseType.RelativeScope, PhraseType.FullyQualifiedName, PhraseType.QualifiedName, PhraseType.RelativeQualifiedName])
-        ){
-            return null;
-        }
-
-        let range = context.document.nodeRange(typeDesignator);
-        if(!range) {
-            return null;
-        }
-
-        let refContext = new Context(this.symbolStore, context.document, range.end);
-        let ref = refContext.reference;
-
-        if(!ref){
-            return null;
-        }
-
-        return this.symbolStore.findSymbolsByReference(ref).shift();
-
-    }
-
-    private _getArgumentNumber(argList: Phrase, context: Context) {
-        if (!ParsedDocument.isPhrase(argList, [PhraseType.ArgumentExpressionList])) {
-            return 0;
-        }
-
-        let token = context.token;
-        let delimiters = argList.children.filter((x) => {
-            return (<Token>x).tokenType === TokenType.Comma && (<Token>x).offset <= token.offset;
-        });
-
-        return delimiters.length;
-
     }
 
     private _isCallablePhrase(node: Phrase | Token) {
@@ -286,6 +182,53 @@ export class SignatureHelpProvider {
             case PhraseType.MethodCallExpression:
             case PhraseType.ScopedCallExpression:
             case PhraseType.ObjectCreationExpression:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private _isNamePhrase(node:Phrase|Token) {
+        switch((<Phrase>node).phraseType) {
+            case PhraseType.FullyQualifiedName:
+            case PhraseType.RelativeQualifiedName:
+            case PhraseType.QualifiedName:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private _isArgExprList(node:Phrase|Token) {
+        return (<Phrase>node).phraseType === PhraseType.ArgumentExpressionList;
+    }
+
+    private _isMemberName(node:Phrase|Token) {
+        return (<Phrase>node).phraseType === PhraseType.MemberName;
+    }
+
+    private _isScopedMemberName(node:Phrase|Token) {
+        return (<Phrase>node).phraseType === PhraseType.ScopedMemberName;
+    }
+
+    private _isNameToken(node:Phrase|Token) {
+        return (<Token>node).tokenType === TokenType.Name;
+    }
+
+    private _isIdentifier(node:Phrase|Token) {
+        return (<Phrase>node).phraseType === PhraseType.Identifier;
+    }
+
+    private _isClassTypeDesignator(node:Phrase|Token) {
+        return (<Phrase>node).phraseType === PhraseType.ClassTypeDesignator;
+    }
+
+    private _isNamePhraseOrRelativeScope(node:Phrase|Token) {
+        switch((<Phrase>node).phraseType) {
+            case PhraseType.FullyQualifiedName:
+            case PhraseType.RelativeQualifiedName:
+            case PhraseType.QualifiedName:
+            case PhraseType.RelativeScope:
                 return true;
             default:
                 return false;

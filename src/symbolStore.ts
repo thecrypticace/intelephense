@@ -308,7 +308,7 @@ export class SymbolStore {
         return filtered;
     }
 
-    findSymbolsByReference(ref: Reference, memberMergeStrategy: MemberMergeStrategy): PhpSymbol[] {
+    findSymbolsByReference(ref: Reference, memberMergeStrategy?: MemberMergeStrategy): PhpSymbol[] {
         if (!ref) {
             return [];
         }
@@ -344,21 +344,21 @@ export class SymbolStore {
                 fn = (x) => {
                     return x.kind === SymbolKind.Method && x.name.toLowerCase() === lcName;
                 };
-                symbols = this.findMembers(ref.scope, memberMergeStrategy, fn);
+                symbols = this.findMembers(ref.scope, memberMergeStrategy || MemberMergeStrategy.None, fn);
                 break;
 
             case SymbolKind.Property:
                 fn = (x) => {
                     return x.kind === SymbolKind.Property && x.name.slice(1) === ref.name;
                 };
-                symbols = this.findMembers(ref.scope, memberMergeStrategy, fn);
+                symbols = this.findMembers(ref.scope, memberMergeStrategy || MemberMergeStrategy.None, fn);
                 break;
 
             case SymbolKind.ClassConstant:
                 fn = (x) => {
                     return x.kind === SymbolKind.ClassConstant && x.name === ref.name;
                 };
-                symbols = this.findMembers(ref.scope, memberMergeStrategy, fn);
+                symbols = this.findMembers(ref.scope, memberMergeStrategy || MemberMergeStrategy.None, fn);
                 break;
 
             case SymbolKind.Variable:
@@ -381,7 +381,7 @@ export class SymbolStore {
                 fn = (x) => {
                     return x.kind === SymbolKind.Method && x.name.toLowerCase() === '__construct';
                 };
-                symbols = this.findMembers(ref.scope, memberMergeStrategy, fn);
+                symbols = this.findMembers(ref.scope, memberMergeStrategy || MemberMergeStrategy.None, fn);
                 break;
 
             default:
@@ -398,9 +398,9 @@ export class SymbolStore {
         let type: TypeAggregate;
         let members = new Set<PhpSymbol>();
         for (let n = 0; n < fqnArray.length; ++n) {
-            type = TypeAggregate.create(this, fqnArray[n], memberMergeStrategy);
+            type = TypeAggregate.create(this, fqnArray[n]);
             if (type) {
-                Set.prototype.add.apply(members, type.members(predicate));
+                Set.prototype.add.apply(members, type.members(memberMergeStrategy, predicate));
             }
         }
         return Array.from(members);
@@ -464,7 +464,7 @@ export class SymbolStore {
                 return true;
             }
 
-            let aggregate = new TypeAggregate(store, type, MemberMergeStrategy.None);
+            let aggregate = new TypeAggregate(store, type);
             return aggregate.isAssociated(baseTypeName);
 
         };
