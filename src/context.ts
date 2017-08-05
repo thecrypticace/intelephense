@@ -540,8 +540,10 @@ export class ParseTreeTraverser extends TreeTraverser<Phrase | Token> {
     }
 
     get nameResolver() {
-
-    }
+        let firstToken = ParsedDocument.firstToken(this.node);
+        let pos = this.document.positionAtOffset(firstToken.offset);
+        return this._table.nameResolver(pos);
+    }   
 
     position(pos: Position) {
         let offset = this._doc.offsetAtPosition(pos);
