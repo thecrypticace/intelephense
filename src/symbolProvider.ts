@@ -4,7 +4,7 @@
 
 'use strict';
 
-import * as lsp from 'vscode-languageserver-types';
+import {Location, SymbolInformation, SymbolKind as Kind} from 'vscode-languageserver-types';
 import { PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
 import {SymbolStore} from './symbolStore';
 
@@ -26,13 +26,13 @@ export class SymbolProvider {
     provideDocumentSymbols(uri: string) {
         let symbolTable = this.symbolStore.getSymbolTable(uri);
         let symbols = symbolTable ? symbolTable.symbols : [];
-        let symbolInformationList: lsp.SymbolInformation[] = [];
+        let symbolInformationList: SymbolInformation[] = [];
         let s: PhpSymbol;
 
         for (let n = 0, l = symbols.length; n < l; ++n) {
             s = symbols[n];
             if (s.location) {
-                symbolInformationList.push(this.toDocumentSymbolInformation(s));
+                symbolInformationList.push(this.toSymbolInformation(s));
             }
         }
 
@@ -46,14 +46,14 @@ export class SymbolProvider {
     provideWorkspaceSymbols(query: string) {
         const maxItems = 100;
         let matches = this.symbolStore.match(query);
-        let symbolInformationList: lsp.SymbolInformation[] = [];
+        let symbolInformationList: SymbolInformation[] = [];
 
         let s: PhpSymbol;
 
         for (let n = 0, l = matches.length; n < l && symbolInformationList.length < maxItems; ++n) {
             s = matches[n];
             if (this.workspaceSymbolFilter(s)) {
-                symbolInformationList.push(this.toDocumentSymbolInformation(s));
+                symbolInformationList.push(this.toSymbolInformation(s));
             }
         }
         return symbolInformationList;
@@ -68,12 +68,12 @@ export class SymbolProvider {
 
     }
 
-    toDocumentSymbolInformation(s: PhpSymbol) {
+    toSymbolInformation(s: PhpSymbol, uri?:string) {
 
-        let si: lsp.SymbolInformation = {
-            kind: null,
+        let si: SymbolInformation = {
+            kind: Kind.File,
             name: s.name,
-            location: this.symbolStore.identifierLocation(s),
+            location: uri ? Location.create(uri, s.location.range) : this.symbolStore.identifierLocation(s),
             containerName: s.scope
         };
 
@@ -87,37 +87,37 @@ export class SymbolProvider {
 
         switch (s.kind) {
             case SymbolKind.Class:
-                si.kind = lsp.SymbolKind.Class;
+                si.kind = Kind.Class;
                 break;
             case SymbolKind.Constant:
             case SymbolKind.ClassConstant:
-                si.kind = lsp.SymbolKind.Constant;
+                si.kind = Kind.Constant;
                 break;
             case SymbolKind.Function:
-                si.kind = lsp.SymbolKind.Function;
+                si.kind = Kind.Function;
                 break;
             case SymbolKind.Interface:
-                si.kind = lsp.SymbolKind.Interface;
+                si.kind = Kind.Interface;
                 break;
             case SymbolKind.Method:
                 if (s.name === '__construct') {
-                    si.kind = lsp.SymbolKind.Constructor;
+                    si.kind = Kind.Constructor;
                 } else {
-                    si.kind = lsp.SymbolKind.Method;
+                    si.kind = Kind.Method;
                 }
                 break;
             case SymbolKind.Namespace:
-                si.kind = lsp.SymbolKind.Namespace;
+                si.kind = Kind.Namespace;
                 break;
             case SymbolKind.Property:
-                si.kind = lsp.SymbolKind.Property;
+                si.kind = Kind.Property;
                 break;
             case SymbolKind.Trait:
-                si.kind = lsp.SymbolKind.Module;
+                si.kind = Kind.Module;
                 break;
             case SymbolKind.Variable:
             case SymbolKind.Parameter:
-                si.kind = lsp.SymbolKind.Variable;
+                si.kind = Kind.Variable;
                 break;
             default:
                 throw new Error(`Invalid argument ${s.kind}`);
