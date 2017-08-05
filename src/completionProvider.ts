@@ -14,7 +14,7 @@ import { TypeString } from './typeString';
 import { NameResolver } from './nameResolver';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Predicate } from './types';
-import { Context } from './context';
+import { ParseTreeTraverser } from './context';
 import * as lsp from 'vscode-languageserver-types';
 import * as util from './util';
 
@@ -256,30 +256,29 @@ export class CompletionProvider {
 
 interface CompletionStrategy {
     config: CompletionOptions;
-    canSuggest(context: Context): boolean;
-    completions(context: Context): lsp.CompletionList;
+    canSuggest(traverser:ParseTreeTraverser): boolean;
+    completions(traverser:ParseTreeTraverser, word:string): lsp.CompletionList;
 }
 
 abstract class AbstractNameCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionOptions) { }
+    constructor(public config: CompletionOptions, public symbolStore:SymbolStore) { }
 
-    abstract canSuggest(context: Context): boolean;
+    abstract canSuggest(traverser:ParseTreeTraverser): boolean;
 
-    completions(context: Context) {
+    completions(traverser:ParseTreeTraverser, word:string) {
 
         let items: lsp.CompletionItem[] = [];
         let namePhrase = this._getNamePhrase(context);
-        let text = context.word;
 
-        if (!text) {
+        if (!word) {
             return noCompletionResponse;
         }
 
         let pred = this._symbolFilter;
         if (namePhrase && namePhrase.phraseType === PhraseType.RelativeQualifiedName) {
             //symbols share current namespace
-            text = text.slice(10); //namespace\
+            word = word.slice(10); //namespace\
             let ns = context.namespaceName;
             let sf = this._symbolFilter;
             pred = (x) => {
@@ -287,11 +286,11 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
             };
         }
 
-        let matches = context.symbolStore.match(text, pred);
+        let matches = this.symbolStore.match(word, pred);
         if (namePhrase && namePhrase.phraseType === PhraseType.QualifiedName) {
             //keywords and imports
-             Array.prototype.push.apply(items, keywordCompletionItems(this._getKeywords(context), text));
-             let imports = this._importedSymbols(context, pred, text);
+             Array.prototype.push.apply(items, keywordCompletionItems(this._getKeywords(context), word));
+             let imports = this._importedSymbols(context, pred, word);
              matches = this._mergeSymbols(matches, imports);
         }
 
@@ -393,8 +392,8 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
 
     }
 
-    protected _getNamePhrase(context: Context) {
-        return context.createTraverser().ancestor(this._isNamePhrase) as Phrase;
+    protected _getNamePhrase(traverser: ParseTreeTraverser) {
+        return traverser.ancestor(this._isNamePhrase) as Phrase;
     }
 
     protected _isNamePhrase(node: Phrase | Token) {
