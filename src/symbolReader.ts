@@ -1584,15 +1584,17 @@ export namespace SymbolReader {
         }
     }
 
-    export function modifierListElementsToSymbolModifier(tokens: Token[]) {
+    export function modifierListToSymbolModifier(phrase: Phrase) {
 
-        let flag = SymbolModifier.None;
-        if (!tokens || tokens.length < 1) {
-            return flag;
+        if(!phrase) {
+            return 0;
         }
 
+        let flag = SymbolModifier.None;
+        let tokens = phrase.children || [];
+
         for (let n = 0, l = tokens.length; n < l; ++n) {
-            flag |= this.modifierTokenToSymbolModifier(tokens[n]);
+            flag |= modifierTokenToSymbolModifier(<Token>tokens[n]);
         }
 
         return flag;

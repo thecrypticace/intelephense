@@ -155,41 +155,6 @@ function toVariableCompletionItem(s: PhpSymbol, varTable: VariableTable) {
 }
 
 
-
-function uniqueSymbolNames(symbols: PhpSymbol[]) {
-
-    let set = new Set<string>();
-    let s: PhpSymbol;
-    let unique: PhpSymbol[] = [];
-    for (let n = 0, l = symbols.length; n < l; ++n) {
-        s = symbols[n];
-        if (!set.has(s.name)) {
-            unique.push(s);
-            set.add(s.name);
-        }
-    }
-    return unique;
-}
-
-function tokenToSymbolKind(t: Token) {
-
-    if (!t) {
-        return 0;
-    }
-
-    switch (t.tokenType) {
-        case TokenType.Class:
-            return SymbolKind.Class;
-        case TokenType.Function:
-            return SymbolKind.Function;
-        case TokenType.Const:
-            return SymbolKind.Constant;
-        default:
-            return 0;
-    }
-
-}
-
 export interface CompletionOptions {
     maxItems: number
 }
@@ -208,19 +173,19 @@ export class CompletionProvider {
 
         this._config = config ? config : CompletionProvider._defaultConfig;
         this._strategies = [
-            new ClassTypeDesignatorCompletion(this._config),
-            new ScopedAccessCompletion(this._config),
-            new ObjectAccessCompletion(this._config),
-            new SimpleVariableCompletion(this._config),
-            new TypeDeclarationCompletion(this._config),
-            new ClassBaseClauseCompletion(this._config),
-            new InterfaceClauseCompletion(this._config),
-            new NamespaceDefinitionCompletion(this._config),
-            new NamespaceUseClauseCompletion(this._config),
-            new NamespaceUseGroupClauseCompletion(this._config),
-            new MethodDeclarationHeaderCompletion(this._config),
+            new ClassTypeDesignatorCompletion(this._config, this.symbolStore),
+            new ScopedAccessCompletion(this._config, this.symbolStore),
+            new ObjectAccessCompletion(this._config, this.symbolStore),
+            new SimpleVariableCompletion(this._config, this.symbolStore),
+            new TypeDeclarationCompletion(this._config, this.symbolStore),
+            new ClassBaseClauseCompletion(this._config, this.symbolStore),
+            new InterfaceClauseCompletion(this._config, this.symbolStore),
+            new NamespaceDefinitionCompletion(this._config, this.symbolStore),
+            new NamespaceUseClauseCompletion(this._config, this.symbolStore),
+            new NamespaceUseGroupClauseCompletion(this._config, this.symbolStore),
+            new MethodDeclarationHeaderCompletion(this._config, this.symbolStore),
             new DeclarationBodyCompletion(this._config),
-            new NameCompletion(this._config)
+            new NameCompletion(this._config, this.symbolStore)
         ];
 
     }
@@ -397,8 +362,20 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
 
     }
 
-    protected _getNamePhrase(traverser: ParseTreeTraverser) {
-        return traverser.ancestor(this._isNamePhrase) as Phrase;
+    protected _insertText(s: PhpSymbol, nsName: string, namePhraseType: PhraseType) {
+        let insertText = s.name;
+
+        if (nsName && s.name.indexOf(nsName) === 0 && insertText.length > nsName.length + 1) {
+            insertText = insertText.slice(nsName.length + 1);
+            if (namePhraseType === PhraseType.RelativeQualifiedName) {
+                insertText = 'namespace\\' + insertText;
+            }
+
+        } else if (nsName && namePhraseType !== PhraseType.FullyQualifiedName && !(s.modifiers & SymbolModifier.Use)) {
+            insertText = '\\' + insertText;
+        }
+        
+        return insertText;
     }
 
     protected _isNamePhrase(node: Phrase | Token) {
@@ -975,7 +952,7 @@ class NamespaceDefinitionCompletion implements CompletionStrategy {
 
 class NamespaceUseClauseCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionOptions, public symbolStore:SymbolStore) { }
+    constructor(public config: CompletionOptions, public symbolStore: SymbolStore) { }
 
     canSuggest(traverser: ParseTreeTraverser) {
         return traverser.ancestor(this._isNamespaceUseClause) !== undefined;
@@ -1013,7 +990,7 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
     private _toCompletionItem(s: PhpSymbol) {
         let item = lsp.CompletionItem.create(s.name);
         item.kind = symbolKindToLspSymbolKind(s.kind);
-        if(s.kind !== SymbolKind.Namespace) {
+        if (s.kind !== SymbolKind.Namespace) {
             item.sortText = item.filterText = s.name;
         }
 
@@ -1062,13 +1039,13 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
 
 class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionOptions, public symbolStore:SymbolStore) { }
+    constructor(public config: CompletionOptions, public symbolStore: SymbolStore) { }
 
-    canSuggest(traverser:ParseTreeTraverser) {
+    canSuggest(traverser: ParseTreeTraverser) {
         return traverser.ancestor(this._isNamespaceUseGroupClause) !== undefined;
     }
 
-    completions(traverser:ParseTreeTraverser, word:string) {
+    completions(traverser: ParseTreeTraverser, word: string) {
 
         let items: lsp.CompletionItem[] = [];
         if (!word) {
@@ -1082,11 +1059,11 @@ class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
         let kind = this._modifierToSymbolKind(nsUseGroupClauseModifier || nsUseDeclModifier);
         let prefix = '';
         traverser.parent();
-        if(traverser.child(this._isNamespaceName)) {
+        if (traverser.child(this._isNamespaceName)) {
             prefix = traverser.text.toLowerCase();
         }
 
-        let pred = (x:PhpSymbol) => {
+        let pred = (x: PhpSymbol) => {
             return (x.kind & kind) > 0 && !(x.modifiers & SymbolModifier.Use) && (!prefix || x.name.toLowerCase().indexOf(prefix) === 0);
         };
 
@@ -1136,11 +1113,11 @@ class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
         }
     }
 
-    private _isNamespaceName(node:Phrase|Token) {
+    private _isNamespaceName(node: Phrase | Token) {
         return (<Phrase>node).phraseType === PhraseType.NamespaceName;
     }
 
-    private _modifierToSymbolKind(modifier:Token) {
+    private _modifierToSymbolKind(modifier: Token) {
         if (!modifier) {
             return SymbolKind.Class;
         }
@@ -1174,7 +1151,7 @@ class DeclarationBodyCompletion implements CompletionStrategy {
         return ParsedDocument.isPhrase(traverser.parent(), DeclarationBodyCompletion._phraseTypes);
     }
 
-    completions(traverser: ParseTreeTraverser, word:string) {
+    completions(traverser: ParseTreeTraverser, word: string) {
         return <lsp.CompletionList>{
             items: keywordCompletionItems(DeclarationBodyCompletion._keywords, word)
         }
@@ -1184,66 +1161,51 @@ class DeclarationBodyCompletion implements CompletionStrategy {
 
 class MethodDeclarationHeaderCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionOptions) { }
+    constructor(public config: CompletionOptions, public symbolStore: SymbolStore) { }
 
-    canSuggest(context: Context) {
-        let traverser = context.createTraverser();
-        let thisSymbol = context.classSymbol;
+    canSuggest(traverser: ParseTreeTraverser) {
+        let nameResolver = traverser.nameResolver;
+        let thisSymbol = nameResolver.class;
         return ParsedDocument.isPhrase(traverser.parent(), [PhraseType.Identifier]) &&
             ParsedDocument.isPhrase(traverser.parent(), [PhraseType.MethodDeclarationHeader]) &&
-            !!thisSymbol && !!thisSymbol.associated && thisSymbol.associated.length > 0;
+            thisSymbol !== undefined && thisSymbol.associated !== undefined && thisSymbol.associated.length > 0;
     }
 
-    completions(context: Context) {
+    completions(traverser: ParseTreeTraverser, word: string) {
 
-        let text = context.word;
-        let memberDecl = context.createTraverser().ancestor((x) => {
-            return (<Phrase>x).phraseType === PhraseType.MethodDeclarationHeader;
-        }) as Phrase;
+        let memberDecl = traverser.ancestor(this._isMethodDeclarationHeader) as Phrase;
+        let modifiers = SymbolReader.modifierListToSymbolModifier(<Phrase>traverser.child(this._isMemberModifierList));
 
-        let modifiers = SymbolReader.modifierListElementsToSymbolModifier(memberDecl.modifierList ? memberDecl.modifierList.elements : []);
-        modifiers &= (SymbolModifier.Public | SymbolModifier.Protected);
-
-        let existingMethodNames: string[] = [];
-        if (context.classSymbol.children) {
-            existingMethodNames = context.classSymbol.children.filter((x) => {
-                return x.kind === SymbolKind.Method;
-            }).map((x) => {
-                return x.name;
-            });
+        if (modifiers & (SymbolModifier.Private | SymbolModifier.Abstract)) {
+            return noCompletionResponse;
         }
 
-        let classPred = (x: PhpSymbol) => {
+        modifiers &= (SymbolModifier.Public | SymbolModifier.Protected);
+        let nameResolver = traverser.nameResolver;
+        let classSymbol = nameResolver.class;
+        let existingMethods = PhpSymbol.filterChildren(classSymbol, this._isMethod);
+        let existingMethodNames = existingMethods.map<string>(this._toName);
+
+        let fn = (x: PhpSymbol) => {
             return x.kind === SymbolKind.Method &&
                 (!modifiers || (x.modifiers & modifiers) > 0) &&
                 !(x.modifiers & (SymbolModifier.Final | SymbolModifier.Private)) &&
                 existingMethodNames.indexOf(x.name) < 0 &&
-                util.fuzzyStringMatch(text, x.name);
+                util.fuzzyStringMatch(word, x.name);
         }
 
-        let interfacePred = (x: PhpSymbol) => {
-            return x.kind === SymbolKind.Method &&
-                existingMethodNames.indexOf(x.name) < 0 &&
-                util.fuzzyStringMatch(text, x.name);
-        }
-
-        let queries = context.classSymbol.associated.filter((x) => {
-            return (x.kind & (SymbolKind.Class | SymbolKind.Interface)) > 0;
-        }).map<MemberQuery>((x) => {
-            return {
-                typeName: x.name,
-                memberPredicate: x.kind === SymbolKind.Interface ? interfacePred : classPred
-            };
-        });
-
-        let matches = context.symbolStore.lookupMembersOnTypes(queries).slice(0, this.config.maxItems);
+        let aggregate = new TypeAggregate(this.symbolStore, classSymbol, true);
+        let matches = aggregate.members(MemberMergeStrategy.Documented, fn);
+        let isIncomplete = matches.length > this.config.maxItems;
+        let limit = Math.min(this.config.maxItems, matches.length);
         let items: lsp.CompletionItem[] = [];
-        for (let n = 0, l = matches.length; n < l; ++n) {
+
+        for (let n = 0; n < limit; ++n) {
             items.push(this._toCompletionItem(matches[n]));
         }
 
         return <lsp.CompletionList>{
-            isIncomplete: matches.length === this.config.maxItems,
+            isIncomplete: isIncomplete,
             items: items
         }
 
@@ -1251,18 +1213,16 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
 
     private _toCompletionItem(s: PhpSymbol) {
 
-        let params = s.children ? s.children.filter((x) => {
-            return x.kind === SymbolKind.Parameter;
-        }) : [];
-
+        let params = PhpSymbol.filterChildren(s, this._isParameter);
         let paramStrings: string[] = [];
+
         for (let n = 0, l = params.length; n < l; ++n) {
             paramStrings.push(this._parameterToString(params[n]));
         }
 
         let paramString = paramStrings.join(', ');
         let escapedParamString = snippetEscape(paramString);
-        let insertText = `${s.name}(${escapedParamString}) {$0}`;
+        let insertText = `${s.name}(${escapedParamString})\n{\n\t$0\n\\}`;
 
         let item: lsp.CompletionItem = {
             kind: lsp.CompletionItemKind.Method,
@@ -1303,9 +1263,29 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
 
     }
 
+    private _isMethodDeclarationHeader(node: Phrase | Token) {
+        return (<Phrase>node).phraseType === PhraseType.MethodDeclarationHeader;
+    }
+
+    private _isMemberModifierList(node: Phrase | Token) {
+        return (<Phrase>node).phraseType === PhraseType.MemberModifierList;
+    }
+
+    private _isMethod(s: PhpSymbol) {
+        return s.kind === SymbolKind.Method;
+    }
+
+    private _toName(s: PhpSymbol) {
+        return s.name.toLowerCase();
+    }
+
+    private _isParameter(s: PhpSymbol) {
+        return s.kind === SymbolKind.Parameter;
+    }
+
 }
 
-const snippetEscapeRegex = /[${\\]/g;
+const snippetEscapeRegex = /[$}\\]/g;
 
 function snippetEscape(text: string) {
     return text.replace(snippetEscapeRegex, snippetEscapeReplacer);

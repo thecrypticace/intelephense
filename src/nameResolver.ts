@@ -20,7 +20,7 @@ export class NameResolver {
      }
 
      get class() {
-        return this._classStack.length ? this._classStack[this._classStack.length - 1] : null;
+        return this._classStack.length ? this._classStack[this._classStack.length - 1] : undefined;
      }
 
      get namespaceName() {

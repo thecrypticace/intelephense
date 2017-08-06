@@ -20,12 +20,14 @@ export class TypeAggregate {
 
     private _symbol: PhpSymbol;
     private _associated: PhpSymbol[];
+    private _excludeTraits = false;
 
-    constructor(public symbolStore: SymbolStore, symbol: PhpSymbol) {
+    constructor(public symbolStore: SymbolStore, symbol: PhpSymbol, excludeTraits?:boolean) {
         if (!symbol || !(symbol.kind & (SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait))) {
             throw new Error('Invalid Argument');
         }
         this._symbol = symbol;
+        this._excludeTraits = excludeTraits;
     }
 
     get type() {
@@ -174,6 +176,10 @@ export class TypeAggregate {
         Array.prototype.push.apply(queue, symbol.associated);
 
         while ((stub = queue.shift())) {
+
+            if(this._excludeTraits && stub.kind === SymbolKind.Trait) {
+                continue;
+            }
 
             symbol = this.symbolStore.find(stub.name, PhpSymbol.isClassLike).shift();
             if (!symbol || this._associated.indexOf(symbol) > -1) {
