@@ -1194,6 +1194,7 @@ class ClassConstantElementTransform implements SymbolNodeTransform {
 
     constructor(public nameResolver: NameResolver, location: HashedLocation, doc: PhpDoc, docLocation: HashedLocation) {
         this.symbol = PhpSymbol.create(SymbolKind.ClassConstant, '', location);
+        this.symbol.modifiers = SymbolModifier.Static;
         this._doc = doc;
         this._docLocation = docLocation;
     }
@@ -1397,7 +1398,7 @@ class FieldDeclarationTransform implements NodeTransform {
             for (let n = 0; n < transforms.length; ++n) {
                 s = transforms[n].symbol;
                 if (s) {
-                    s.modifiers = this._modifier;
+                    s.modifiers |= this._modifier;
                     this.symbols.push(s);
                 }
             }

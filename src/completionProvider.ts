@@ -4,7 +4,7 @@
 
 'use strict';
 
-import {    Token, TokenType, Phrase, PhraseType} from 'php7parser';
+import { Token, TokenType, Phrase, PhraseType } from 'php7parser';
 import {
     PhpSymbol, SymbolKind, SymbolModifier
 } from './symbol';
@@ -17,6 +17,7 @@ import { Predicate } from './types';
 import { ParseTreeTraverser } from './context';
 import * as lsp from 'vscode-languageserver-types';
 import * as util from './util';
+import { TypeAggregate, MemberMergeStrategy } from './typeAggregate';
 
 const noCompletionResponse: lsp.CompletionList = {
     items: [],
@@ -74,6 +75,7 @@ function symbolKindToLspSymbolKind(kind: SymbolKind) {
         case SymbolKind.Function:
             return lsp.CompletionItemKind.Function;
         case SymbolKind.Constant:
+        case SymbolKind.ClassConstant:
             return lsp.CompletionItemKind.Value;
         case SymbolKind.Interface:
             return lsp.CompletionItemKind.Interface;
@@ -92,7 +94,7 @@ function toMethodCompletionItem(s: PhpSymbol) {
         detail: PhpSymbol.signatureString(s)
     };
 
-    if(s.doc && s.doc.description) {
+    if (s.doc && s.doc.description) {
         item.documentation = s.doc.description;
     }
 
@@ -110,11 +112,11 @@ function toClassConstantCompletionItem(s: PhpSymbol) {
         label: s.name,
     };
 
-    if(s.doc && s.doc.description) {
+    if (s.doc && s.doc.description) {
         item.documentation = s.doc.description;
     }
 
-    if(s.value) {
+    if (s.value) {
         item.detail = '= ' + s.value;
     }
 
@@ -129,7 +131,7 @@ function toPropertyCompletionItem(s: PhpSymbol) {
         detail: PhpSymbol.type(s)
     }
 
-    if(s.doc && s.doc.description) {
+    if (s.doc && s.doc.description) {
         item.documentation = s.doc.description;
     }
 
@@ -138,13 +140,13 @@ function toPropertyCompletionItem(s: PhpSymbol) {
 
 function toVariableCompletionItem(s: PhpSymbol, varTable: VariableTable) {
 
-    let item =  <lsp.CompletionItem>{
+    let item = <lsp.CompletionItem>{
         label: s.name,
         kind: lsp.CompletionItemKind.Variable,
         detail: varTable.getType(s.name).toString()
     }
 
-    if(s.doc && s.doc.description) {
+    if (s.doc && s.doc.description) {
         item.documentation = s.doc.description;
     }
 
@@ -259,17 +261,17 @@ export class CompletionProvider {
 
 interface CompletionStrategy {
     config: CompletionOptions;
-    canSuggest(traverser:ParseTreeTraverser): boolean;
-    completions(traverser:ParseTreeTraverser, word:string): lsp.CompletionList;
+    canSuggest(traverser: ParseTreeTraverser): boolean;
+    completions(traverser: ParseTreeTraverser, word: string): lsp.CompletionList;
 }
 
 abstract class AbstractNameCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionOptions, public symbolStore:SymbolStore) { }
+    constructor(public config: CompletionOptions, public symbolStore: SymbolStore) { }
 
-    abstract canSuggest(traverser:ParseTreeTraverser): boolean;
+    abstract canSuggest(traverser: ParseTreeTraverser): boolean;
 
-    completions(traverser:ParseTreeTraverser, word:string) {
+    completions(traverser: ParseTreeTraverser, word: string) {
 
         let items: lsp.CompletionItem[] = [];
         let namePhrase = traverser.clone().ancestor(this._isNamePhrase) as Phrase;
@@ -293,9 +295,9 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         let matches = this.symbolStore.match(word, pred);
         if (namePhrase && namePhrase.phraseType === PhraseType.QualifiedName) {
             //keywords and imports
-             Array.prototype.push.apply(items, keywordCompletionItems(this._getKeywords(traverser.clone()), word));
-             let imports = this._importedSymbols(nameResolver.rules, pred, word);
-             matches = this._mergeSymbols(matches, imports);
+            Array.prototype.push.apply(items, keywordCompletionItems(this._getKeywords(traverser.clone()), word));
+            let imports = this._importedSymbols(nameResolver.rules, pred, word);
+            matches = this._mergeSymbols(matches, imports);
         }
 
         let limit = Math.min(matches.length, this.config.maxItems - items.length);
@@ -314,25 +316,25 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
 
     protected abstract _getKeywords(traverser: ParseTreeTraverser): string[];
 
-    protected _importedSymbols(rules:PhpSymbol[], pred:Predicate<PhpSymbol>, text:string) {
+    protected _importedSymbols(rules: PhpSymbol[], pred: Predicate<PhpSymbol>, text: string) {
 
-        let filteredRules:PhpSymbol[] = [];
-        let r:PhpSymbol;
-        for(let n =0, l = rules.length; n < l; ++n) {
+        let filteredRules: PhpSymbol[] = [];
+        let r: PhpSymbol;
+        for (let n = 0, l = rules.length; n < l; ++n) {
             r = rules[n];
-            if(r.associated && r.associated.length > 0 && util.fuzzyStringMatch(text, r.name)) {
+            if (r.associated && r.associated.length > 0 && util.fuzzyStringMatch(text, r.name)) {
                 filteredRules.push(r);
             }
         }
 
         //lookup associated symbol
-        let s:PhpSymbol;
-        let merged:PhpSymbol;
-        let imported:PhpSymbol[] = [];
-        for(let n = 0, l = filteredRules.length; n < l; ++n) {
+        let s: PhpSymbol;
+        let merged: PhpSymbol;
+        let imported: PhpSymbol[] = [];
+        for (let n = 0, l = filteredRules.length; n < l; ++n) {
             r = filteredRules[n];
             s = this.symbolStore.find(r.associated[0].name, pred).shift();
-            if(s){
+            if (s) {
                 merged = PhpSymbol.clone(s);
                 merged.associated = r.associated;
                 merged.modifiers |= SymbolModifier.Use;
@@ -351,7 +353,7 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
             insertText: createInsertText(s, namespaceName, namePhraseType)
         }
 
-        if(s.doc && s.doc.description) {
+        if (s.doc && s.doc.description) {
             item.documentation = s.doc.description;
         }
 
@@ -370,7 +372,7 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
 
             case SymbolKind.Constant:
                 item.kind = lsp.CompletionItemKind.Value;
-                if(s.value) {
+                if (s.value) {
                     item.detail = s.value;
                 }
                 break;
@@ -459,7 +461,7 @@ class ClassTypeDesignatorCompletion extends AbstractNameCompletion {
             !(s.modifiers & (SymbolModifier.Anonymous | SymbolModifier.Abstract));
     }
 
-    protected _getKeywords(traverser:ParseTreeTraverser) {
+    protected _getKeywords(traverser: ParseTreeTraverser) {
 
         if (traverser.ancestor(this._isQualifiedName)) {
             return ClassTypeDesignatorCompletion._keywords;
@@ -475,7 +477,7 @@ class ClassTypeDesignatorCompletion extends AbstractNameCompletion {
             insertText: createInsertText(s, namespaceName, namePhraseType)
         }
 
-        if(s.doc && s.doc.description) {
+        if (s.doc && s.doc.description) {
             item.documentation = s.doc.description;
         }
 
@@ -497,14 +499,14 @@ class ClassTypeDesignatorCompletion extends AbstractNameCompletion {
 
 class SimpleVariableCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionOptions, public symbolStore:SymbolStore) { }
+    constructor(public config: CompletionOptions, public symbolStore: SymbolStore) { }
 
-    canSuggest(traverser:ParseTreeTraverser) {
+    canSuggest(traverser: ParseTreeTraverser) {
         return ParsedDocument.isToken(traverser.node, [TokenType.Dollar, TokenType.VariableName]) &&
             ParsedDocument.isPhrase(traverser.parent(), [PhraseType.SimpleVariable]);
     }
 
-    completions(traverser:ParseTreeTraverser, word:string) {
+    completions(traverser: ParseTreeTraverser, word: string) {
 
         if (!word) {
             return noCompletionResponse;
@@ -622,13 +624,13 @@ class NameCompletion extends AbstractNameCompletion {
     private static _extendsRegex = /\b(?:class|interface)\s+[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*\s+[a-z]+$/;
     private static _implementsRegex = /\bclass\s+[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*(?:\s+extends\s+[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*)?\s+[a-z]+$/;
 
-    canSuggest(traverser:ParseTreeTraverser) {
+    canSuggest(traverser: ParseTreeTraverser) {
 
         return ParsedDocument.isPhrase(traverser.parent(), [PhraseType.NamespaceName]) &&
             traverser.ancestor(this._isNamePhrase) !== null;
     }
 
-    completions(traverser:ParseTreeTraverser, word:string) {
+    completions(traverser: ParseTreeTraverser, word: string) {
 
         //<?php (no trailing space) is considered short tag open and then name token
         //dont suggest in this context
@@ -654,7 +656,7 @@ class NameCompletion extends AbstractNameCompletion {
 
     }
 
-    protected _getKeywords(traverser:ParseTreeTraverser) {
+    protected _getKeywords(traverser: ParseTreeTraverser) {
         let kw: string[] = [];
         Array.prototype.push.apply(kw, NameCompletion._expressionKeywords);
         Array.prototype.push.apply(kw, NameCompletion._statementKeywords);
@@ -668,12 +670,106 @@ class NameCompletion extends AbstractNameCompletion {
 
 }
 
-class ScopedAccessCompletion implements CompletionStrategy {
+abstract class MemberAccessCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionOptions) { }
+    constructor(public config: CompletionOptions, public symbolStore: SymbolStore) { }
 
-    canSuggest(traverser:ParseTreeTraverser) {
-        let scopedAccessPhrases = [
+    abstract canSuggest(traverser: ParseTreeTraverser);
+
+    completions(traverser: ParseTreeTraverser, word: string) {
+
+        let scopedAccessExpr = traverser.ancestor(this._isMemberAccessExpr);
+        let scopePhrase = traverser.nthChild(0) as Phrase;
+        let type = this._resolveType(traverser);
+        let typeNames = TypeString.atomicClassArray(type);
+
+        if (!typeNames.length) {
+            return noCompletionResponse;
+        }
+
+        let nameResolver = traverser.nameResolver;
+        let classSymbol = nameResolver.class;
+        let classAggregateType: TypeAggregate;
+        if (classSymbol) {
+            classAggregateType = new TypeAggregate(this.symbolStore, classSymbol);
+        }
+        let typeName: string;
+        let fn: Predicate<PhpSymbol>;
+        let typeAggregate: TypeAggregate;
+        let symbols: PhpSymbol[] = [];
+
+        for (let n = 0, l = typeNames.length; n < l; ++n) {
+            typeName = typeNames[n];
+            if (classSymbol && classSymbol.name.toLowerCase() === typeName.toLowerCase()) {
+                typeAggregate = classAggregateType;
+            } else {
+                typeAggregate = TypeAggregate.create(this.symbolStore, typeName);
+            }
+
+            if (!typeAggregate) {
+                continue;
+            }
+
+            fn = this._createMemberPredicate(typeName, word, classAggregateType);
+            Array.prototype.push.apply(symbols, typeAggregate.members(MemberMergeStrategy.Documented, fn));
+        }
+
+        symbols = Array.from(new Set<PhpSymbol>(symbols)); //unique
+        let isIncomplete = symbols.length > this.config.maxItems;
+        let limit = Math.min(symbols.length, this.config.maxItems);
+        let items: lsp.CompletionItem[] = [];
+
+        for (let n = 0; n < limit; ++n) {
+            items.push(this._toCompletionItem(symbols[n]));
+        }
+
+        return <lsp.CompletionList>{
+            isIncomplete: isIncomplete,
+            items: items
+        }
+
+    }
+
+    private _resolveType(traverser: ParseTreeTraverser): string {
+
+    }
+
+    protected abstract _createMemberPredicate(scopeName: string, word: string, classContext: TypeAggregate): Predicate<PhpSymbol>;
+
+    protected _isMemberAccessExpr(node: Phrase | Token) {
+        switch ((<Phrase>node).phraseType) {
+            case PhraseType.ScopedCallExpression:
+            case PhraseType.ErrorScopedAccessExpression:
+            case PhraseType.ClassConstantAccessExpression:
+            case PhraseType.ScopedPropertyAccessExpression:
+            case PhraseType.PropertyAccessExpression:
+            case PhraseType.MethodCallExpression:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    protected _toCompletionItem(s: PhpSymbol) {
+        switch (s.kind) {
+            case SymbolKind.ClassConstant:
+                return toClassConstantCompletionItem(s);
+            case SymbolKind.Method:
+                return toMethodCompletionItem(s);
+            case SymbolKind.Property:
+                return toPropertyCompletionItem(s);
+            default:
+                throw Error('Invalid Argument');
+        }
+    }
+
+}
+
+class ScopedAccessCompletion extends MemberAccessCompletion {
+
+
+    canSuggest(traverser: ParseTreeTraverser) {
+        const scopedAccessPhrases = [
             PhraseType.ScopedCallExpression,
             PhraseType.ErrorScopedAccessExpression,
             PhraseType.ClassConstantAccessExpression,
@@ -697,101 +793,41 @@ class ScopedAccessCompletion implements CompletionStrategy {
             ParsedDocument.isPhrase(traverser.parent(), [PhraseType.ScopedMemberName]);
     }
 
-    completions(traverser:ParseTreeTraverser, word:string) {
+    protected _createMemberPredicate(scopeName: string, word: string, classContext: TypeAggregate): Predicate<PhpSymbol> {
+        if (scopeName === classContext!.name.toLowerCase()) {
+            //public, protected, private
+            return (x) => {
+                return (x.modifiers & SymbolModifier.Static) > 0 && util.fuzzyStringMatch(word, x.name);
+            };
+        } else if (classContext!.isBaseClass(scopeName)) {
+            //public, protected
+            //looking for non static here as well to handle parent keyword
+            return (x) => {
+                return !(x.modifiers & SymbolModifier.Private) && util.fuzzyStringMatch(word, x.name);
+            };
 
-        let scopedAccessExpr = traverser.ancestor(this._isScopedAccessExpr);
-        let accessee = scopedAccessExpr.scope;
-        let type = context.resolveExpressionType(<Phrase>accessee);
+        } else if (classContext!.isAssociated(scopeName)) {
+            //public, protected
+            return (x) => {
+                return (x.modifiers & SymbolModifier.Static) > 0 &&
+                    !(x.modifiers & SymbolModifier.Private) &&
+                    util.fuzzyStringMatch(word, x.name);
+            };
 
-        let text = context.word;
-        let typeNames = TypeString.atomicClassArray(type);
-
-        if (!typeNames.length) {
-            return noCompletionResponse;
-        }
-
-        let memberPred = this._createSymbolPredicate(text, SymbolModifier.Private | SymbolModifier.Protected);
-        let baseMemberPred = this._createSymbolPredicate(text, SymbolModifier.Private);
-        let ownMemberPred = this._createSymbolPredicate(text, 0);
-        let memberQueries: MemberQuery[] = [];
-        let typeName: string;
-        let pred: Predicate<PhpSymbol>;
-
-        for (let n = 0, l = typeNames.length; n < l; ++n) {
-            typeName = typeNames[n];
-
-            if (typeName === context.className) {
-                pred = ownMemberPred;
-            } else if (typeName === context.classBaseName) {
-                pred = baseMemberPred;
-            } else {
-                pred = memberPred;
-            }
-
-            memberQueries.push({
-                typeName: typeName,
-                memberPredicate: pred
-            });
-        }
-
-        let symbols = uniqueSymbolNames(context.symbolStore.lookupMembersOnTypes(memberQueries));
-        let isIncomplete = symbols.length > this.config.maxItems;
-        let limit = Math.min(symbols.length, this.config.maxItems);
-        let items: lsp.CompletionItem[] = [];
-
-        for (let n = 0; n < limit; ++n) {
-            items.push(this._toCompletionItem(symbols[n]));
-        }
-
-        return <lsp.CompletionList>{
-            isIncomplete: isIncomplete,
-            items: items
-        }
-
-    }
-
-    private _toCompletionItem(s: PhpSymbol) {
-        switch (s.kind) {
-            case SymbolKind.ClassConstant:
-                return toClassConstantCompletionItem(s);
-            case SymbolKind.Method:
-                return toMethodCompletionItem(s);
-            case SymbolKind.Property:
-                return toPropertyCompletionItem(s);
-            default:
-                throw Error('Invalid Argument');
-        }
-    }
-
-    private _createSymbolPredicate(text: string, notVisibilityMask: SymbolModifier) {
-        return (s: PhpSymbol) => {
-            return (s.kind === SymbolKind.ClassConstant ||
-                (s.modifiers & SymbolModifier.Static) > 0) &&
-                (!notVisibilityMask || !(s.modifiers & notVisibilityMask)) &&
-                util.fuzzyStringMatch(text, s.name);
-        };
-    }
-
-    private _isScopedAccessExpr(node: Phrase | Token) {
-        switch ((<Phrase>node).phraseType) {
-            case PhraseType.ScopedCallExpression:
-            case PhraseType.ErrorScopedAccessExpression:
-            case PhraseType.ClassConstantAccessExpression:
-            case PhraseType.ScopedPropertyAccessExpression:
-                return true;
-            default:
-                return false;
+        } else {
+            //public
+            const mask = SymbolModifier.Static | SymbolModifier.Public;
+            return (x) => {
+                return (x.modifiers & mask) === mask && util.fuzzyStringMatch(word, x.name);
+            };
         }
     }
 
 }
 
-class ObjectAccessCompletion implements CompletionStrategy {
+class ObjectAccessCompletion extends MemberAccessCompletion {
 
-    constructor(public config: CompletionOptions) { }
-
-    canSuggest(context: Context) {
-        let traverser = context.createTraverser();
+    canSuggest(traverser: ParseTreeTraverser) {
 
         if (ParsedDocument.isToken(traverser.node, [TokenType.Arrow])) {
             return ParsedDocument.isPhrase(traverser.parent(),
@@ -802,105 +838,25 @@ class ObjectAccessCompletion implements CompletionStrategy {
 
     }
 
-    completions(context: Context) {
+    protected _createMemberPredicate(scopeName: string, word: string, classContext: TypeAggregate): Predicate<PhpSymbol> {
+        if (scopeName === classContext!.name.toLowerCase()) {
+            //public, protected, private
+            return (x) => {
+                return !(x.modifiers & SymbolModifier.Static) && util.fuzzyStringMatch(word, x.name);
+            };
+        } else if (classContext!.isAssociated(scopeName)) {
+            //public, protected
+            const mask = SymbolModifier.Static | SymbolModifier.Private;
+            return (x) => {
+                return !(x.modifiers & mask) && util.fuzzyStringMatch(word, x.name);
+            };
 
-        let traverser = context.createTraverser();
-        let objAccessExpr = traverser.ancestor(this._isMemberAccessExpr) as ObjectAccessExpression;
-        let type = context.resolveExpressionType(<Phrase>objAccessExpr.variable);
-        let typeNames = TypeString.atomicClassArray(type);
-        let text = context.word;
-
-        if (!typeNames.length) {
-            return noCompletionResponse;
-        }
-
-        let memberPred = this._createMembersPredicate(text);
-        let basePred = this._createBaseMembersPredicate(text);
-        let ownPred = this._createOwnMembersPredicate(text);
-        let typeName: string;
-        let pred: Predicate<PhpSymbol>;
-        let memberQueries: MemberQuery[] = [];
-
-        for (let n = 0, l = typeNames.length; n < l; ++n) {
-            typeName = typeNames[n];
-
-            if (typeName === context.className) {
-                pred = ownPred;
-            } else if (typeName === context.classBaseName) {
-                pred = basePred;
-            } else {
-                pred = memberPred;
-            }
-
-            memberQueries.push({
-                typeName: typeName,
-                memberPredicate: pred
-            });
-        }
-
-        let symbols = uniqueSymbolNames(context.symbolStore.lookupMembersOnTypes(memberQueries));
-        let isIncomplete = symbols.length > this.config.maxItems;
-        let limit = Math.min(symbols.length, this.config.maxItems);
-        let items: lsp.CompletionItem[] = [];
-
-        for (let n = 0; n < limit; ++n) {
-            items.push(this._toCompletionItem(symbols[n]));
-        }
-
-        return <lsp.CompletionList>{
-            isIncomplete: isIncomplete,
-            items: items
-        }
-
-
-    }
-
-    private _toCompletionItem(s: PhpSymbol) {
-
-        switch (s.kind) {
-            case SymbolKind.Method:
-                return toMethodCompletionItem(s);
-            case SymbolKind.Property:
-                return toPropertyCompletionItem(s);
-            default:
-                throw new Error('Invalid Argument');
-
-        }
-
-    }
-
-
-    private _createMembersPredicate(text: string) {
-        return (s: PhpSymbol) => {
-            return (s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
-                !(s.modifiers & (SymbolModifier.Private | SymbolModifier.Protected | SymbolModifier.Static)) &&
-                util.fuzzyStringMatch(text, s.name);
-        };
-    }
-
-    private _createBaseMembersPredicate(text: string) {
-        return (s: PhpSymbol) => {
-            return (s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
-                !(s.modifiers & (SymbolModifier.Private | SymbolModifier.Static)) &&
-                util.fuzzyStringMatch(text, s.name);
-        };
-    }
-
-    private _createOwnMembersPredicate(text: string) {
-        return (s: PhpSymbol) => {
-            return (s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 &&
-                !(s.modifiers & SymbolModifier.Static) &&
-                util.fuzzyStringMatch(text, s.name);
-        };
-    }
-
-    private _isMemberAccessExpr(node: Phrase | Token) {
-        switch ((<Phrase>node).phraseType) {
-            case PhraseType.PropertyAccessExpression:
-            case PhraseType.MethodCallExpression:
-                return true;
-            default:
-                return false;
+        } else {
+            //public
+            const mask = SymbolModifier.Static | SymbolModifier.Protected | SymbolModifier.Private;
+            return (x) => {
+                return !(x.modifiers & mask) && util.fuzzyStringMatch(word, x.name);
+            };
         }
     }
 
@@ -912,14 +868,12 @@ class TypeDeclarationCompletion extends AbstractNameCompletion {
         'self', 'array', 'callable', 'bool', 'float', 'int', 'string'
     ];
 
-    canSuggest(context: Context) {
-        return ParsedDocument.isToken(context.token, [TokenType.Name, TokenType.Backslash, TokenType.Array, TokenType.Callable]) &&
-            context.createTraverser().ancestor((x) => {
-                return (<Phrase>x).phraseType === PhraseType.TypeDeclaration;
-            }) !== null;
+    canSuggest(traverser: ParseTreeTraverser) {
+        return ParsedDocument.isToken(traverser.node, [TokenType.Name, TokenType.Backslash, TokenType.Array, TokenType.Callable]) &&
+            traverser.ancestor(this._isTypeDeclaration) !== undefined;
     }
 
-    protected _getKeywords(context: Context) {
+    protected _getKeywords(traverser: ParseTreeTraverser) {
         return TypeDeclarationCompletion._keywords;
     }
 
@@ -927,21 +881,24 @@ class TypeDeclarationCompletion extends AbstractNameCompletion {
         return (s.kind & (SymbolKind.Class | SymbolKind.Interface)) > 0;
     }
 
+    private _isTypeDeclaration(node: Phrase | Token) {
+        return (<Phrase>node).phraseType === PhraseType.TypeDeclaration;
+    }
+
 }
 
 class ClassBaseClauseCompletion extends AbstractNameCompletion {
 
-    canSuggest(context: Context) {
-        return context.createTraverser().ancestor(this._isClassBaseClause) !== null;
+    canSuggest(traverser: ParseTreeTraverser) {
+        return traverser.ancestor(this._isClassBaseClause) !== undefined;
     }
 
-    protected _getKeywords(context: Context) {
+    protected _getKeywords(traverser: ParseTreeTraverser) {
         return [];
     }
 
     protected _symbolFilter(s: PhpSymbol) {
-        return s.kind === SymbolKind.Class &&
-            !(s.modifiers & SymbolModifier.Final);
+        return s.kind === SymbolKind.Class && !(s.modifiers & SymbolModifier.Final);
     }
 
     private _isClassBaseClause(node: Phrase | Token) {
@@ -952,12 +909,12 @@ class ClassBaseClauseCompletion extends AbstractNameCompletion {
 
 class InterfaceClauseCompletion extends AbstractNameCompletion {
 
-    canSuggest(context: Context) {
-        return context.createTraverser().ancestor(this._isInterfaceClause) !== null;
+    canSuggest(traverser: ParseTreeTraverser) {
+        return traverser.ancestor(this._isInterfaceClause) !== undefined;
 
     }
 
-    protected _getKeywords() {
+    protected _getKeywords(traverser: ParseTreeTraverser) {
         return [];
     }
 
@@ -974,19 +931,18 @@ class InterfaceClauseCompletion extends AbstractNameCompletion {
 
 class NamespaceDefinitionCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionOptions) { }
+    constructor(public config: CompletionOptions, public symbolStore: SymbolStore) { }
 
-    canSuggest(context: Context) {
-        return context.createTraverser().ancestor(this._isNamespaceDefinition) !== null;
+    canSuggest(traverser: ParseTreeTraverser) {
+        return traverser.ancestor(this._isNamespaceDefinition) !== undefined;
     }
 
-    completions(context: Context) {
-        let items: lsp.CompletionItem[] = [];
-        let text = context.word;
+    completions(traverser: ParseTreeTraverser, word: string) {
 
-        let matches = uniqueSymbolNames(context.symbolStore.match(text, this._symbolFilter));
-        let limit = Math.min(matches.length, this.config.maxItems - items.length);
-        let isIncomplete = matches.length > this.config.maxItems - items.length;
+        let items: lsp.CompletionItem[] = [];
+        let matches = PhpSymbol.unique(this.symbolStore.match(word, this._symbolFilter));
+        let limit = Math.min(matches.length, this.config.maxItems);
+        let isIncomplete = matches.length > this.config.maxItems;
 
         for (let n = 0; n < limit; ++n) {
             items.push(this._toNamespaceCompletionItem(matches[n]));
@@ -1019,45 +975,49 @@ class NamespaceDefinitionCompletion implements CompletionStrategy {
 
 class NamespaceUseClauseCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionOptions) { }
+    constructor(public config: CompletionOptions, public symbolStore:SymbolStore) { }
 
-    canSuggest(context: Context) {
-        return context.createTraverser().ancestor(this._isNamespaceUseClause) !== null;
+    canSuggest(traverser: ParseTreeTraverser) {
+        return traverser.ancestor(this._isNamespaceUseClause) !== undefined;
     }
 
-    completions(context: Context) {
+    completions(traverser: ParseTreeTraverser, word: string) {
 
         let items: lsp.CompletionItem[] = [];
-        let text = context.word;
-        let namespaceUseDecl = context.createTraverser().ancestor(this._isNamespaceUseDeclaration) as Phrase;
+        let namespaceUseDecl = traverser.ancestor(this._isNamespaceUseDeclaration) as Phrase;
 
-        if (!text) {
+        if (!word) {
             return noCompletionResponse;
         }
 
-        let kind = tokenToSymbolKind(namespaceUseDecl.kind) || (SymbolKind.Class | SymbolKind.Namespace | SymbolKind.Interface);
+        let kind = this._modifierToSymbolKind(<Token>traverser.child(this._isModifier));
+
         let pred = (x: PhpSymbol) => {
             return (x.kind & kind) > 0 && !(x.modifiers & SymbolModifier.Use);
         }
 
-        let matches = uniqueSymbolNames(context.symbolStore.match(text, pred).slice(0, this.config.maxItems));
-        for (let n = 0, l = matches.length; n < l; ++n) {
+        let matches = PhpSymbol.unique(this.symbolStore.match(word, pred));
+        let isIncomplete = matches.length > this.config.maxItems;
+        let limit = Math.min(this.config.maxItems, matches.length);
+        for (let n = 0; n < limit; ++n) {
             items.push(this._toCompletionItem(matches[n]));
         }
 
         return <lsp.CompletionList>{
-            isIncomplete: matches.length === this.config.maxItems,
+            isIncomplete: isIncomplete,
             items: items
         }
 
     }
 
     private _toCompletionItem(s: PhpSymbol) {
-        let item = lsp.CompletionItem.create(PhpSymbol.notFqn(s.name));
-        item.insertText = s.name;
+        let item = lsp.CompletionItem.create(s.name);
         item.kind = symbolKindToLspSymbolKind(s.kind);
+        if(s.kind !== SymbolKind.Namespace) {
+            item.sortText = item.filterText = s.name;
+        }
 
-        if(s.doc && s.doc.description) {
+        if (s.doc && s.doc.description) {
             item.documentation = s.doc.description;
         }
 
@@ -1072,43 +1032,73 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
         return (<Phrase>node).phraseType === PhraseType.NamespaceUseClause;
     }
 
+    private _modifierToSymbolKind(token: Token) {
+        if (!token) {
+            return SymbolKind.Class | SymbolKind.Namespace;
+        }
+
+        switch (token.tokenType) {
+            case TokenType.Function:
+                return SymbolKind.Function;
+            case TokenType.Const:
+                return SymbolKind.Constant;
+            default:
+                return SymbolKind.Class | SymbolKind.Namespace;
+        }
+    }
+
+    private _isModifier(node: Phrase | Token) {
+        switch ((<Token>node).tokenType) {
+            case TokenType.Class:
+            case TokenType.Function:
+            case TokenType.Const:
+                return true;
+            default:
+                return false;
+        }
+    }
+
 }
 
 class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
 
-    constructor(public config: CompletionOptions) { }
+    constructor(public config: CompletionOptions, public symbolStore:SymbolStore) { }
 
-    canSuggest(context: Context) {
-        return context.createTraverser().ancestor(this._isNamespaceUseGroupClause) !== null;
+    canSuggest(traverser:ParseTreeTraverser) {
+        return traverser.ancestor(this._isNamespaceUseGroupClause) !== undefined;
     }
 
-    completions(context: Context) {
+    completions(traverser:ParseTreeTraverser, word:string) {
 
         let items: lsp.CompletionItem[] = [];
-        let text = context.word;
-        if (!text) {
+        if (!word) {
             return noCompletionResponse;
         }
 
-        let traverser = context.createTraverser();
         let nsUseGroupClause = traverser.ancestor(this._isNamespaceUseGroupClause) as Phrase;
         let nsUseGroupClauseModifier = traverser.child(this._isModifier) as Token;
         let nsUseDecl = traverser.ancestor(this._isNamespaceUseDeclaration) as Phrase;
         let nsUseDeclModifier = traverser.child(this._isModifier) as Token;
-        let kind = tokenToSymbolKind(nsUseGroupClauseModifier || nsUseDeclModifier) || SymbolKind.Class;
-        let prefix = context.nodeText(nsUseDecl.prefix);
+        let kind = this._modifierToSymbolKind(nsUseGroupClauseModifier || nsUseDeclModifier);
+        let prefix = '';
+        traverser.parent();
+        if(traverser.child(this._isNamespaceName)) {
+            prefix = traverser.text.toLowerCase();
+        }
 
-        let pred = (x) => {
-            return (x.kind & kind) > 0 && !(x.modifiers & SymbolModifier.Use) && (!prefix || x.name.indexOf(prefix) === 0);
+        let pred = (x:PhpSymbol) => {
+            return (x.kind & kind) > 0 && !(x.modifiers & SymbolModifier.Use) && (!prefix || x.name.toLowerCase().indexOf(prefix) === 0);
         };
 
-        let matches = context.symbolStore.match(text, pred).slice(0, this.config.maxItems);
-        for (let n = 0, l = matches.length; n < l; ++n) {
+        let matches = this.symbolStore.match(word, pred);
+        let isIncomplete = matches.length > this.config.maxItems;
+        let limit = Math.min(this.config.maxItems, matches.length);
+        for (let n = 0; n < limit; ++n) {
             items.push(this._toCompletionItem(matches[n], matches[n].name.slice(prefix.length + 1))); //+1 for \
         }
 
         return <lsp.CompletionList>{
-            isIncomplete: matches.length === this.config.maxItems,
+            isIncomplete: isIncomplete,
             items: items
         }
 
@@ -1118,8 +1108,9 @@ class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
         let item = lsp.CompletionItem.create(PhpSymbol.notFqn(s.name));
         item.insertText = insertText;
         item.kind = symbolKindToLspSymbolKind(s.kind);
+        item.detail = s.name;
 
-        if(s.doc && s.doc.description) {
+        if (s.doc && s.doc.description) {
             item.documentation = s.doc.description;
         }
 
@@ -1134,14 +1125,33 @@ class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
         return (<Phrase>node).phraseType === PhraseType.NamespaceUseDeclaration;
     }
 
-    private _isModifier(node:Phrase|Token) {
-        switch((<Token>node).tokenType) {
+    private _isModifier(node: Phrase | Token) {
+        switch ((<Token>node).tokenType) {
             case TokenType.Class:
             case TokenType.Function:
             case TokenType.Const:
                 return true;
             default:
                 return false;
+        }
+    }
+
+    private _isNamespaceName(node:Phrase|Token) {
+        return (<Phrase>node).phraseType === PhraseType.NamespaceName;
+    }
+
+    private _modifierToSymbolKind(modifier:Token) {
+        if (!modifier) {
+            return SymbolKind.Class;
+        }
+
+        switch (modifier.tokenType) {
+            case TokenType.Function:
+                return SymbolKind.Function;
+            case TokenType.Const:
+                return SymbolKind.Constant;
+            default:
+                return SymbolKind.Class;
         }
     }
 
@@ -1160,14 +1170,13 @@ class DeclarationBodyCompletion implements CompletionStrategy {
         'var', 'public', 'private', 'protected', 'final', 'function', 'abstract', 'implements', 'extends'
     ];
 
-    canSuggest(context: Context) {
-        return ParsedDocument.isPhrase(context.createTraverser().parent(), DeclarationBodyCompletion._phraseTypes);
+    canSuggest(traverser: ParseTreeTraverser) {
+        return ParsedDocument.isPhrase(traverser.parent(), DeclarationBodyCompletion._phraseTypes);
     }
 
-    completions(context: Context) {
-        let text = context.word;
+    completions(traverser: ParseTreeTraverser, word:string) {
         return <lsp.CompletionList>{
-            items: keywordCompletionItems(DeclarationBodyCompletion._keywords, text)
+            items: keywordCompletionItems(DeclarationBodyCompletion._keywords, word)
         }
     }
 
@@ -1263,7 +1272,7 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
             detail: s.scope
         };
 
-        if(s.doc && s.doc.description) {
+        if (s.doc && s.doc.description) {
             item.documentation = s.doc.description;
         }
 

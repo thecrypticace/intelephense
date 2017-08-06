@@ -210,7 +210,7 @@ export class TreeTraverser<T extends TreeLike> {
             }
         }
 
-        return null;
+        return undefined;
 
     }
 

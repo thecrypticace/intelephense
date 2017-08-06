@@ -157,17 +157,17 @@ export class SignatureHelpProvider {
                 return undefined;
             case PhraseType.MethodCallExpression:
                 if(traverser.child(this._isMemberName) && traverser.child(this._isNameToken)) {
-                    return this.symbolStore.findSymbolsByReference(traverser.reference).shift();
+                    return this.symbolStore.findSymbolsByReference(traverser.reference, MemberMergeStrategy.Documented).shift();
                 }
                 return undefined;
             case PhraseType.ScopedCallExpression:
                 if(traverser.child(this._isScopedMemberName) && traverser.child(this._isIdentifier)) {
-                    return this.symbolStore.findSymbolsByReference(traverser.reference).shift();
+                    return this.symbolStore.findSymbolsByReference(traverser.reference, MemberMergeStrategy.Documented).shift();
                 }
                 return undefined;
             case PhraseType.ObjectCreationExpression:
                 if(traverser.child(this._isClassTypeDesignator) && traverser.child(this._isNamePhraseOrRelativeScope)) {
-                    return this.symbolStore.findSymbolsByReference(traverser.reference).shift();
+                    return this.symbolStore.findSymbolsByReference(traverser.reference, MemberMergeStrategy.Override).shift();
                 }
                 return undefined;
                 

@@ -221,6 +221,31 @@ export namespace PhpSymbol {
         return util.find(symbol.associated, fn);
     }
 
+    /**
+     * uniqueness determined by name and symbol kind
+     * @param symbol 
+     */
+    export function unique(symbols:PhpSymbol[]) {
+        
+        let uniqueSymbols:PhpSymbol[] = [];
+        if(!symbols) {
+            return uniqueSymbols;
+        }
+        
+        let map:{[index:string]:SymbolKind} = {};
+        let s:PhpSymbol;
+
+        for(let n = 0, l = symbols.length; n < l; ++n) {
+            s = symbols[n];
+            if(!(map[s.name] & s.kind)){
+                uniqueSymbols.push(s);
+                map[s.name] |= s.kind;
+            }
+        }
+
+        return uniqueSymbols;
+    }
+
 }
 
 export interface Reference extends SymbolIdentifier {

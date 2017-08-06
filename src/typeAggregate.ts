@@ -32,6 +32,18 @@ export class TypeAggregate {
         return this._symbol;
     }
 
+    get name() {
+        return this._symbol.name;
+    }
+
+    isBaseClass(name:string) {
+        let lcName = name.toLowerCase();
+        let fn = (x:PhpSymbol) => {
+            return x.kind === SymbolKind.Class && lcName === x.name.toLowerCase();
+        }
+        return PhpSymbol.findChild(this._symbol, fn) !== undefined;
+    }
+
     isAssociated(name: string) {
         if (!name) {
             return false;
