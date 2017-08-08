@@ -12,7 +12,6 @@ import { SymbolStore, SymbolTable } from './symbolStore';
 import { ParsedDocument, NodeTransform } from './parsedDocument';
 import { NameResolver } from './nameResolver';
 import { Predicate, BinarySearch, BinarySearchResult } from './types';
-import { NameResolverVisitor } from './nameResolverVisitor';
 import * as lsp from 'vscode-languageserver-types';
 import { isInRange } from './util';
 import { TypeString } from './typeString';
@@ -39,26 +38,6 @@ function symbolsToTypeReduceFn(prev: string, current: PhpSymbol) {
     return TypeString.merge(prev, PhpSymbol.type(current));
 }
 
-export class ReferenceReader extends MultiVisitor<Phrase | Token> {
-
-    constructor(
-        public nameResolverVisitor: NameResolverVisitor,
-        public referenceVisitor: ReferenceVisitor
-    ) {
-        super([
-            nameResolverVisitor,
-            referenceVisitor
-        ]);
-    }
-
-    static create(document: ParsedDocument, nameResolver: NameResolver, symbolStore: SymbolStore, symbolTable: SymbolTable) {
-        return new ReferenceReader(
-            new NameResolverVisitor(document, nameResolver),
-            new ReferenceVisitor(document, nameResolver, symbolStore, symbolTable)
-        );
-    }
-
-}
 
 export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
 
@@ -134,7 +113,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
                     let s = this._symbols.shift();
                     this._scopeStack.push(s);
                     this.nameResolver.pushClass(s);
-                    this._classStack.push(new TypeAggregate(this.symbolStore, s, MemberMergeStrategy.Documented));
+                    this._classStack.push(new TypeAggregate(this.symbolStore, s));
                     this._variableTable.pushScope();
                     this._variableTable.setVariable(Variable.create('$this', s.name));
                 }
@@ -469,7 +448,7 @@ export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
             return x.kind === SymbolKind.Method && lcName === x.name.toLowerCase();
         };
         //lookup method on aggregate to inherit doc
-        symbol = type.members(fn).shift();
+        symbol = type.members(MemberMergeStrategy.Documented, fn).shift();
         let children = symbol && symbol.children ? symbol.children : [];
         let param: PhpSymbol;
         for (let n = 0, l = children.length; n < l; ++n) {

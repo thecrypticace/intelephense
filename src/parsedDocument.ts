@@ -87,10 +87,6 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         return visitor;
     }
 
-    createTraverser() {
-        return new ParseTreeTraverser(this);
-    }
-
     applyChanges(contentChanges: lsp.TextDocumentContentChangeEvent[]) {
 
         let change: lsp.TextDocumentContentChangeEvent;

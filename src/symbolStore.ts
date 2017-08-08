@@ -242,7 +242,7 @@ export class SymbolStore {
      */
     find(text: string, filter?: Predicate<PhpSymbol>) {
 
-        if(!text) {
+        if (!text) {
             return [];
         }
 
@@ -289,10 +289,8 @@ export class SymbolStore {
             Array.prototype.push.apply(matches, this._symbolIndex.match(substrings[n]));
         }
 
-        matches = this._sortMatches(text, matches);
-
         if (!filter) {
-            return matches;
+            return this._sortMatches(text, matches);
         }
 
         let filtered: PhpSymbol[] = [];
@@ -305,7 +303,7 @@ export class SymbolStore {
             }
         }
 
-        return filtered;
+        return this._sortMatches(text, filtered);
     }
 
     findSymbolsByReference(ref: Reference, memberMergeStrategy?: MemberMergeStrategy): PhpSymbol[] {
@@ -406,25 +404,25 @@ export class SymbolStore {
         return Array.from(members);
     }
 
-    findBaseMember(symbol:PhpSymbol) {
+    findBaseMember(symbol: PhpSymbol) {
 
-        if(
+        if (
             !symbol || !symbol.scope ||
-            !(symbol.kind & (SymbolKind.Property | SymbolKind.Method | SymbolKind.ClassConstant)) || 
+            !(symbol.kind & (SymbolKind.Property | SymbolKind.Method | SymbolKind.ClassConstant)) ||
             (symbol.modifiers & SymbolModifier.Private) > 0
         ) {
             return symbol;
         }
 
-        let fn:Predicate<PhpSymbol>;
-        
-        if(symbol.kind === SymbolKind.Method) {
+        let fn: Predicate<PhpSymbol>;
+
+        if (symbol.kind === SymbolKind.Method) {
             let name = symbol.name.toLowerCase();
-            fn = (s:PhpSymbol)=>{
+            fn = (s: PhpSymbol) => {
                 return s.kind === symbol.kind && s.modifiers === symbol.modifiers && name === s.name.toLowerCase();
             };
         } else {
-            fn = (s:PhpSymbol)=>{
+            fn = (s: PhpSymbol) => {
                 return s.kind === symbol.kind && s.modifiers === symbol.modifiers && symbol.name === s.name;
             };
         }
@@ -433,7 +431,7 @@ export class SymbolStore {
 
     }
 
-    findOverrides(baseSymbol: PhpSymbol) : PhpSymbol[] {
+    findOverrides(baseSymbol: PhpSymbol): PhpSymbol[] {
 
         if (
             !baseSymbol ||
@@ -445,22 +443,22 @@ export class SymbolStore {
 
         let baseTypeName = baseSymbol.scope ? baseSymbol.scope : '';
         let baseType = this.find(baseTypeName, PhpSymbol.isClassLike).shift();
-        if(!baseType || baseType.kind === SymbolKind.Trait) {
+        if (!baseType || baseType.kind === SymbolKind.Trait) {
             return [];
         }
         let store = this;
-        let filterFn = (s:PhpSymbol) => {
-            
-            if(s.kind !== baseSymbol.kind || s.modifiers !== baseSymbol.modifiers || s === baseSymbol) {
-                return false;
-            }
-            
-            let type = store.find(s.scope).shift();
-            if(!type) {
+        let filterFn = (s: PhpSymbol) => {
+
+            if (s.kind !== baseSymbol.kind || s.modifiers !== baseSymbol.modifiers || s === baseSymbol) {
                 return false;
             }
 
-            if(PhpSymbol.isAssociated(type, baseTypeName)) {
+            let type = store.find(s.scope).shift();
+            if (!type) {
+                return false;
+            }
+
+            if (PhpSymbol.isAssociated(type, baseTypeName)) {
                 return true;
             }
 
@@ -474,20 +472,20 @@ export class SymbolStore {
 
     findReferences(name: string, filter?: Predicate<Reference>): Reference[] {
 
-        if(!name) {
+        if (!name) {
             return [];
         }
 
         let matches = this._referenceIndex.find(name);
-        let filtered:Reference[] = [];
-        let match:Reference;
+        let filtered: Reference[] = [];
+        let match: Reference;
         const caseSensitiveKindMask = SymbolKind.Property | SymbolKind.Variable | SymbolKind.Constant | SymbolKind.ClassConstant;
 
-        for(let n = 0; n < matches.length; ++n) {
+        for (let n = 0; n < matches.length; ++n) {
             match = matches[n];
-            if(!filter || filter(match)){
-                if(!(match.kind & caseSensitiveKindMask) || name === match.name){
-                    filtered.push(match);    
+            if (!filter || filter(match)) {
+                if (!(match.kind & caseSensitiveKindMask) || name === match.name) {
+                    filtered.push(match);
                 }
             }
         }
@@ -536,7 +534,6 @@ export class SymbolStore {
         let map: { [index: string]: number } = {};
         let s: PhpSymbol;
         let name: string;
-        let checkIndexOf = query.length > 3;
         let val: number;
         query = query.toLowerCase();
 
@@ -544,12 +541,9 @@ export class SymbolStore {
             s = matches[n];
             name = s.name;
             if (map[name] === undefined) {
-                val = 0;
-                if (checkIndexOf) {
-                    val = (PhpSymbol.notFqn(s.name).toLowerCase().indexOf(query) + 1) * -10;
-                    if (val < 0) {
-                        val += 1000;
-                    }
+                val = (PhpSymbol.notFqn(s.name).toLowerCase().indexOf(query) + 1) * 10;
+                if (val > 0) {
+                    val = 1000 - val;
                 }
                 map[name] = val;
             }
@@ -603,8 +597,7 @@ export class SymbolStore {
             return Array.from(keys);
         }
 
-        let notFqnPos = s.name.lastIndexOf('\\') + 1;
-        let notFqn = s.name.slice(notFqnPos);
+        let notFqn = PhpSymbol.notFqn(s.name);
         let lcNotFqn = notFqn.toLowerCase();
         let lcFqn = s.name.toLowerCase();
 
