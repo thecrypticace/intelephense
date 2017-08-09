@@ -7,25 +7,56 @@
 import {ParsedDocument} from './parsedDocument';
 import {SymbolTable} from './symbolStore';
 import {PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
-import {Position} from 'vscode-languageserver-types';
+import {Position, TextEdit} from 'vscode-languageserver-types';
 import {TreeVisitor} from './types';
 import {Phrase, Token, PhraseType, TokenType} from 'php7parser';
 
 export class UseDeclarationHelper {
 
     private _useDeclarations:PhpSymbol[];
+    private _afterNode:Phrase;
+    private _afterNodeEndPosition:Position;
+    private _cursor:Position;
 
-    constructor(public doc:ParsedDocument, public table:SymbolTable) { 
+    constructor(public doc:ParsedDocument, public table:SymbolTable, cursor:Position) { 
         this._useDeclarations = table.filter(this._isUseDeclarationSymbol);
+        this._cursor = cursor;
     }
 
-    insertPosition(current:Position) {
-        let visitor = new InsertPositionVisitor(this.doc, this.doc.offsetAtPosition(current));
-        this.doc.traverse(visitor);
-        return visitor.lastNamespaceUseDeclaration || visitor.namespaceDefinition || visitor.openingInlineText;
+    insertDeclarationTextEdit(symbol:PhpSymbol, alias?:string) {
+        let afterNode = this._insertAfterNode();
+
+        let text = '\n';
+        if(afterNode.phraseType === PhraseType.NamespaceDefinition){
+            text += '\n';
+        }
+
+        text += 'use ';
+
+        switch(symbol.kind) {
+            case SymbolKind.Constant:
+                text += 'const ';
+                break;
+            case SymbolKind.Function:
+                text += 'function ';
+                break;
+            default:
+                break;
+        }
+
+        text += symbol.name;
+
+        if(alias) {
+            text += ' as ' + alias;
+        }
+
+        text += ';';
+
+        return TextEdit.insert(this._insertPosition(), text);
+
     }
 
-    declarationRange(fqn:string) {
+    deleteDeclarationTextEdit(fqn:string) {
 
     }
 
@@ -53,10 +84,28 @@ export class UseDeclarationHelper {
         return (s.modifiers & SymbolModifier.Use) > 0 && (s.kind & mask) > 0;
     }
 
+    private _insertAfterNode() {
+
+        if(this._afterNode) {
+            return this._afterNode;
+        }
+
+        let visitor = new InsertAfterNodeVisitor(this.doc, this.doc.offsetAtPosition(this._cursor));
+        this.doc.traverse(visitor);
+        return this._afterNode = visitor.lastNamespaceUseDeclaration || visitor.namespaceDefinition || visitor.openingInlineText;
+    }
+
+    private _insertPosition() {
+        if(this._afterNodeEndPosition) {
+            return this._afterNodeEndPosition;
+        }
+
+        return this._afterNodeEndPosition = this.doc.nodeRange(this._insertAfterNode()).end;
+    }
 
 }
 
-class InsertPositionVisitor implements TreeVisitor<Phrase | Token> {
+class InsertAfterNodeVisitor implements TreeVisitor<Phrase | Token> {
 
     private _openingInlineText: Phrase;
     private _lastNamespaceUseDeclaration: Phrase;
