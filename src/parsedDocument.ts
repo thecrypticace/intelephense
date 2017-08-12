@@ -181,11 +181,7 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
     createAnonymousName(node: Phrase) {
         let tFirst = ParsedDocument.firstToken(node);
         let offset = tFirst ? tFirst.offset : 0;
-        let hash = util.hash32(this.uri);
-        if(hash < 0) {
-            hash = Math.abs(hash) + (Math.pow(2, 31));
-        }
-        return `#anon#${hash.toString(16)}#${offset}`;
+        return `#anon#${this.uri}#${offset}`;
     }
 
     positionAtOffset(offset: number) {

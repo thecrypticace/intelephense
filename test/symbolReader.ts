@@ -3,6 +3,7 @@ import { SymbolTable } from '../src/symbolStore';
 import { NameResolver } from '../src/nameResolver';
 import { SymbolReader } from '../src/symbolReader';
 import { ParsedDocument } from '../src/parsedDocument';
+import * as util from '../src/util';
 import { assert } from 'chai';
 import 'mocha';
 
@@ -10,8 +11,9 @@ function symbolReaderOutput(src: string) {
 
     let parsedDoc = new ParsedDocument('test', src);
     let symbolTree: PhpSymbol = { kind: SymbolKind.None, name: '' };
-    let sr = SymbolReader.create(parsedDoc, new NameResolver(), [symbolTree]);
+    let sr = new SymbolReader(parsedDoc, new NameResolver());
     parsedDoc.traverse(sr);
+    symbolTree.children = sr.symbols;
     return symbolTree;
 
 }
@@ -39,16 +41,17 @@ describe('SymbolReader', () => {
             class Foo { }`;
 
         let symbols = symbolReaderOutput(src);
+        //console.log(JSON.stringify(symbols, undefined, 4));
         let method = symbols.children[0].children[0];
         let param = method.children[0];
 
         assert.equal(method.kind, SymbolKind.Method);
-        assert.equal(method.modifiers, SymbolModifier.Magic);
+        assert.equal(method.modifiers, SymbolModifier.Magic | SymbolModifier.Public);
         assert.equal(method.name, 'fn');
-        assert.equal(method.type.toString(), 'int');
+        assert.equal(method.doc.type, 'int');
         assert.equal(param.kind, SymbolKind.Parameter);
         assert.equal(param.name, '$p');
-        assert.equal(param.type.toString(), 'string');
+        assert.equal(param.doc.type, 'string');
 
         //console.log(JSON.stringify(symbols, null, 4));
     });
@@ -77,13 +80,14 @@ describe('SymbolReader', () => {
             }
         `;
         let output = symbolReaderOutput(src);
+        //console.log(JSON.stringify(output, null, 4));
         assert.equal(output.children[0].kind, SymbolKind.Namespace);
         assert.equal(output.children[0].name, 'Wat');
         assert.equal(output.children[1].kind, SymbolKind.Class);
         assert.equal(output.children[1].name, 'Baz');
         assert.equal(output.children[2].kind, SymbolKind.Class);
         assert.equal(output.children[2].name, 'Wat\\Bar');
-        assert.deepEqual(output.children[2].associated[0], { kind: SymbolKind.Trait, name: 'Foo\\Baz' });
+        assert.deepEqual(output.children[2].associated[0], { kind: SymbolKind.Trait, name: 'Foo\\Baz', location:undefined });
     });
 
     it('Should read simple variables', () => {
@@ -119,13 +123,14 @@ describe('SymbolReader', () => {
         <?php
             $c = new class {};
         `;
+        let uriHash = util.hash32('test');
         let output = symbolReaderOutput(src);
         let expect = <PhpSymbol>{
             kind: 1,
-            name: "#anonymous#test#36",
+            name: "#anon#test#36",
             modifiers: 512,
             location: {
-                uri: "test",
+                uriHash: uriHash,
                 range: {
                     start: {
                         line: 2,
@@ -136,7 +141,9 @@ describe('SymbolReader', () => {
                         character: 29
                     }
                 }
-            }
+            },
+            associated:[],
+            children:[]
         };
         assert.deepEqual(output.children[1], expect);
         //console.log(JSON.stringify(output, null, 4));

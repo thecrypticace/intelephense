@@ -161,7 +161,7 @@ export class SymbolTable implements Traversable<PhpSymbol> {
 
     static readBuiltInSymbols() {
 
-        return new SymbolTable('\\', {
+        return new SymbolTable('php', {
             kind: SymbolKind.None,
             name: '',
             children: <any>builtInSymbols

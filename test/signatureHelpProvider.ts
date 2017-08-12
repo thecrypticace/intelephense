@@ -68,16 +68,6 @@ function setup(src: string) {
     return new SignatureHelpProvider(symbolStore, docStore);
 }
 
-function setupInbuilt(src:string){
-    let docStore = new ParsedDocumentStore();
-    let symbolStore = new SymbolStore();
-    let doc = new ParsedDocument('test', src);
-    docStore.add(doc);
-    symbolStore.add(SymbolTable.create(doc));
-    symbolStore.add(SymbolTable.createBuiltIn());
-    return new SignatureHelpProvider(symbolStore, docStore);
-}
-
 
 describe('SignatureHelpProvider', function () {
 
