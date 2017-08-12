@@ -196,16 +196,6 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         return this._textDocument.offsetAtPosition(position);
     }
 
-    namespaceNamePhraseToString(node: Phrase | Token) {
-
-        if (!ParsedDocument.isPhrase(node, [PhraseType.NamespaceName])) {
-            return '';
-        }
-
-        return this.nodeText(node, [TokenType.Comment, TokenType.Whitespace]);
-
-    }
-
 }
 
 export namespace ParsedDocument {
@@ -278,26 +268,6 @@ export namespace ParsedDocument {
 
         return tFirst.offset <= offset && tLast.offset + tLast.length - 1 >= offset;
 
-    }
-
-    export function isFixedMemberName(phrase: MemberName) {
-        return ParsedDocument.isPhrase(phrase, [PhraseType.MemberName]) &&
-            ParsedDocument.isToken(phrase.name, [TokenType.Name]);
-    }
-
-    export function isFixedSimpleVariable(phrase: SimpleVariable) {
-        return ParsedDocument.isPhrase(phrase, [PhraseType.SimpleVariable]) &&
-            ParsedDocument.isToken(phrase.name, [TokenType.VariableName]);
-    }
-
-    export function isFixedScopedMemberName(phrase: ScopedMemberName) {
-        return ParsedDocument.isPhrase(phrase, [PhraseType.ScopedMemberName]) &&
-            (ParsedDocument.isToken(phrase.name, [TokenType.VariableName]) ||
-                ParsedDocument.isPhrase(phrase.name, [PhraseType.Identifier]));
-    }
-
-    function isNumeric(n) {
-        return !isNaN(parseFloat(n)) && isFinite(n);
     }
 
     export function findChild(parent:Phrase, fn:Predicate<Phrase|Token>) {

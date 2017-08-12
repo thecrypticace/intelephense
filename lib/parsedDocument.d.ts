@@ -1,12 +1,18 @@
-import { Phrase, Token, MemberName, TokenType, PhraseType, SimpleVariable, ScopedMemberName } from 'php7parser';
+import { Phrase, Token, TokenType, PhraseType } from 'php7parser';
 import * as lsp from 'vscode-languageserver-types';
-import { TreeVisitor, TreeTraverser, Event, Predicate, Traversable } from './types';
+import { TreeVisitor, Event, Predicate, Traversable, HashedLocation } from './types';
+export interface NodeTransform {
+    phraseType?: PhraseType;
+    tokenType?: TokenType;
+    push(transform: NodeTransform): any;
+}
 export interface ParsedDocumentChangeEventArgs {
     parsedDocument: ParsedDocument;
 }
 export declare class ParsedDocument implements Traversable<Phrase | Token> {
     private static _wordRegex;
     private _textDocument;
+    private _uriHash;
     private _parseTree;
     private _changeEvent;
     private _debounce;
@@ -21,17 +27,15 @@ export declare class ParsedDocument implements Traversable<Phrase | Token> {
     wordAtOffset(offset: number): string;
     flush(): void;
     traverse(visitor: TreeVisitor<Phrase | Token>): TreeVisitor<Token | Phrase>;
-    createTraverser(): TreeTraverser<Token | Phrase>;
     applyChanges(contentChanges: lsp.TextDocumentContentChangeEvent[]): void;
     tokenRange(t: Token): lsp.Range;
-    nodeLocation(node: Phrase | Token): lsp.Location;
+    nodeLocation(node: Phrase | Token): HashedLocation;
     nodeRange(node: Phrase | Token): lsp.Range;
     tokenText(t: Token): string;
-    nodeText(node: Phrase | Token, ignore?: TokenType[]): string;
+    nodeText(node: Phrase | Token): string;
     createAnonymousName(node: Phrase): string;
     positionAtOffset(offset: number): lsp.Position;
     offsetAtPosition(position: lsp.Position): number;
-    namespaceNamePhraseToString(node: Phrase | Token): string;
 }
 export declare namespace ParsedDocument {
     function firstToken(node: Phrase | Token): Token;
@@ -40,11 +44,8 @@ export declare namespace ParsedDocument {
     function isPhrase(node: Phrase | Token, types?: PhraseType[]): boolean;
     function isOffsetInToken(offset: number, t: Token): boolean;
     function isOffsetInNode(offset: any, node: Phrase | Token): boolean;
-    function isFixedMemberName(phrase: MemberName): boolean;
-    function isFixedSimpleVariable(phrase: SimpleVariable): boolean;
-    function isFixedScopedMemberName(phrase: ScopedMemberName): boolean;
-    function stringyfyReplacer(k: any, v: any): any;
-    function firstPhraseOfType(type: PhraseType, nodes: (Phrase | Token)[]): Phrase;
+    function findChild(parent: Phrase, fn: Predicate<Phrase | Token>): Token | Phrase;
+    function filterChildren(parent: Phrase, fn: Predicate<Phrase | Token>): (Token | Phrase)[];
     function isNamePhrase(node: Phrase | Token): boolean;
 }
 export declare class ParsedDocumentStore {

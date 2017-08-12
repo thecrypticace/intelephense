@@ -10,7 +10,6 @@ import { NameResolver } from './nameResolver';
 import { TreeVisitor, TreeTraverser, Predicate, MultiVisitor } from './types';
 import { TypeString } from './typeString';
 import { ParsedDocument } from './parsedDocument';
-import { NameResolverVisitor } from './nameResolverVisitor';
 import { Position, TextEdit, Range } from 'vscode-languageserver-types';
 import { Phrase, Token, PhraseType, TokenType, } from 'php7parser';
 import * as util from './util';

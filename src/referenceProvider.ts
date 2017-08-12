@@ -6,7 +6,7 @@
 
 import { Position, ReferenceContext, Location } from 'vscode-languageserver-types';
 import { ParsedDocumentStore, ParsedDocument } from './parsedDocument';
-import { ParseTreeTraverser } from './context';
+import { ParseTreeTraverser } from './parseTreeTraverser';
 import { SymbolStore, SymbolTable } from './symbolStore';
 import { Reference, PhpSymbol, SymbolKind, SymbolModifier, SymbolIdentifier } from './symbol';
 import { MemberMergeStrategy, TypeAggregate } from './typeAggregate';
@@ -178,7 +178,7 @@ export class ReferenceProvider {
                 return map[lcScope] = false;
             }
 
-            let aggregateType = new TypeAggregate(store, type, MemberMergeStrategy.None);
+            let aggregateType = new TypeAggregate(store, type);
             return map[lcScope] = aggregateType.associated(associatedFilterFn).length > 0;
 
         };

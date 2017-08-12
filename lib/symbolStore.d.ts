@@ -1,29 +1,40 @@
-import { PhpSymbol, PhpSymbolDto } from './symbol';
-import { Predicate, TreeVisitor } from './types';
-import { Position } from 'vscode-languageserver-types';
+import { PhpSymbol, Reference, SymbolIdentifier } from './symbol';
+import { Predicate, TreeVisitor, Traversable } from './types';
+import { Position, Location } from 'vscode-languageserver-types';
 import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
-export declare class SymbolTable {
-    uri: string;
-    root: PhpSymbol;
+import { NameResolver } from './nameResolver';
+import { MemberMergeStrategy } from './typeAggregate';
+export declare class SymbolTable implements Traversable<PhpSymbol> {
+    private _uri;
+    private _root;
+    private _hash;
     constructor(uri: string, root: PhpSymbol);
+    readonly uri: string;
+    readonly root: PhpSymbol;
+    readonly hash: number;
     readonly symbols: PhpSymbol[];
-    readonly count: number;
+    readonly symbolCount: number;
+    readonly referenceCount: number;
+    parent(s: PhpSymbol): PhpSymbol;
     traverse(visitor: TreeVisitor<PhpSymbol>): TreeVisitor<PhpSymbol>;
     filter(predicate: Predicate<PhpSymbol>): PhpSymbol[];
     find(predicate: Predicate<PhpSymbol>): PhpSymbol;
+    nameResolver(pos: Position): NameResolver;
+    scope(pos: Position): PhpSymbol;
+    absoluteScope(pos: Position): PhpSymbol;
+    scopeSymbols(): PhpSymbol[];
     symbolAtPosition(position: Position): PhpSymbol;
-    toDto(): SymbolTableDto;
-    static fromDto(dto: SymbolTableDto): SymbolTable;
+    references(filter?: Predicate<Reference>): Reference[];
+    contains(identifier: SymbolIdentifier): boolean;
+    private _isScopeSymbol(s);
+    private _hasReferences(s);
     static create(parsedDocument: ParsedDocument, externalOnly?: boolean): SymbolTable;
     static readBuiltInSymbols(): SymbolTable;
 }
-export interface MemberQuery {
-    typeName: string;
-    memberPredicate: Predicate<PhpSymbol>;
-}
 export declare class SymbolStore {
-    private _map;
-    private _index;
+    private _tableIndex;
+    private _symbolIndex;
+    private _referenceIndex;
     private _symbolCount;
     constructor();
     onParsedDocumentChange: (args: ParsedDocumentChangeEventArgs) => void;
@@ -32,36 +43,37 @@ export declare class SymbolStore {
     readonly symbolCount: number;
     add(symbolTable: SymbolTable): void;
     remove(uri: string): void;
+    indexReferences(symbolTable: SymbolTable): void;
     /**
-     * As per match but returns first item in result that matches full text
-     * the match is case sensitive for constants and variables and insensitive for
+     * Finds all indexed symbols that match text exactly.
+     * Case sensitive for constants and variables and insensitive for
      * classes, traits, interfaces, functions, methods
      * @param text
      * @param filter
      */
-    find(text: string, filter?: Predicate<PhpSymbol>): PhpSymbol;
+    find(text: string, filter?: Predicate<PhpSymbol>): PhpSymbol[];
     /**
-     * Matches any indexed symbol by name or partial name with optional additional filter
-     * Parameters and variables that are not file scoped are not indexed.
-     * case insensitive
+     * Fuzzy matches indexed symbols.
+     * Case insensitive
      */
-    match(text: string, filter?: Predicate<PhpSymbol>, fuzzy?: boolean): PhpSymbol[];
+    match(text: string, filter?: Predicate<PhpSymbol>): PhpSymbol[];
+    findSymbolsByReference(ref: Reference, memberMergeStrategy?: MemberMergeStrategy): PhpSymbol[];
+    findMembers(scope: string, memberMergeStrategy: MemberMergeStrategy, predicate?: Predicate<PhpSymbol>): PhpSymbol[];
+    findBaseMember(symbol: PhpSymbol): PhpSymbol;
+    findOverrides(baseSymbol: PhpSymbol): PhpSymbol[];
+    findReferences(name: string, filter?: Predicate<Reference>): Reference[];
+    identifierLocation(identifier: SymbolIdentifier): Location;
+    referenceToTypeString(ref: Reference): string;
+    private _sortMatches(query, matches);
     private _classOrInterfaceFilter(s);
-    lookupTypeMembers(query: MemberQuery): PhpSymbol[];
-    lookupTypeMember(query: MemberQuery): PhpSymbol;
-    lookupMembersOnTypes(queries: MemberQuery[]): PhpSymbol[];
-    lookupMemberOnTypes(queries: MemberQuery[]): PhpSymbol;
-    /**
-     * This will return duplicate symbols where members are overridden or already implemented
-     * @param type
-     * @param predicate
-     * @param typeHistory
-     */
-    private _lookupTypeMembers(type, predicate, typeHistory);
+    private _classInterfaceTraitFilter(s);
     private _indexSymbols(root);
+    private _indexableReferenceFilter(ref);
+    /**
+     * No vars, params or symbols with use modifier or private modifier
+     * @param s
+     */
     private _indexFilter(s);
-}
-export interface SymbolTableDto {
-    uri: string;
-    root: PhpSymbolDto;
+    private _symbolKeys(s);
+    private _referenceKeys(ref);
 }

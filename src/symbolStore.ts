@@ -14,6 +14,7 @@ import { SymbolReader } from './symbolReader';
 import { NameResolver } from './nameResolver';
 import * as util from './util';
 import { TypeAggregate, MemberMergeStrategy } from './typeAggregate';
+import { ReferenceReader } from './referenceReader';
 
 export class SymbolTable implements Traversable<PhpSymbol> {
 
@@ -47,10 +48,14 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         return symbols;
     }
 
-    get count() {
+    get symbolCount() {
         let traverser = new TreeTraverser([this.root]);
         //subtract 1 for root
         return traverser.count() - 1;
+    }
+
+    get referenceCount() {
+        return this.references().length;
     }
 
     parent(s: PhpSymbol) {
@@ -132,13 +137,6 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         return visitor.found;
     }
 
-    toDto() {
-        return <SymbolTableDto>{
-            uri: this.uri,
-            root: (<ToPhpSymbolDtoVisitor>this.traverse(new ToPhpSymbolDtoVisitor())).root
-        }
-    }
-
     private _isScopeSymbol(s: PhpSymbol) {
         const mask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.None | SymbolKind.Function | SymbolKind.Method;
         return (s.kind & mask) > 0;
@@ -148,21 +146,9 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         return s.references !== undefined;
     }
 
-    static fromDto(dto: SymbolTableDto) {
-
-        let traverser = new TreeTraverser([dto.root]);
-        let visitor = new ToPhpSymbolVisitor(dto.uri);
-        traverser.traverse(visitor);
-        return new SymbolTable(dto.uri, visitor.root);
-
-    }
-
     static create(parsedDocument: ParsedDocument, externalOnly?: boolean) {
 
-        let symbolReader = SymbolReader.create(
-            parsedDocument,
-            new NameResolver()
-        );
+        let symbolReader = new SymbolReader(parsedDocument, new NameResolver());
         symbolReader.externalOnly = externalOnly;
 
         parsedDocument.traverse(symbolReader);
@@ -201,7 +187,9 @@ export class SymbolStore {
 
     onParsedDocumentChange = (args: ParsedDocumentChangeEventArgs) => {
         this.remove(args.parsedDocument.uri);
-        this.add(SymbolTable.create(args.parsedDocument));
+        let table = SymbolTable.create(args.parsedDocument);
+        ReferenceReader.discoverReferences(args.parsedDocument, table, this);
+        this.add(table);
     };
 
     getSymbolTable(uri: string) {
@@ -220,7 +208,7 @@ export class SymbolStore {
         this._tableIndex.add(symbolTable);
         this._symbolIndex.addMany(this._indexSymbols(symbolTable.root));
         this._referenceIndex.addMany(symbolTable.references(this._indexableReferenceFilter));
-        this._symbolCount += symbolTable.count;
+        this._symbolCount += symbolTable.symbolCount;
     }
 
     remove(uri: string) {
@@ -230,7 +218,14 @@ export class SymbolStore {
         }
         this._symbolIndex.removeMany(this._indexSymbols(symbolTable.root));
         this._referenceIndex.removeMany(symbolTable.references(this._indexableReferenceFilter));
-        this._symbolCount -= symbolTable.count;
+        this._symbolCount -= symbolTable.symbolCount;
+    }
+
+    indexReferences(symbolTable: SymbolTable) {
+
+        let references = symbolTable.references(this._indexableReferenceFilter);
+        this._referenceIndex.removeMany(references);
+        this._referenceIndex.addMany(references);
     }
 
     /**
@@ -577,13 +572,17 @@ export class SymbolStore {
     }
 
     private _indexableReferenceFilter(ref: Reference) {
-        return ref.kind && ref.kind !== SymbolKind.Parameter && ref.kind !== SymbolKind.Variable;
+        return ref.kind !== SymbolKind.Parameter && ref.kind !== SymbolKind.Variable;
     }
 
+    /**
+     * No vars, params or symbols with use modifier or private modifier
+     * @param s 
+     */
     private _indexFilter(s: PhpSymbol) {
         return s.kind !== SymbolKind.Parameter &&
-            (s.kind !== SymbolKind.Variable || !s.scope) && //script level vars
-            !(s.modifiers & SymbolModifier.Use) &&
+            s.kind !== SymbolKind.Variable &&
+            !(s.modifiers & (SymbolModifier.Use | SymbolModifier.Private)) &&
             s.name.length > 0;
     }
 

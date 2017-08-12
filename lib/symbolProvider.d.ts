@@ -1,4 +1,4 @@
-import * as lsp from 'vscode-languageserver-types';
+import { SymbolInformation } from 'vscode-languageserver-types';
 import { PhpSymbol } from './symbol';
 import { SymbolStore } from './symbolStore';
 export declare class SymbolProvider {
@@ -8,12 +8,12 @@ export declare class SymbolProvider {
      * Excludes magic symbols
      * @param uri
      */
-    provideDocumentSymbols(uri: string): lsp.SymbolInformation[];
+    provideDocumentSymbols(uri: string): SymbolInformation[];
     /**
      * Excludes internal symbols
      * @param query
      */
-    provideWorkspaceSymbols(query: string): lsp.SymbolInformation[];
+    provideWorkspaceSymbols(query: string): SymbolInformation[];
     workspaceSymbolFilter(s: PhpSymbol): boolean;
-    toDocumentSymbolInformation(s: PhpSymbol): lsp.SymbolInformation;
+    toSymbolInformation(s: PhpSymbol, uri?: string): SymbolInformation;
 }

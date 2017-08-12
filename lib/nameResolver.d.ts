@@ -2,16 +2,14 @@ import { PhpSymbol, SymbolKind } from './symbol';
 export declare class NameResolver {
     private _classStack;
     rules: PhpSymbol[];
-    namespace: string;
+    namespace: PhpSymbol;
     constructor();
+    readonly class: PhpSymbol;
+    readonly namespaceName: string;
     readonly className: string;
     readonly classBaseName: string;
-    /**
-     *
-     * @param classNameTuple className, classBaseName
-     */
-    pushClassName(classNameTuple: [string, string]): void;
-    popClassName(): void;
+    pushClass(symbol: PhpSymbol): void;
+    popClass(): void;
     resolveRelative(relativeName: string): string;
     resolveNotFullyQualified(notFqn: string, kind?: SymbolKind): string;
     concatNamespaceName(prefix: string, suffix: string): string;

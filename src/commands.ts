@@ -6,12 +6,11 @@
 
 import {Position, TextEdit} from 'vscode-languageserver-types';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
-import { ParseTreeTraverser } from './context';
+import { ParseTreeTraverser } from './parseTreeTraverser';
 import { SymbolStore, SymbolTable } from './symbolStore';
 import { SymbolKind, PhpSymbol, Reference } from './symbol';
-import { ReferenceVisitor } from './references';
+import { ReferenceReader } from './referenceReader';
 import { NameResolver } from './nameResolver';
-import { NameResolverVisitor } from './nameResolverVisitor';
 import { Phrase, PhraseType, Token } from 'php7parser';
 import {UseDeclarationHelper} from './useDeclarationHelper';
 import * as util from './util';

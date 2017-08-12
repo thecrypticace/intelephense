@@ -7,7 +7,7 @@
 import * as lsp from 'vscode-languageserver-types';
 import { SymbolKind, PhpSymbol, SymbolModifier } from './symbol';
 import { SymbolStore } from './symbolStore';
-import { ParseTreeTraverser } from './context';
+import { ParseTreeTraverser } from './parseTreeTraverser';
 import { TypeString } from './typeString';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Phrase, PhraseType, Token, TokenType } from 'php7parser';

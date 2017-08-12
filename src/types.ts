@@ -64,7 +64,7 @@ export namespace HashedLocation {
 }
 
 export interface TreeLike {
-    [index:string]:any
+    [index:string]:any,
     children?: TreeLike[]
 }
 

@@ -24,4 +24,6 @@ export declare class DiagnosticsProvider {
     debounceWait: number;
     private _diagnose(uri);
     private _parseErrorToDiagnostic(err, doc);
+    private _message(err);
+    private _errorRange(err, doc);
 }

@@ -5,7 +5,7 @@
 'use strict';
 
 import { ParsedDocument, ParsedDocumentStore, ParsedDocumentChangeEventArgs } from './parsedDocument';
-import { SymbolStore, SymbolTable, SymbolTableDto } from './symbolStore';
+import { SymbolStore, SymbolTable } from './symbolStore';
 import { SymbolProvider } from './symbolProvider';
 import { CompletionProvider, CompletionOptions } from './completionProvider';
 import { DiagnosticsProvider, PublishDiagnosticsEventArgs } from './diagnosticsProvider';
@@ -15,9 +15,9 @@ import { DefinitionProvider } from './definitionProvider';
 import { PhraseType } from 'php7parser';
 import { FormatProvider } from './formatProvider';
 import * as lsp from 'vscode-languageserver-types';
-import { importSymbol as importSymbolCommand } from './commands';
-
-export { SymbolTableDto } from './symbolStore';
+import { NameTextEditProvider } from './commands';
+import { ReferenceReader } from './referenceReader';
+import { NameResolver } from './nameResolver';
 
 export namespace Intelephense {
 
@@ -32,6 +32,7 @@ export namespace Intelephense {
     let signatureHelpProvider = new SignatureHelpProvider(symbolStore, documentStore);
     let definitionProvider = new DefinitionProvider(symbolStore, documentStore);
     let formatProvider = new FormatProvider(documentStore);
+    let nameTextEditProvider = new NameTextEditProvider(symbolStore, documentStore);
     let unsubscribeMap: { [index: string]: Unsubscribe } = {};
 
     function unsubscribe(key: string) {
@@ -134,27 +135,14 @@ export namespace Intelephense {
         return definitionProvider.provideDefinition(textDocument.uri, position);
     }
 
-    export function addSymbols(symbolTableDto: SymbolTableDto) {
-
-        if (documentStore.has(symbolTableDto.uri)) {
-            //if doc is open dont add symbols
-            return;
-        }
-
-        let table = SymbolTable.fromDto(symbolTableDto);
-        symbolStore.remove(table.uri);
-        symbolStore.add(table);
-
-    }
-
-    export function discover(textDocument: lsp.TextDocumentItem) {
+    export function discoverSymbols(textDocument: lsp.TextDocumentItem) {
 
         let uri = textDocument.uri;
 
         if (documentStore.has(uri)) {
             //if document is in doc store/opened then dont rediscover.
             let symbolTable = symbolStore.getSymbolTable(uri);
-            return symbolTable ? symbolTable.toDto() : null;
+            return symbolTable ? symbolTable.symbolCount : 0;
         }
 
         let text = textDocument.text;
@@ -162,8 +150,29 @@ export namespace Intelephense {
         let symbolTable = SymbolTable.create(parsedDocument, true);
         symbolStore.remove(uri);
         symbolStore.add(symbolTable);
-        return symbolTable.toDto();
+        return symbolTable.symbolCount;
 
+    }
+
+    export function discoverReferences(textDocument: lsp.TextDocumentItem) {
+        let uri = textDocument.uri;
+        let symbolTable = symbolStore.getSymbolTable(uri);
+
+        if (documentStore.has(uri)) {
+            //if document is in doc store/opened then dont rediscover.
+            
+            return symbolTable ? symbolTable.referenceCount : 0;
+        }
+
+        if(!symbolTable) {
+            //symbols must have already been discovered
+            return 0;
+        }
+
+        let text = textDocument.text;
+        let parsedDocument = new ParsedDocument(uri, text);
+        ReferenceReader.discoverReferences(parsedDocument, symbolTable, symbolStore);
+        return symbolTable.referenceCount;
     }
 
     export function forget(uri: string): number {
@@ -173,14 +182,14 @@ export namespace Intelephense {
             return forgotten;
         }
 
-        forgotten = table.count;
+        forgotten = table.symbolCount;
         symbolStore.remove(table.uri);
         return forgotten;
     }
 
-    export function importSymbol(uri:string, position:lsp.Position, alias?:string) {
+    export function provideContractFqnTextEdits(uri: string, position: lsp.Position, alias?: string) {
         flushParseDebounce(uri);
-        return importSymbolCommand(symbolStore, documentStore, uri, position, alias);
+        return nameTextEditProvider.provideContractFqnTextEdits(uri, position, alias);
     }
 
     export function numberDocumentsOpen() {
@@ -200,7 +209,7 @@ export namespace Intelephense {
         return formatProvider.provideDocumentFormattingEdits(doc, formatOptions);
     }
 
-    export function provideDocumentRangeFormattingEdits(doc: lsp.TextDocumentIdentifier, range:lsp.Range, formatOptions: lsp.FormattingOptions) {
+    export function provideDocumentRangeFormattingEdits(doc: lsp.TextDocumentIdentifier, range: lsp.Range, formatOptions: lsp.FormattingOptions) {
         flushParseDebounce(doc.uri);
         return formatProvider.provideDocumentRangeFormattingEdits(doc, range, formatOptions);
     }

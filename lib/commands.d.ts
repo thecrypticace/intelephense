@@ -1,4 +1,11 @@
-import * as lsp from 'vscode-languageserver-types';
+import { Position, TextEdit } from 'vscode-languageserver-types';
 import { ParsedDocumentStore } from './parsedDocument';
 import { SymbolStore } from './symbolStore';
-export declare function importSymbol(symbolStore: SymbolStore, documentStore: ParsedDocumentStore, uri: string, position: lsp.Position, alias?: string): lsp.TextEdit[];
+export declare class NameTextEditProvider {
+    symbolStore: SymbolStore;
+    docStore: ParsedDocumentStore;
+    constructor(symbolStore: SymbolStore, docStore: ParsedDocumentStore);
+    provideContractFqnTextEdits(uri: string, position: Position, alias?: string): TextEdit[];
+    private _fullyQualifiedNamePhrase(position, doc, table);
+    private _isFullyQualifiedName(node);
+}

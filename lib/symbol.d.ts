@@ -1,4 +1,4 @@
-import { Location } from 'vscode-languageserver-types';
+import { Predicate, HashedLocation } from './types';
 export declare const enum SymbolKind {
     None = 0,
     Class = 1,
@@ -12,6 +12,7 @@ export declare const enum SymbolKind {
     Variable = 256,
     Namespace = 512,
     ClassConstant = 1024,
+    Constructor = 2048,
 }
 export declare const enum SymbolModifier {
     None = 0,
@@ -36,19 +37,23 @@ export interface PhpSymbolDoc {
 export declare namespace PhpSymbolDoc {
     function create(description?: string, type?: string): PhpSymbolDoc;
 }
-export interface PhpSymbol {
-    kind: SymbolKind;
-    name: string;
-    location?: Location;
+export interface PhpSymbol extends SymbolIdentifier {
     modifiers?: SymbolModifier;
     doc?: PhpSymbolDoc;
     type?: string;
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
-    scope?: string;
     value?: string;
+    references?: Reference[];
+}
+export interface SymbolIdentifier {
+    kind: SymbolKind;
+    name: string;
+    scope?: string;
+    location?: HashedLocation;
 }
 export declare namespace PhpSymbol {
+    function isClassLike(s: PhpSymbol): boolean;
     function signatureString(s: PhpSymbol): string;
     function hasParameters(s: PhpSymbol): boolean;
     function notFqn(text: string): string;
@@ -58,35 +63,22 @@ export declare namespace PhpSymbol {
      */
     function clone(s: PhpSymbol): PhpSymbol;
     function type(s: PhpSymbol): string;
+    function setScope(symbols: PhpSymbol[], scope: string): PhpSymbol[];
+    function create(kind: SymbolKind, name: string, location?: HashedLocation): PhpSymbol;
+    function filterReferences(parent: PhpSymbol, fn: Predicate<Reference>): Reference[];
+    function filterChildren(parent: PhpSymbol, fn: Predicate<PhpSymbol>): PhpSymbol[];
+    function findChild(parent: PhpSymbol, fn: Predicate<PhpSymbol>): PhpSymbol;
+    function isAssociated(symbol: PhpSymbol, name: string): PhpSymbol;
+    /**
+     * uniqueness determined by name and symbol kind
+     * @param symbol
+     */
+    function unique(symbols: PhpSymbol[]): PhpSymbol[];
 }
-export declare class SymbolIndex {
-    private _nodeArray;
-    private _binarySearch;
-    private _collator;
-    constructor();
-    add(item: PhpSymbol): void;
-    addMany(items: PhpSymbol[]): void;
-    remove(item: PhpSymbol): void;
-    removeMany(items: PhpSymbol[]): void;
-    match(text: string, fuzzy?: boolean): PhpSymbol[];
-    private _sortedFuzzyResults(query, matches);
-    private _nodeMatch(lcText);
-    private _nodeFind(text);
-    private _insertNode(node);
-    private _deleteNode(node);
-    private _symbolKeys(s);
-    private _hasLength(text);
-    private _namespaceSymbolKeys(s);
-}
-export interface PhpSymbolDto {
-    kind: SymbolKind;
-    name: string;
-    location?: number[];
-    modifiers?: SymbolModifier;
-    doc?: PhpSymbolDoc;
+export interface Reference extends SymbolIdentifier {
     type?: string;
-    associated?: PhpSymbolDto[];
-    children?: PhpSymbolDto[];
-    scope?: string;
-    value?: string;
+    altName?: string;
+}
+export declare namespace Reference {
+    function create(kind: SymbolKind, name: string, location: HashedLocation): Reference;
 }

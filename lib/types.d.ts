@@ -1,3 +1,4 @@
+import { Range } from 'vscode-languageserver-types';
 export interface Predicate<T> {
     (t: T): boolean;
 }
@@ -16,12 +17,19 @@ export declare class Event<T> {
     subscribe(handler: EventHandler<T>): Unsubscribe;
     trigger(args: T): void;
 }
+export interface HashedLocation {
+    uriHash: number;
+    range: Range;
+}
+export declare namespace HashedLocation {
+    function create(uriHash: number, range: Range): HashedLocation;
+}
 export interface TreeLike {
     [index: string]: any;
     children?: TreeLike[];
 }
 export declare class TreeTraverser<T extends TreeLike> {
-    private _spine;
+    protected _spine: T[];
     constructor(spine: T[]);
     readonly spine: T[];
     readonly node: T;
@@ -32,6 +40,9 @@ export declare class TreeTraverser<T extends TreeLike> {
     depth(): number;
     up(n: number): void;
     find(predicate: Predicate<T>): T;
+    child(predicate: Predicate<T>): T;
+    nthChild(n: number): T;
+    childCount(): number;
     prevSibling(): T;
     nextSibling(): T;
     ancestor(predicate: Predicate<T>): T;

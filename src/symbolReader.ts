@@ -13,7 +13,7 @@ import { NameResolver } from './nameResolver';
 import { TypeString } from './typeString';
 import * as util from './util';
 
-export class SymbolVisitor implements TreeVisitor<Phrase | Token> {
+export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     lastPhpDoc: PhpDoc;
     lastPhpDocLocation: HashedLocation;

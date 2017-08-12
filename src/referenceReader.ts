@@ -38,8 +38,7 @@ function symbolsToTypeReduceFn(prev: string, current: PhpSymbol) {
     return TypeString.merge(prev, PhpSymbol.type(current));
 }
 
-
-export class ReferenceVisitor implements TreeVisitor<Phrase | Token> {
+export class ReferenceReader implements TreeVisitor<Phrase | Token> {
 
     private _transformStack: NodeTransform[];
     private _variableTable: VariableTable;
@@ -1455,5 +1454,13 @@ namespace VariableSet {
             variables: {},
             branches: []
         };
+    }
+}
+
+export namespace ReferenceReader {
+    export function discoverReferences(doc:ParsedDocument, table:SymbolTable, symbolStore:SymbolStore) {
+        let visitor = new ReferenceReader(doc, new NameResolver(), symbolStore, table);
+        doc.traverse(visitor);
+        return table;
     }
 }

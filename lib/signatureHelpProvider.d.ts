@@ -10,11 +10,14 @@ export declare class SignatureHelpProvider {
     private _signatureInfo(fn, params);
     private _parameterInfoArray(params);
     private _parameterInfo(s);
-    private _getSymbol(callableExpr, context);
-    private _functionCallExpressionSymbol(phrase, context);
-    private _methodCallExpressionSymbol(phrase, context);
-    private _scopedCallExpressionSymbol(phrase, context);
-    private _objectCreationExpressionSymbol(phrase, context);
-    private _getArgumentNumber(argList, context);
+    private _getSymbol(traverser);
     private _isCallablePhrase(node);
+    private _isNamePhrase(node);
+    private _isArgExprList(node);
+    private _isMemberName(node);
+    private _isScopedMemberName(node);
+    private _isNameToken(node);
+    private _isIdentifier(node);
+    private _isClassTypeDesignator(node);
+    private _isNamePhraseOrRelativeScope(node);
 }
