@@ -5,19 +5,18 @@
 'use strict';
 
 import { Token, TokenType, Phrase, PhraseType } from 'php7parser';
-import {
-    PhpSymbol, SymbolKind, SymbolModifier
-} from './symbol';
+import { PhpSymbol, SymbolKind, SymbolModifier, Reference } from './symbol';
 import { SymbolStore, SymbolTable } from './symbolStore';
 import { SymbolReader } from './symbolReader';
 import { TypeString } from './typeString';
 import { NameResolver } from './nameResolver';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Predicate } from './types';
-import { ParseTreeTraverser } from './context';
+import { ParseTreeTraverser } from './parseTreeTraverser';
 import * as lsp from 'vscode-languageserver-types';
 import * as util from './util';
 import { TypeAggregate, MemberMergeStrategy } from './typeAggregate';
+import { UseDeclarationHelper } from './useDeclarationHelper';
 
 const noCompletionResponse: lsp.CompletionList = {
     items: [],
@@ -42,14 +41,6 @@ function keywordCompletionItems(keywords: string[], text: string) {
 
     return items;
 
-}
-
-function createSignatureHelpCommand(uri: string, position: lsp.Position) {
-    return <lsp.Command>{
-        command: 'vscode.executeSignatureHelpProvider',
-        title: 'Signature Help',
-        arguments: [uri, position]
-    };
 }
 
 function createInsertText(s: PhpSymbol, nsName: string, namePhraseType: PhraseType) {
@@ -103,6 +94,10 @@ function toMethodCompletionItem(s: PhpSymbol) {
         item.sortText = 'zzz';
     }
 
+    item.insertText = item.label + '($0)';
+    item.insertTextFormat = lsp.InsertTextFormat.Snippet;
+    item.command = triggerParameterHintsCommand;
+
     return item;
 }
 
@@ -138,25 +133,23 @@ function toPropertyCompletionItem(s: PhpSymbol) {
     return item;
 }
 
-function toVariableCompletionItem(s: PhpSymbol, varTable: VariableTable) {
-
-    let item = <lsp.CompletionItem>{
-        label: s.name,
-        kind: lsp.CompletionItemKind.Variable,
-        detail: varTable.getType(s.name).toString()
-    }
-
-    if (s.doc && s.doc.description) {
-        item.documentation = s.doc.description;
-    }
-
-    return item;
-
-}
 
 
 export interface CompletionOptions {
-    maxItems: number
+    maxItems: number,
+    addUseDeclaration: boolean,
+    backslashPrefix: boolean
+}
+
+const defaultCompletionOptions: CompletionOptions = {
+    maxItems: 100,
+    addUseDeclaration: true,
+    backslashPrefix: true
+}
+
+const triggerParameterHintsCommand: lsp.Command = {
+    title: 'Trigger Parameter Hints',
+    command: 'editor.action.triggerParameterHints'
 }
 
 export class CompletionProvider {
@@ -164,7 +157,7 @@ export class CompletionProvider {
     private _maxItems: number;
     private _strategies: CompletionStrategy[];
     private _config: CompletionOptions;
-    private static _defaultConfig: CompletionOptions = { maxItems: 100 };
+    private static _defaultConfig: CompletionOptions = defaultCompletionOptions;
 
     constructor(
         public symbolStore: SymbolStore,
@@ -208,7 +201,8 @@ export class CompletionProvider {
 
         let traverser = new ParseTreeTraverser(doc, table);
         traverser.position(position);
-        let word = doc.wordAtOffset(doc.offsetAtPosition(position));
+        let offset = doc.offsetAtPosition(position);
+        let word = doc.wordAtOffset(offset);
         let strategy: CompletionStrategy = null;
 
         for (let n = 0, l = this._strategies.length; n < l; ++n) {
@@ -218,7 +212,7 @@ export class CompletionProvider {
             }
         }
 
-        return strategy ? strategy.completions(traverser, word) : noCompletionResponse;
+        return strategy ? strategy.completions(traverser, word, doc.lineSubstring(offset)) : noCompletionResponse;
 
     }
 
@@ -227,7 +221,7 @@ export class CompletionProvider {
 interface CompletionStrategy {
     config: CompletionOptions;
     canSuggest(traverser: ParseTreeTraverser): boolean;
-    completions(traverser: ParseTreeTraverser, word: string): lsp.CompletionList;
+    completions(traverser: ParseTreeTraverser, word: string, lineSubstring: string): lsp.CompletionList;
 }
 
 abstract class AbstractNameCompletion implements CompletionStrategy {
@@ -236,7 +230,7 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
 
     abstract canSuggest(traverser: ParseTreeTraverser): boolean;
 
-    completions(traverser: ParseTreeTraverser, word: string) {
+    completions(traverser: ParseTreeTraverser, word: string, lineSubstring: string) {
 
         let items: lsp.CompletionItem[] = [];
         let namePhrase = traverser.clone().ancestor(this._isNamePhrase) as Phrase;
@@ -267,9 +261,10 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
 
         let limit = Math.min(matches.length, this.config.maxItems - items.length);
         let isIncomplete = matches.length > this.config.maxItems - items.length;
+        let useDeclarationHelper = new UseDeclarationHelper(traverser.document, traverser.symbolTable, traverser.range.start);
 
         for (let n = 0; n < limit; ++n) {
-            items.push(this._toCompletionItem(matches[n], nameResolver.namespaceName, namePhrase.phraseType));
+            items.push(this._toCompletionItem(matches[n], nameResolver.namespaceName, namePhrase.phraseType, useDeclarationHelper));
         }
 
         return <lsp.CompletionList>{
@@ -310,13 +305,14 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         return imported;
     }
 
-    protected _toCompletionItem(s: PhpSymbol, namespaceName: string, namePhraseType: PhraseType): lsp.CompletionItem {
+    protected _toCompletionItem(s: PhpSymbol, namespaceName: string, namePhraseType: PhraseType, useDeclarationHelper: UseDeclarationHelper): lsp.CompletionItem {
 
         let item = <lsp.CompletionItem>{
             kind: lsp.CompletionItemKind.Class,
             label: PhpSymbol.notFqn(s.name),
-            insertText: createInsertText(s, namespaceName, namePhraseType)
         }
+
+        this._setInsertText(item, s, namespaceName, namePhraseType, useDeclarationHelper);
 
         if (s.doc && s.doc.description) {
             item.documentation = s.doc.description;
@@ -345,6 +341,9 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
             case SymbolKind.Function:
                 item.kind = lsp.CompletionItemKind.Function;
                 item.detail = PhpSymbol.signatureString(s);
+                item.insertText += '($0)';
+                item.insertTextFormat = lsp.InsertTextFormat.Snippet;
+                item.command = triggerParameterHintsCommand;
                 break;
 
             case SymbolKind.Namespace:
@@ -362,20 +361,30 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
 
     }
 
-    protected _insertText(s: PhpSymbol, nsName: string, namePhraseType: PhraseType) {
-        let insertText = s.name;
+    protected _setInsertText(item: lsp.CompletionItem, s: PhpSymbol, namespaceName: string, namePhraseType: PhraseType, useDeclarationHelper: UseDeclarationHelper) {
+        const kindMask = SymbolKind.Constant | SymbolKind.Function;
+        let notFqn = PhpSymbol.notFqn(namespaceName);
 
-        if (nsName && s.name.indexOf(nsName) === 0 && insertText.length > nsName.length + 1) {
-            insertText = insertText.slice(nsName.length + 1);
+        if ((s.modifiers & SymbolModifier.Use) > 0) {
+            item.insertText = s.name;
+
+        } else if (this.config.addUseDeclaration && (namespaceName || notFqn !== s.name) && !useDeclarationHelper.findUseSymbolByName(notFqn)) {
+            item.insertText = notFqn;
+            item.additionalTextEdits = [useDeclarationHelper.insertDeclarationTextEdit(s)];
+
+        } else if (namespaceName && s.name.indexOf(namespaceName) === 0 && s.name.length > namespaceName.length + 1) {
+            item.insertText = s.name.slice(namespaceName.length + 1);
             if (namePhraseType === PhraseType.RelativeQualifiedName) {
-                insertText = 'namespace\\' + insertText;
+                item.insertText = 'namespace\\' + item.insertText;
             }
 
-        } else if (nsName && namePhraseType !== PhraseType.FullyQualifiedName && !(s.modifiers & SymbolModifier.Use)) {
-            insertText = '\\' + insertText;
+        } else if (namespaceName && namePhraseType !== PhraseType.FullyQualifiedName && (!(s.kind & kindMask) || this.config.backslashPrefix)) {
+            item.insertText = '\\' + s.name;
+        } else {
+            item.insertText = s.name;
         }
-        
-        return insertText;
+
+        return item;
     }
 
     protected _isNamePhrase(node: Phrase | Token) {
@@ -446,24 +455,13 @@ class ClassTypeDesignatorCompletion extends AbstractNameCompletion {
         return [];
     }
 
-    protected _toCompletionItem(s: PhpSymbol, namespaceName: string, namePhraseType: PhraseType) {
+    protected _toCompletionItem(s: PhpSymbol, namespaceName: string, namePhraseType: PhraseType, useDeclarationHelper: UseDeclarationHelper) {
 
-        let item = <lsp.CompletionItem>{
-            kind: lsp.CompletionItemKind.Constructor,
-            label: PhpSymbol.notFqn(s.name),
-            insertText: createInsertText(s, namespaceName, namePhraseType)
-        }
-
-        if (s.doc && s.doc.description) {
-            item.documentation = s.doc.description;
-        }
-
-        if ((s.modifiers & SymbolModifier.Use) > 0 && s.associated && s.associated.length) {
-            item.detail = s.associated[0].name;
-        } else {
-            item.detail = s.name;
-        }
-
+        let item = super._toCompletionItem(s, namespaceName, namePhraseType, useDeclarationHelper);
+        item.kind = lsp.CompletionItemKind.Constructor;
+        item.insertText += '($0)';
+        item.insertTextFormat = lsp.InsertTextFormat.Snippet;
+        item.command = triggerParameterHintsCommand;
         return item;
 
     }
@@ -483,7 +481,7 @@ class SimpleVariableCompletion implements CompletionStrategy {
             ParsedDocument.isPhrase(traverser.parent(), [PhraseType.SimpleVariable]);
     }
 
-    completions(traverser: ParseTreeTraverser, word: string) {
+    completions(traverser: ParseTreeTraverser, word: string, lineSubstring: string) {
 
         if (!word) {
             return noCompletionResponse;
@@ -491,9 +489,9 @@ class SimpleVariableCompletion implements CompletionStrategy {
 
         let scope = traverser.scope;
         let symbolMask = SymbolKind.Variable | SymbolKind.Parameter;
-        let varSymbols = scope.children ? scope.children.filter((x) => {
+        let varSymbols = PhpSymbol.filterChildren(scope, (x) => {
             return (x.kind & symbolMask) > 0 && x.name.indexOf(word) === 0;
-        }) : [];
+        });
         //also suggest built in globals vars
         Array.prototype.push.apply(varSymbols, this.symbolStore.match(word, this._isBuiltInGlobalVar));
 
@@ -501,10 +499,10 @@ class SimpleVariableCompletion implements CompletionStrategy {
         let isIncomplete = varSymbols.length > this.config.maxItems;
 
         let items: lsp.CompletionItem[] = [];
-        let varTable = context.variableTable;
+        let varTable = this._varTypeMap(scope);
 
         for (let n = 0; n < limit; ++n) {
-            items.push(toVariableCompletionItem(varSymbols[n], varTable));
+            items.push(this._toVariableCompletionItem(varSymbols[n], varTable));
         }
 
         return <lsp.CompletionList>{
@@ -514,11 +512,48 @@ class SimpleVariableCompletion implements CompletionStrategy {
 
     }
 
+    private _toVariableCompletionItem(s: PhpSymbol, varTable: {[index:string]:string}) {
+
+        let item = <lsp.CompletionItem>{
+            label: s.name,
+            kind: lsp.CompletionItemKind.Variable,
+            detail: varTable[s.name] ? varTable[s.name] : ''
+        }
+
+        if (s.doc && s.doc.description) {
+            item.documentation = s.doc.description;
+        }
+
+        return item;
+
+    }
+
+    private _varTypeMap(s: PhpSymbol) {
+
+        let map: { [index: string]: string } = {};
+        let params = PhpSymbol.filterChildren(s, (x) => { return x.kind === SymbolKind.Parameter });
+        for (let n = 0, l = params.length; n < l; ++n) {
+            map[params[n].name] = PhpSymbol.type(params[n]);
+        }
+
+        let ref: Reference;
+        if (!s.references) {
+            return map;
+        }
+
+        for (let n = 0, l = s.references.length; n < l; ++n) {
+            ref = s.references[n];
+            if (ref.kind === SymbolKind.Variable) {
+                map[ref.name] = TypeString.merge(map[ref.name], ref.type);
+            }
+        }
+
+        return map;
+    }
+
     private _isBuiltInGlobalVar(s: PhpSymbol) {
         return s.kind === SymbolKind.Variable && !s.location;
     }
-
-
 
 }
 
@@ -607,29 +642,28 @@ class NameCompletion extends AbstractNameCompletion {
             traverser.ancestor(this._isNamePhrase) !== null;
     }
 
-    completions(traverser: ParseTreeTraverser, word: string) {
+    completions(traverser: ParseTreeTraverser, word: string, lineSubstring: string) {
 
         //<?php (no trailing space) is considered short tag open and then name token
         //dont suggest in this context
-        if (context.textBefore(3) === '<?p' ||
-            context.textBefore(4) === '<?ph' ||
-            context.textBefore(5) === '<?php') {
+        if (lineSubstring.slice(-3) === '<?p' ||
+            lineSubstring.slice(-4) === '<?ph' ||
+            lineSubstring.slice(-5) === '<?php') {
             return NameCompletion._openTagCompletion;
         }
 
         //this strategy may get called during parse errors on class/interface declaration
         //when wanting to use extends/implements.
         //suppress name suggestions in this case
-        let textBefore = context.textBefore(200);
-        if (textBefore.match(NameCompletion._extendsRegex)) {
+        if (lineSubstring.match(NameCompletion._extendsRegex)) {
             return lsp.CompletionList.create([{ kind: lsp.CompletionItemKind.Keyword, label: 'extends' }]);
         }
 
-        if (textBefore.match(NameCompletion._implementsRegex)) {
+        if (lineSubstring.match(NameCompletion._implementsRegex)) {
             return lsp.CompletionList.create([{ kind: lsp.CompletionItemKind.Keyword, label: 'implements' }]);
         }
 
-        return super.completions(traverser, word);
+        return super.completions(traverser, word, lineSubstring);
 
     }
 
@@ -709,6 +743,64 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
 
     private _resolveType(traverser: ParseTreeTraverser): string {
 
+        //assumed that traverser is on the member scope node
+        let node = traverser.node as Phrase;
+        let arrayDereference = 0;
+        let ref: Reference;
+
+        while (true) {
+
+            switch (node.phraseType) {
+                case PhraseType.FullyQualifiedName:
+                case PhraseType.RelativeQualifiedName:
+                case PhraseType.QualifiedName:
+                case PhraseType.SimpleVariable:
+                    ref = traverser.reference;
+                    break;
+
+                case PhraseType.MethodCallExpression:
+                case PhraseType.PropertyAccessExpression:
+                case PhraseType.ScopedCallExpression:
+                case PhraseType.ScopedPropertyAccessExpression:
+                case PhraseType.ClassConstantAccessExpression:
+                    if (traverser.child(this._isMemberName)) {
+                        ref = traverser.reference;
+                    }
+                    break;
+
+                case PhraseType.FunctionCallExpression:
+                    if (traverser.nthChild(0)) {
+                        ref = traverser.reference;
+                    }
+                    break;
+
+                case PhraseType.SubscriptExpression:
+                    if (traverser.nthChild(0)) {
+                        arrayDereference++;
+                        continue;
+                    }
+                    break;
+
+                default:
+                    break;
+
+            }
+
+            break;
+
+        }
+
+        if (!ref) {
+            return '';
+        }
+
+        let type = this.symbolStore.referenceToTypeString(ref);
+        while (arrayDereference--) {
+            type = TypeString.arrayDereference(type);
+        }
+
+        return type;
+
     }
 
     protected abstract _createMemberPredicate(scopeName: string, word: string, classContext: TypeAggregate): Predicate<PhpSymbol>;
@@ -738,6 +830,10 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
             default:
                 throw Error('Invalid Argument');
         }
+    }
+
+    private _isMemberName(node: Phrase | Token) {
+        return (<Phrase>node).phraseType === PhraseType.MemberName || (<Phrase>node).phraseType === PhraseType.ScopedMemberName;
     }
 
 }
@@ -1222,7 +1318,7 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
 
         let paramString = paramStrings.join(', ');
         let escapedParamString = snippetEscape(paramString);
-        let insertText = `${s.name}(${escapedParamString})\n{\n\t$0\n\\}`;
+        let insertText = `${s.name}(${escapedParamString})${snippetEscape(this._returnType(s))}\n{\n\t$0\n\\}`;
 
         let item: lsp.CompletionItem = {
             kind: lsp.CompletionItemKind.Method,
@@ -1238,6 +1334,14 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
 
         return item;
 
+    }
+
+    private _returnType(s: PhpSymbol) {
+        if (s.type) {
+            return `: ${s.type}`;
+        } else {
+            return '';
+        }
     }
 
     private _parameterToString(s: PhpSymbol) {

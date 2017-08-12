@@ -90,6 +90,10 @@ export namespace TypeString {
             return '';
         }
 
+        if(a === b) {
+            return a;
+        }
+
         if (!a) {
             return b;
         }
