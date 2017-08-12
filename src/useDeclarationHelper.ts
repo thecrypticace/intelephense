@@ -7,9 +7,10 @@
 import {ParsedDocument} from './parsedDocument';
 import {SymbolTable} from './symbolStore';
 import {PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
-import {Position, TextEdit} from 'vscode-languageserver-types';
+import {Position, TextEdit, Range} from 'vscode-languageserver-types';
 import {TreeVisitor} from './types';
 import {Phrase, Token, PhraseType, TokenType} from 'php7parser';
+import * as util from './util';
 
 export class UseDeclarationHelper {
 
@@ -56,26 +57,49 @@ export class UseDeclarationHelper {
 
     }
 
+    replaceDeclarationTextEdit(symbol:PhpSymbol, alias:string) {
+        let useSymbol = this.findUseSymbolByFqn(symbol.name);
+        let node = this.findNamespaceUseClauseByRange(useSymbol.location.range) as Phrase;
+        let aliasingClause = ParsedDocument.findChild(node, this._isNamespaceAliasingClause) as Phrase;
+
+        if(aliasingClause) {
+            return TextEdit.replace(this.doc.nodeRange(aliasingClause), `as ${alias}`);
+        } else {
+            return TextEdit.insert(this.doc.nodeRange(node).end, ` as ${alias}`);
+        }
+    }
+
     deleteDeclarationTextEdit(fqn:string) {
 
     }
 
-    isImported(fqn:string) {
+    findUseSymbolByFqn(fqn:string) {
         let lcFqn = fqn.toLowerCase();
         let fn = (x:PhpSymbol) => {
             return x.associated && x.associated.length > 0 && x.associated[0].name.toLowerCase() === lcFqn;
         }
-        return this._useDeclarations.find(fn) !== undefined;
+        return this._useDeclarations.find(fn);
     }
 
-    nameExists(name:string) {
+    findUseSymbolByName(name:string) {
 
         let lcName = name.toLowerCase();
         let fn = (x:PhpSymbol) => {
             return x.name.toLowerCase() === lcName;
         }
 
-        return this._useDeclarations.find(fn) !== undefined;
+        return this._useDeclarations.find(fn);
+
+    }
+
+    findNamespaceUseClauseByRange(range:Range) {
+
+        let fn = (x:Phrase | Token) => {
+            return ((<Phrase>x).phraseType === PhraseType.NamespaceUseClause || (<Phrase>x).phraseType === PhraseType.NamespaceUseGroupClause) &&
+                util.rangeEquality(range, this.doc.nodeRange(x));
+        };
+
+        return this.doc.find(fn);
 
     }
 
@@ -101,6 +125,10 @@ export class UseDeclarationHelper {
         }
 
         return this._afterNodeEndPosition = this.doc.nodeRange(this._insertAfterNode()).end;
+    }
+
+    private _isNamespaceAliasingClause(node:Phrase|Token) {
+        return (<Phrase>node).phraseType === PhraseType.NamespaceAliasingClause;
     }
 
 }

@@ -42,6 +42,13 @@ export function isInRange(position: Position, range: Range) {
 
 }
 
+export function rangeEquality(r1: Range, r2: Range) {
+    return r1.start.line === r2.start.line &&
+        r1.start.character === r2.start.character &&
+        r1.end.line === r2.end.line &&
+        r1.end.character === r2.end.character;
+}
+
 export function acronym(text: string) {
 
     if (!text) {
@@ -161,16 +168,16 @@ export function filter<T>(items: T[], fn: Predicate<T>) {
 
 }
 
-export function find<T>(items:T[], fn:Predicate<T>) {
+export function find<T>(items: T[], fn: Predicate<T>) {
 
-    if(!items) {
+    if (!items) {
         return undefined;
     }
 
-    let item:T;
-    for(let n = 0, l = items.length; n < l; ++n) {
+    let item: T;
+    for (let n = 0, l = items.length; n < l; ++n) {
         item = items[n];
-        if(fn(item)) {
+        if (fn(item)) {
             return item;
         }
     }

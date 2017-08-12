@@ -4,128 +4,90 @@
 
 'use strict';
 
-import * as lsp from 'vscode-languageserver-types';
+import {Position, TextEdit} from 'vscode-languageserver-types';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
-import { Context } from './context';
-import { SymbolStore } from './symbolStore';
-import { SymbolKind, PhpSymbol } from './symbol';
-import { ReferenceVisitor, Reference } from './references';
+import { ParseTreeTraverser } from './context';
+import { SymbolStore, SymbolTable } from './symbolStore';
+import { SymbolKind, PhpSymbol, Reference } from './symbol';
+import { ReferenceVisitor } from './references';
 import { NameResolver } from './nameResolver';
 import { NameResolverVisitor } from './nameResolverVisitor';
-import { VariableTable } from './typeResolver';
-import { ParseTreeHelper } from './parseTreeHelper';
-import { Phrase, PhraseType } from 'php7parser';
-import { MultiVisitor } from './types';
+import { Phrase, PhraseType, Token } from 'php7parser';
+import {UseDeclarationHelper} from './useDeclarationHelper';
 import * as util from './util';
 
-export function importSymbol(
-    symbolStore: SymbolStore,
-    documentStore: ParsedDocumentStore,
-    uri: string,
-    position: lsp.Position,
-    alias?: string
-): lsp.TextEdit[] {
+export class NameTextEditProvider {
 
-    let edits: lsp.TextEdit[] = [];
-    let doc = documentStore.find(uri);
+    constructor(public symbolStore:SymbolStore, public docStore:ParsedDocumentStore) {
 
-    if (!doc) {
-        return edits;
     }
 
-    let nameResolver = new NameResolver();
-    let nameResolverVisitor = new NameResolverVisitor(doc, nameResolver);
-    let referenceVisitor = new ReferenceVisitor(doc, nameResolver, symbolStore);
-    let visitor = new MultiVisitor([
-        nameResolverVisitor, referenceVisitor
-    ]);
+    provideContractFqnTextEdits(uri:string, position:Position, alias?:string) {
 
-    doc.traverse(visitor);
-    let references = referenceVisitor.references;
-    //console.log(JSON.stringify(references, null, 4));
-    let refAtPos = references.referenceAtPosition(position);
-    //console.log(JSON.stringify(refAtPos, null, 4));
+        let edits:TextEdit[] = [];
+        let doc = this.docStore.find(uri);
+        let table = this.symbolStore.getSymbolTable(uri);
 
-    if (
-        !refAtPos ||
-        !((<PhpSymbol>refAtPos.symbol).kind & (SymbolKind.Class | SymbolKind.Interface | SymbolKind.Constant | SymbolKind.Function))
-    ) {
-        return edits;
-    }
-
-    let filterFn = (x: Reference) => {
-        return x.symbol === refAtPos.symbol;
-    };
-
-    let filteredReferences = references.filter(filterFn);
-    let context = new Context(symbolStore, doc, position);
-    nameResolver = context.nameResolver;
-
-    let existingRule = nameResolver.rules.find((x) => {
-        let assoc = x.associated.find((z) => {
-            return z.kind === (<PhpSymbol>refAtPos.symbol).kind && z.name === (<PhpSymbol>refAtPos.symbol).name;
-        });
-        return assoc !== undefined;
-    });
-
-    let name: string;
-    if (existingRule) {
-        name = existingRule.name;
-    } else if (alias) {
-        name = alias;
-    } else {
-        name = PhpSymbol.notFqn((<PhpSymbol>refAtPos.symbol).name);
-    }
-
-    if (!existingRule) {
-
-        let importText = 'use';
-
-        switch ((<PhpSymbol>refAtPos.symbol).kind) {
-            case SymbolKind.Function:
-                importText += ' function';
-                break;
-            case SymbolKind.Constant:
-                importText = ' const';
-                break;
-            default:
-                break;
-        }
-
-        importText += ' ' + (<PhpSymbol>refAtPos.symbol).name;
-
-        if (alias) {
-            importText += ' as ' + alias;
-        }
-
-        importText += ';';
-
-        let appendAfterRange: lsp.Range;
-
-        //placement of use decl fallback
-        if (context.lastNamespaceUseDeclaration) {
-            appendAfterRange = doc.nodeRange(context.lastNamespaceUseDeclaration);
-            importText = '\n' + util.whitespace(appendAfterRange.start.character) + importText;
-        } else if (context.namespaceDefinition && !ParsedDocument.findChild(PhraseType.StatementList, context.namespaceDefinition.children)) {
-            appendAfterRange = doc.nodeRange(context.namespaceDefinition);
-            importText = '\n\n' + util.whitespace(appendAfterRange.start.character) + importText;
-        } else if (context.openingInlineText) {
-            appendAfterRange = doc.nodeRange(context.openingInlineText);
-            importText = '\n' + util.whitespace(appendAfterRange.start.character) + importText;
-        }
-
-        if (appendAfterRange) {
-            edits.push(lsp.TextEdit.insert(appendAfterRange.end, importText));
-        } else {
+        if(!doc) {
             return edits;
         }
 
+        let fqnNode = this._fullyQualifiedNamePhrase(position, doc, table);
+        let symbol = this.symbolStore.find(doc.nodeText(fqnNode)).shift();
+
+        if(!symbol) {
+            return edits;
+        }
+
+        let helper = new UseDeclarationHelper(doc, table, position);
+        let fqnUseSymbol = helper.findUseSymbolByFqn(symbol.name);
+        let nameUseSymbol = helper.findUseSymbolByName(PhpSymbol.notFqn(symbol.name));
+
+        if (!fqnUseSymbol){
+            if(!alias && nameUseSymbol) {
+                //declaration will clash with an existing import
+                return edits;
+            }
+
+            edits.push(helper.insertDeclarationTextEdit(symbol, alias));
+
+        } else if(alias && fqnUseSymbol.name !== alias) {
+            //replace existing 
+            edits.push(helper.replaceDeclarationTextEdit(symbol, alias));
+        }
+
+        let name = alias || PhpSymbol.notFqn(symbol.name);
+        const kindMask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.Function | SymbolKind.Constant | SymbolKind.Constructor;
+        let lcName = symbol.name.toLowerCase();
+
+        let fn = (r:Reference) => {
+            return (r.kind & kindMask) > 0 && lcName === r.name.toLowerCase();
+        };
+
+        let references = table.references(fn);
+
+        for (let n = 0, l = references.length; n < l; ++n) {
+            edits.push(TextEdit.replace(references[n].location.range, name));
+        }
+    
+        return edits.reverse();
+
     }
 
-    for (let n = 0, l = filteredReferences.length; n < l; ++n) {
-        edits.push(lsp.TextEdit.replace(filteredReferences[n].range, name));
-    }
+    private _fullyQualifiedNamePhrase(position:Position, doc:ParsedDocument, table:SymbolTable) {
+        let traverser = new ParseTreeTraverser(doc, table);
+        traverser.position(position);
+        let fqnNode = traverser.ancestor(this._isFullyQualifiedName);
+        if(!fqnNode && position.character > 0) {
+            traverser.position(Position.create(position.line, position.character - 1));
+            return traverser.ancestor(this._isFullyQualifiedName);
+        } else {
+            return fqnNode;
+        }
+    } 
 
-    return edits.reverse();
+    private _isFullyQualifiedName(node:Phrase|Token) {
+        return (<Phrase>node).phraseType === PhraseType.FullyQualifiedName;        
+    }
 
 }
