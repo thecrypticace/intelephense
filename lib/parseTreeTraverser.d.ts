@@ -16,6 +16,10 @@ export declare class ParseTreeTraverser extends TreeTraverser<Phrase | Token> {
     readonly reference: Reference;
     readonly scope: PhpSymbol;
     readonly nameResolver: NameResolver;
+    /**
+     * Traverses to the token to the left of position
+     * @param pos
+     */
     position(pos: Position): Token;
     clone(): ParseTreeTraverser;
     /**

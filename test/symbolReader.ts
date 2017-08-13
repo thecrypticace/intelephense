@@ -10,11 +10,9 @@ import 'mocha';
 function symbolReaderOutput(src: string) {
 
     let parsedDoc = new ParsedDocument('test', src);
-    let symbolTree: PhpSymbol = { kind: SymbolKind.None, name: '' };
     let sr = new SymbolReader(parsedDoc, new NameResolver());
     parsedDoc.traverse(sr);
-    symbolTree.children = sr.symbols;
-    return symbolTree;
+    return sr.symbol;
 
 }
 

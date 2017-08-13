@@ -30,7 +30,6 @@ export class SignatureHelpProvider {
         let traverser = new ParseTreeTraverser(doc, table);
         let token = traverser.position(position);
         let callableExpr = traverser.ancestor(this._isCallablePhrase) as Phrase;
-
         if (!callableExpr || !token || token.tokenType === TokenType.CloseParenthesis) {
             return null;
         }

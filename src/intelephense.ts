@@ -91,6 +91,8 @@ export namespace Intelephense {
         //must remove before adding as entry may exist already from workspace discovery
         symbolStore.remove(symbolTable.uri);
         symbolStore.add(symbolTable);
+        ReferenceReader.discoverReferences(parsedDocument, symbolTable, symbolStore);
+        symbolStore.indexReferences(symbolTable);
         diagnosticsProvider.add(parsedDocument);
 
     }

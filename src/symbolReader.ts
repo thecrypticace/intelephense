@@ -26,12 +26,12 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
         public document: ParsedDocument,
         public nameResolver: NameResolver
     ) {
-        this._transformStack = [new InitialTransform()];
+        this._transformStack = [new FileTransform(this.document.uri, this.document.nodeLocation(this.document.tree))];
         this._uriHash = util.hash32(document.uri);
     }
 
-    get symbols() {
-        return (<InitialTransform>this._transformStack[0]).symbols;
+    get symbol() {
+        return (<FileTransform>this._transformStack[0]).symbol;
     }
 
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
@@ -94,7 +94,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.ParameterDeclaration:
                 this._transformStack.push(new ParameterDeclarationTransform(
-                    this.document.nodeLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
+                    this.document.nodeLocation(node), this.lastPhpDoc, this.lastPhpDocLocation, this.nameResolver
                 ));
                 break;
 
@@ -484,31 +484,34 @@ interface SymbolsNodeTransform extends NodeTransform {
     symbols:PhpSymbol[];
 }
 
-class InitialTransform implements NodeTransform {
+class FileTransform implements SymbolNodeTransform {
 
-    private _symbols: UniqueSymbolCollection;
+    private _children: UniqueSymbolCollection;
+    private _symbol:PhpSymbol;
 
-    constructor() {
-        this._symbols = new UniqueSymbolCollection();
+    constructor(uri:string, location:HashedLocation) {
+        this._symbol = PhpSymbol.create(SymbolKind.File, uri, location);
+        this._children = new UniqueSymbolCollection();
     }
 
     push(transform: NodeTransform) {
 
         let s = (<SymbolNodeTransform>transform).symbol;
         if (s) {
-            this._symbols.push(s);
+            this._children.push(s);
             return;
         }
 
         let symbols = (<SymbolsNodeTransform>transform).symbols;
         if(symbols) {
-            this._symbols.pushMany(symbols);
+            this._children.pushMany(symbols);
         }
 
     }
 
-    get symbols() {
-        return this._symbols.toArray();
+    get symbol() {
+        this._symbol.children = this._children.toArray();
+        return this._symbol;
     }
 
 }
@@ -625,8 +628,15 @@ class ParameterDeclarationTransform implements SymbolNodeTransform {
 
     phraseType = PhraseType.ParameterDeclaration;
     symbol: PhpSymbol;
-    constructor(location: HashedLocation, doc: PhpDoc, docLocation: HashedLocation) {
+    private _doc:PhpDoc;
+    private _nameResolver:NameResolver;
+    private _docLocation:HashedLocation;
+
+    constructor(location: HashedLocation, doc: PhpDoc, docLocation: HashedLocation, nameResolver:NameResolver) {
         this.symbol = PhpSymbol.create(SymbolKind.Parameter, '', location);
+        this._doc = doc;
+        this._docLocation = docLocation;
+        this._nameResolver = nameResolver;
     }
 
     push(transform: NodeTransform) {
@@ -638,6 +648,7 @@ class ParameterDeclarationTransform implements SymbolNodeTransform {
             this.symbol.modifiers |= SymbolModifier.Variadic;
         } else if (transform.tokenType === TokenType.VariableName) {
             this.symbol.name = (<TokenTransform>transform).text;
+            SymbolReader.assignPhpDocInfoToSymbol(this.symbol, this._doc, this._docLocation, this._nameResolver);
         } else {
             this.symbol.value = (<TextNodeTransform>transform).text;
         }

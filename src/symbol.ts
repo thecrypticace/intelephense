@@ -23,7 +23,8 @@ export const enum SymbolKind {
     Variable = 1 << 8,
     Namespace = 1 << 9,
     ClassConstant = 1 << 10,
-    Constructor = 1 << 11
+    Constructor = 1 << 11,
+    File = 1 << 12
 }
 
 export const enum SymbolModifier {

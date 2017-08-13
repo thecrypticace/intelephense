@@ -4,6 +4,7 @@ import {SymbolStore, SymbolTable} from '../src/symbolStore';
 import { ParsedDocumentStore, ParsedDocument } from '../src/parsedDocument';
 import * as lsp from 'vscode-languageserver-types';
 import { assert } from 'chai';
+import { ReferenceReader } from '../src/referenceReader';
 import 'mocha';
 
 
@@ -64,7 +65,11 @@ function setup(src: string) {
     let symbolStore = new SymbolStore();
     let doc = new ParsedDocument('test', src);
     docStore.add(doc);
-    symbolStore.add(SymbolTable.create(doc));
+    let table = SymbolTable.create(doc);
+    symbolStore.add(table);
+    ReferenceReader.discoverReferences(doc, table, symbolStore);
+    symbolStore.indexReferences(table);
+
     return new SignatureHelpProvider(symbolStore, docStore);
 }
 
@@ -82,16 +87,13 @@ describe('SignatureHelpProvider', function () {
                 activeSignature:0,
                 signatures:[
                     {
-                        documentation:undefined,
                         label:'__construct($p1, $p2)',
                         parameters:[
                             {
                                 label:'$p1',
-                                documentation:undefined
                             },
                             {
                                 label:'$p2',
-                                documentation:undefined
                             }
                         ]
                     }
@@ -112,15 +114,12 @@ describe('SignatureHelpProvider', function () {
                 signatures:[
                     {
                         label:'fn($p1, $p2)',
-                        documentation:undefined,
                         parameters:[
                             {
                                 label:'$p1',
-                                documentation:undefined
                             },
                             {
                                 label:'$p2',
-                                documentation:undefined
                             }
                         ]
                     }
@@ -141,15 +140,12 @@ describe('SignatureHelpProvider', function () {
                 signatures:[
                     {
                         label:'fn($p1, $p2)',
-                        documentation:undefined,
                         parameters:[
                             {
                                 label:'$p1',
-                                documentation:undefined
                             },
                             {
                                 label:'$p2',
-                                documentation:undefined
                             }
                         ]
                     }
@@ -170,15 +166,12 @@ describe('SignatureHelpProvider', function () {
                 signatures:[
                     {
                         label:'bar($p1, $p2)',
-                        documentation:undefined,
                         parameters:[
                             {
                                 label:'$p1',
-                                documentation:undefined
                             },
                             {
                                 label:'$p2',
-                                documentation:undefined
                             }
                         ]
                     }
@@ -237,12 +230,10 @@ describe('SignatureHelpProvider', function () {
                 activeSignature:0,
                 signatures:[
                     {
-                        documentation:undefined,
                         label:'fn(int $p1)',
                         parameters:[
                             {
                                 label:'int $p1',
-                                documentation:undefined
                             }
                         ]
                     }

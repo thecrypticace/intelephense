@@ -74,8 +74,12 @@ export class ParseTreeTraverser extends TreeTraverser<Phrase | Token> {
         return this._table.nameResolver(pos);
     }
 
+    /**
+     * Traverses to the token to the left of position
+     * @param pos 
+     */
     position(pos: Position) {
-        let offset = this._doc.offsetAtPosition(pos);
+        let offset = this._doc.offsetAtPosition(pos) - 1;
         let fn = (x: Phrase | Token) => {
             return (<Token>x).tokenType !== undefined &&
                 offset < (<Token>x).offset + (<Token>x).length &&

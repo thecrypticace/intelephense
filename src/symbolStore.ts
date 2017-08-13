@@ -96,14 +96,14 @@ export class SymbolTable implements Traversable<PhpSymbol> {
 
     scope(pos: Position) {
         let traverser = new TreeTraverser([this.root]);
-        let visitor = new ScopeVisitor(pos, this.root, false);
+        let visitor = new ScopeVisitor(pos, false);
         traverser.traverse(visitor);
         return visitor.scope;
     }
 
     absoluteScope(pos: Position) {
         let traverser = new TreeTraverser([this.root]);
-        let visitor = new ScopeVisitor(pos, this.root, true);
+        let visitor = new ScopeVisitor(pos, true);
         traverser.traverse(visitor);
         return visitor.scope;
     }
@@ -130,6 +130,16 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         return visitor.references;
     }
 
+    referenceAtPosition(position:Position) {
+
+        let s = this.scope(position);
+        let fn = (ref:Reference) => {
+            return util.isInRange(position, ref.location.range) === 0;
+        }
+        return s.references ? util.find<Reference>(s.references, fn) : undefined;
+
+    }
+
     contains(identifier: SymbolIdentifier) {
         let traverser = new TreeTraverser([this.root]);
         let visitor = new ContainsVisitor(identifier);
@@ -154,7 +164,7 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         parsedDocument.traverse(symbolReader);
         return new SymbolTable(
             parsedDocument.uri,
-            { kind: SymbolKind.None, name: '', children: symbolReader.symbols }
+            symbolReader.symbol
         );
 
     }
@@ -188,8 +198,9 @@ export class SymbolStore {
     onParsedDocumentChange = (args: ParsedDocumentChangeEventArgs) => {
         this.remove(args.parsedDocument.uri);
         let table = SymbolTable.create(args.parsedDocument);
-        ReferenceReader.discoverReferences(args.parsedDocument, table, this);
         this.add(table);
+        ReferenceReader.discoverReferences(args.parsedDocument, table, this);
+        this.indexReferences(table);
     };
 
     getSymbolTable(uri: string) {
@@ -374,7 +385,7 @@ export class SymbolStore {
                 fn = (x) => {
                     return x.kind === SymbolKind.Method && x.name.toLowerCase() === '__construct';
                 };
-                symbols = this.findMembers(ref.scope, memberMergeStrategy || MemberMergeStrategy.None, fn);
+                symbols = this.findMembers(ref.name, memberMergeStrategy || MemberMergeStrategy.None, fn);
                 break;
 
             default:
@@ -673,17 +684,17 @@ class NameResolverVisitor implements TreeVisitor<PhpSymbol> {
 class ScopeVisitor implements TreeVisitor<PhpSymbol> {
 
     haltTraverse = false;
-    private _scope: PhpSymbol;
-    private _kindMask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.Function | SymbolKind.Method;
+    private _scopeStack: PhpSymbol[];
+    private _kindMask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.Function | SymbolKind.Method | SymbolKind.File;
     private _absolute = false;
 
-    constructor(public pos: Position, defaultScope: PhpSymbol, absolute: boolean) {
-        this._scope = defaultScope;
+    constructor(public pos: Position, absolute: boolean) {
+        this._scopeStack = [];
         this._absolute = absolute;
     }
 
     get scope() {
-        return this._scope;
+        return this._scopeStack[this._scopeStack.length - 1];
     }
 
     preorder(node: PhpSymbol, spine: PhpSymbol[]) {
@@ -693,20 +704,31 @@ class ScopeVisitor implements TreeVisitor<PhpSymbol> {
             return false;
         }
 
-        if (node.location && util.isInRange(this.pos, node.location.range) !== 0) {
+        if (!node.location || util.isInRange(this.pos, node.location.range) !== 0) {
             return false;
         }
 
         if (
             (node.kind & this._kindMask) > 0 &&
             !(node.modifiers & SymbolModifier.Use) &&
-            node.location && util.isInRange(this.pos, node.location.range) === 0 &&
-            (!this._absolute || !(node.modifiers & SymbolModifier.Anonymous))
+            (!this._absolute || node.kind !== SymbolKind.Function || !(node.modifiers & SymbolModifier.Anonymous))
         ) {
-            this._scope = node;
+            this._scopeStack.push(node);
         }
 
         return true;
+    }
+
+    postorder(node:PhpSymbol, spine:PhpSymbol[]) {
+
+        if(this.haltTraverse) {
+            return;
+        }
+
+        if((node.kind & this._kindMask) > 0 && this._scopeStack.length > 1) {
+            this._scopeStack.pop();
+        }
+
     }
 
 }

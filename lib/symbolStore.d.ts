@@ -25,6 +25,7 @@ export declare class SymbolTable implements Traversable<PhpSymbol> {
     scopeSymbols(): PhpSymbol[];
     symbolAtPosition(position: Position): PhpSymbol;
     references(filter?: Predicate<Reference>): Reference[];
+    referenceAtPosition(position: Position): Reference;
     contains(identifier: SymbolIdentifier): boolean;
     private _isScopeSymbol(s);
     private _hasReferences(s);

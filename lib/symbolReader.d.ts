@@ -13,7 +13,7 @@ export declare class SymbolReader implements TreeVisitor<Phrase | Token> {
     private _transformStack;
     private _uriHash;
     constructor(document: ParsedDocument, nameResolver: NameResolver);
-    readonly symbols: PhpSymbol[];
+    readonly symbol: PhpSymbol;
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
     postorder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
 }

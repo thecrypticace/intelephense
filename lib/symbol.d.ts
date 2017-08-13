@@ -13,6 +13,7 @@ export declare const enum SymbolKind {
     Namespace = 512,
     ClassConstant = 1024,
     Constructor = 2048,
+    File = 4096,
 }
 export declare const enum SymbolModifier {
     None = 0,

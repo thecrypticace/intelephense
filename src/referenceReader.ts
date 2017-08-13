@@ -46,8 +46,8 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
     private _scopeStack: PhpSymbol[];
     private _symbols: PhpSymbol[];
     private _symbolFilter:Predicate<PhpSymbol> = (x) => {
-        const mask = SymbolKind.Namespace | SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.Method | SymbolKind.Function;
-        return !x.kind || (x.kind & mask) > 0;
+        const mask = SymbolKind.Namespace | SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.Method | SymbolKind.Function | SymbolKind.File;
+        return (x.kind & mask) > 0;
     };
 
     constructor(
@@ -60,13 +60,13 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
         this._variableTable = new VariableTable();
         this._classStack = [];
         this._symbols = symbolTable.filter(this._symbolFilter);
-        this._scopeStack = [this._symbols.shift()];
+        this._scopeStack = [this._symbols.shift()]; //file/root node
     }
 
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
         let parent = spine.length ? spine[spine.length - 1] : null;
-        let parentTransform = this._transformStack.length ? this._transformStack[this._transformStack.length] : null;
+        let parentTransform = this._transformStack.length ? this._transformStack[this._transformStack.length - 1] : null;
 
         switch ((<Phrase>node).phraseType) {
 
@@ -354,7 +354,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
 
         switch ((<Phrase>node).phraseType) {
 
-            case PhraseType.NamespaceName:
+            case PhraseType.NamespaceDefinition:
                 this._scopeStack.pop();
                 break;
 
@@ -374,6 +374,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                         scope.references = [];
                     }
                     let ref = (<ReferenceNodeTransform>transform).reference;
+                    
                     if(ref) {
                         scope.references.push(ref);
                     }
@@ -432,6 +433,8 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                 return SymbolKind.Constant;
             case PhraseType.FunctionCallExpression:
                 return SymbolKind.Function;
+            case PhraseType.ClassTypeDesignator:
+                return SymbolKind.Constructor;
             default:
                 return SymbolKind.Class;
         }
@@ -766,12 +769,12 @@ class ForeachCollectionTransform implements TypeNodeTransform {
 
 class SimpleAssignmentExpressionTransform implements TypeNodeTransform {
 
-    variables: Variable[];
+    _variables: Variable[];
     type = '';
     private _pushCount = 0;
 
     constructor(public phraseType: PhraseType) {
-        this.variables = [];
+        this._variables = [];
     }
 
     push(transform: NodeTransform) {
@@ -792,7 +795,7 @@ class SimpleAssignmentExpressionTransform implements TypeNodeTransform {
                 {
                     let ref = (<SimpleVariableTransform>lhs).reference;
                     if (ref) {
-                        this.variables.push(Variable.create(ref.name, ref.type));
+                        this._variables.push(Variable.create(ref.name, ref.type));
                     }
                     break;
                 }
@@ -800,16 +803,24 @@ class SimpleAssignmentExpressionTransform implements TypeNodeTransform {
                 {
                     let variable = (<SubscriptExpressionTransform>lhs).variable;
                     if (variable) {
-                        this.variables.push(variable);
+                        this._variables.push(variable);
                     }
                     break;
                 }
             case PhraseType.ListIntrinsic:
-                    this.variables = (<ListIntrinsicTransform>lhs).variables;
+                    this._variables = (<ListIntrinsicTransform>lhs).variables;
                     break;
             default:
                 break;
         }
+    }
+
+    get variables() {
+        let type = this.type;
+        let fn = (x:Variable) => {
+            return Variable.resolveBaseVariable(x, type);
+        };
+        return this._variables.map(fn);
     }
 
 }
@@ -1287,6 +1298,7 @@ class IdentifierTransform implements TextNodeTransform {
 class MemberAccessExpressionTransform implements TypeNodeTransform, ReferenceNodeTransform {
 
     reference: Reference;
+    private _scope = '';
 
     constructor(
         public phraseType: PhraseType,
@@ -1301,6 +1313,7 @@ class MemberAccessExpressionTransform implements TypeNodeTransform, ReferenceNod
             case PhraseType.MemberName:
                 this.reference = (<ReferenceNodeTransform>transform).reference;
                 this.reference.kind = this.symbolKind;
+                this.reference.scope = this._scope;
                 break;
 
             case PhraseType.ScopedCallExpression:
@@ -1313,7 +1326,7 @@ class MemberAccessExpressionTransform implements TypeNodeTransform, ReferenceNod
             case PhraseType.FullyQualifiedName:
             case PhraseType.QualifiedName:
             case PhraseType.RelativeQualifiedName:
-                this.reference.scope = (<TypeNodeTransform>transform).type;
+                this._scope = (<TypeNodeTransform>transform).type;
                 break;
 
             default:
