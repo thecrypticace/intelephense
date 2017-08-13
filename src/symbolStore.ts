@@ -352,11 +352,17 @@ export class SymbolStore {
                 break;
 
             case SymbolKind.Property:
-                fn = (x) => {
-                    return x.kind === SymbolKind.Property && x.name.slice(1) === ref.name;
-                };
-                symbols = this.findMembers(ref.scope, memberMergeStrategy || MemberMergeStrategy.None, fn);
-                break;
+                {
+                    let name = ref.name;
+                    if(name && name[0] !== '$') {
+                        name = '$' + name;
+                    } 
+                    fn = (x) => {
+                        return x.kind === SymbolKind.Property && name === x.name;
+                    };
+                    symbols = this.findMembers(ref.scope, memberMergeStrategy || MemberMergeStrategy.None, fn);
+                    break;
+                }
 
             case SymbolKind.ClassConstant:
                 fn = (x) => {

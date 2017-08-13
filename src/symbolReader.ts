@@ -231,7 +231,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 break;
 
             case PhraseType.Identifier:
-                if (parentNode.phraseType === PhraseType.MethodDeclarationHeader) {
+                if (parentNode.phraseType === PhraseType.MethodDeclarationHeader || parentNode.phraseType === PhraseType.ClassConstElement) {
                     this._transformStack.push(new IdentifierTransform());
                 } else {
                     this._transformStack.push(null);

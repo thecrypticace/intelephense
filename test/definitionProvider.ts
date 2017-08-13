@@ -1,6 +1,7 @@
 import { DefinitionProvider } from '../src/definitionProvider';
 import { SymbolStore, SymbolTable } from '../src/symbolStore';
 import { ParsedDocumentStore, ParsedDocument } from '../src/parsedDocument';
+import { ReferenceReader } from '../src/referenceReader';
 import * as lsp from 'vscode-languageserver-types';
 import { assert } from 'chai';
 import 'mocha';
@@ -14,6 +15,9 @@ function setup(src:string){
     let docStore = new ParsedDocumentStore();
     docStore.add(doc);
     symbolStore.add(table);
+    ReferenceReader.discoverReferences(doc, table, symbolStore);
+    symbolStore.indexReferences(table);
+
     return new DefinitionProvider(symbolStore,docStore);
 
 }
