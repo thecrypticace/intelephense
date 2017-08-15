@@ -354,9 +354,6 @@ export class SymbolStore {
             case SymbolKind.Property:
                 {
                     let name = ref.name;
-                    if(name && name[0] !== '$') {
-                        name = '$' + name;
-                    } 
                     fn = (x) => {
                         return x.kind === SymbolKind.Property && name === x.name;
                     };
@@ -372,6 +369,7 @@ export class SymbolStore {
                 break;
 
             case SymbolKind.Variable:
+            case SymbolKind.Parameter:
                 table = this._tableIndex.findByIdentifier(ref);
                 if (table) {
                     let scope = table.scope(ref.location.range.start);
@@ -723,18 +721,6 @@ class ScopeVisitor implements TreeVisitor<PhpSymbol> {
         }
 
         return true;
-    }
-
-    postorder(node:PhpSymbol, spine:PhpSymbol[]) {
-
-        if(this.haltTraverse) {
-            return;
-        }
-
-        if((node.kind & this._kindMask) > 0 && this._scopeStack.length > 1) {
-            this._scopeStack.pop();
-        }
-
     }
 
 }

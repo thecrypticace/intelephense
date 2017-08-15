@@ -830,9 +830,9 @@ class AnonymousFunctionHeaderTransform implements NodeTransform {
                 this.parameters.push(transforms[n].symbol);
             }
         } else if (transform.phraseType === PhraseType.AnonymousFunctionUseClause) {
-            let transforms = (<DelimiteredListTransform>transform).transforms as SymbolNodeTransform[];
-            for(let n = 0; n < transforms.length; ++n) {
-                this.uses.push(transforms[n].symbol);
+            let symbols = (<AnonymousFunctionUseClauseTransform>transform).symbols;
+            for(let n = 0; n < symbols.length; ++n) {
+                this.uses.push(symbols[n]);
             }
         } else if (transform.phraseType === PhraseType.ReturnType) {
             this.returnType = (<ReturnTypeTransform>transform).type;

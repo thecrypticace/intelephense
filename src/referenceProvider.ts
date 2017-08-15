@@ -27,18 +27,17 @@ export class ReferenceProvider {
             return locations;
         }
 
-        let traverser = new ParseTreeTraverser(doc, table);
-        let token = traverser.position(position);
         let symbols: PhpSymbol[];
-        let ref = traverser.reference;
-
+        let ref = table.referenceAtPosition(position);
         if (ref) {
             //get symbol definition
+            //for constructors get the class instead of __construct
+            if (ref.kind === SymbolKind.Constructor) {
+                ref = { kind: SymbolKind.Class, name: ref.name };
+            }
+
             //if class member then make sure base symbol is fetched
             symbols = this.symbolStore.findSymbolsByReference(ref, MemberMergeStrategy.Base);
-        } else if (traverser.isDeclarationName) {
-            let s = this.symbolStore.findBaseMember(traverser.scope);
-            symbols = [s];
         } else {
             return locations;
         }
@@ -58,26 +57,16 @@ export class ReferenceProvider {
      * @param table 
      * @param includeDeclaration 
      */
-    provideReferences(symbols: PhpSymbol[], table:SymbolTable, includeDeclaration:boolean): SymbolIdentifier[] {
+    provideReferences(symbols: PhpSymbol[], table: SymbolTable, includeDeclaration: boolean): SymbolIdentifier[] {
 
-        let refs:SymbolIdentifier[] = [];
-        let s:PhpSymbol;
+        let refs: SymbolIdentifier[] = [];
+        let s: PhpSymbol;
 
-        for(let n = 0; n < symbols.length; ++n) {
+        for (let n = 0; n < symbols.length; ++n) {
             s = symbols[n];
             Array.prototype.push.apply(refs, this._provideReferences(s, table));
 
-            if(includeDeclaration) {
-
-                if(
-                    (s.kind & (SymbolKind.ClassConstant | SymbolKind.Method | SymbolKind.Property)) > 0 &&
-                    !(s.modifiers & SymbolModifier.Private)
-                ) {
-                    Array.prototype.unshift.apply(refs, this.symbolStore.findOverrides(s));
-                }
-                refs.unshift(s);
-
-            }
+            //@todo handle includeDeclaration
 
         }
 
@@ -86,7 +75,7 @@ export class ReferenceProvider {
 
     }
 
-    private _provideReferences(symbol: PhpSymbol, table: SymbolTable) : Reference[] {
+    private _provideReferences(symbol: PhpSymbol, table: SymbolTable): Reference[] {
 
         switch (symbol.kind) {
             case SymbolKind.Parameter:
@@ -110,8 +99,8 @@ export class ReferenceProvider {
 
     }
 
-    private _methodReferences(symbol:PhpSymbol, table:SymbolTable) {
-        
+    private _methodReferences(symbol: PhpSymbol, table: SymbolTable) {
+
         if ((symbol.modifiers & SymbolModifier.Private) > 0) {
             let lcScope = symbol.scope ? symbol.scope.toLowerCase() : '';
             let name = symbol.name.toLowerCase();
@@ -124,8 +113,8 @@ export class ReferenceProvider {
         }
     }
 
-    private _classConstantReferences(symbol:PhpSymbol, table:SymbolTable) {
-        
+    private _classConstantReferences(symbol: PhpSymbol, table: SymbolTable) {
+
         if ((symbol.modifiers & SymbolModifier.Private) > 0) {
             let lcScope = symbol.scope ? symbol.scope.toLowerCase() : '';
             let fn = (x: Reference) => {
@@ -137,9 +126,9 @@ export class ReferenceProvider {
         }
     }
 
-    private _propertyReferences(symbol: PhpSymbol, table:SymbolTable) {
+    private _propertyReferences(symbol: PhpSymbol, table: SymbolTable) {
 
-        let name = (symbol.modifiers & SymbolModifier.Static) > 0 ? symbol.name : symbol.name.slice(1);
+        let name = symbol.name;
         if ((symbol.modifiers & SymbolModifier.Private) > 0) {
             let lcScope = symbol.scope ? symbol.scope.toLowerCase() : '';
             let fn = (x: Reference) => {
@@ -185,10 +174,10 @@ export class ReferenceProvider {
 
     }
 
-    private _variableReferences(symbol: PhpSymbol, table:SymbolTable) {
+    private _variableReferences(symbol: PhpSymbol, table: SymbolTable) {
         let parent = table.parent(symbol);
         let refFn = (r: Reference) => {
-            return r.kind === SymbolKind.Variable && r.name === symbol.name;
+            return (r.kind === SymbolKind.Variable || r.kind === SymbolKind.Parameter) && r.name === symbol.name;
         };
         let refs: SymbolIdentifier[] = PhpSymbol.filterReferences(parent, refFn);
 
