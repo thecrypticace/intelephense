@@ -90,7 +90,7 @@ var interfaceBaseSrc =
 
 var groupUseSrc =
     `<?php
-    namespace Foo\\Bar
+    namespace Foo\\Bar;
     use Foo\\{
         B
     }
@@ -150,17 +150,6 @@ function setup(src: string) {
     let doc = new ParsedDocument('test', src);
     parsedDocumentStore.add(doc);
     symbolStore.add(SymbolTable.create(doc));
-    return completionProvider;
-}
-
-function inbuiltSetup(src: string) {
-    let symbolStore = new SymbolStore();
-    let parsedDocumentStore = new ParsedDocumentStore();
-    let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore);
-    let doc = new ParsedDocument('test', src);
-    parsedDocumentStore.add(doc);
-    symbolStore.add(SymbolTable.create(doc));
-    symbolStore.add(SymbolTable.readBuiltInSymbols());
     return completionProvider;
 }
 
@@ -446,17 +435,21 @@ describe('CompletionProvider', () => {
         symbolStore.add(SymbolTable.create(doc2));
 
         let expected = <lsp.CompletionList>{
-            items: [
+            "items": [
                 {
-                    kind: lsp.CompletionItemKind.Constructor,
-                    label: "Fuz",
-                    insertText: "Fuz",
-                    detail: "Foo\\Bar",
-                    documentation:undefined
+                    "kind": 4,
+                    "label": "Fuz",
+                    "insertText": "Fuz($0)",
+                    "detail": "Foo\\Bar",
+                    "insertTextFormat": 2,
+                    "command": {
+                        "title": "Trigger Parameter Hints",
+                        "command": "editor.action.triggerParameterHints"
+                    }
                 }
             ],
-            isIncomplete: false
-        }
+            "isIncomplete": false
+        };
 
         it('should provide import aliases', () => {
 

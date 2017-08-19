@@ -363,8 +363,7 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
 
     protected _setInsertText(item: lsp.CompletionItem, s: PhpSymbol, namespaceName: string, namePhraseType: PhraseType, useDeclarationHelper: UseDeclarationHelper) {
         const kindMask = SymbolKind.Constant | SymbolKind.Function;
-        let notFqn = PhpSymbol.notFqn(namespaceName);
-
+        let notFqn = PhpSymbol.notFqn(s.name);
         if ((s.modifiers & SymbolModifier.Use) > 0) {
             item.insertText = s.name;
 
@@ -1154,7 +1153,10 @@ class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
         let nsUseDeclModifier = traverser.child(this._isModifier) as Token;
         let kind = this._modifierToSymbolKind(nsUseGroupClauseModifier || nsUseDeclModifier);
         let prefix = '';
-        traverser.parent();
+        if(nsUseDeclModifier) {
+            traverser.parent();
+        }
+        
         if (traverser.child(this._isNamespaceName)) {
             prefix = traverser.text.toLowerCase();
         }

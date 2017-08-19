@@ -72,6 +72,10 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 }
                 break;
 
+            case PhraseType.NamespaceAliasingClause:
+                this._transformStack.push(new NamespaceAliasingClause());
+                break;
+
             case PhraseType.ConstElement:
                 this._transformStack.push(
                     new ConstElementTransform(this.nameResolver, this.document.nodeLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
