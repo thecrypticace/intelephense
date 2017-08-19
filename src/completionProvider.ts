@@ -511,7 +511,7 @@ class SimpleVariableCompletion implements CompletionStrategy {
 
     }
 
-    private _toVariableCompletionItem(s: PhpSymbol, varTable: {[index:string]:string}) {
+    private _toVariableCompletionItem(s: PhpSymbol, varTable: { [index: string]: string }) {
 
         let item = <lsp.CompletionItem>{
             label: s.name,
@@ -692,7 +692,7 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
         let scopePhrase = traverser.nthChild(0) as Phrase;
         let type = this._resolveType(traverser);
         let typeNames = TypeString.atomicClassArray(type);
-
+        
         if (!typeNames.length) {
             return noCompletionResponse;
         }
@@ -866,19 +866,19 @@ class ScopedAccessCompletion extends MemberAccessCompletion {
     }
 
     protected _createMemberPredicate(scopeName: string, word: string, classContext: TypeAggregate): Predicate<PhpSymbol> {
-        if (scopeName === classContext!.name.toLowerCase()) {
+        if (classContext && scopeName === classContext.name.toLowerCase()) {
             //public, protected, private
             return (x) => {
                 return (x.modifiers & SymbolModifier.Static) > 0 && util.fuzzyStringMatch(word, x.name);
             };
-        } else if (classContext!.isBaseClass(scopeName)) {
+        } else if (classContext && classContext.isBaseClass(scopeName)) {
             //public, protected
             //looking for non static here as well to handle parent keyword
             return (x) => {
                 return !(x.modifiers & SymbolModifier.Private) && util.fuzzyStringMatch(word, x.name);
             };
 
-        } else if (classContext!.isAssociated(scopeName)) {
+        } else if (classContext && classContext!.isAssociated(scopeName)) {
             //public, protected
             return (x) => {
                 return (x.modifiers & SymbolModifier.Static) > 0 &&
@@ -911,12 +911,12 @@ class ObjectAccessCompletion extends MemberAccessCompletion {
     }
 
     protected _createMemberPredicate(scopeName: string, word: string, classContext: TypeAggregate): Predicate<PhpSymbol> {
-        if (scopeName === classContext!.name.toLowerCase()) {
+        if (classContext && scopeName === classContext.name.toLowerCase()) {
             //public, protected, private
             return (x) => {
                 return !(x.modifiers & SymbolModifier.Static) && util.fuzzyStringMatch(word, x.name);
             };
-        } else if (classContext!.isAssociated(scopeName)) {
+        } else if (classContext && classContext.isAssociated(scopeName)) {
             //public, protected
             const mask = SymbolModifier.Static | SymbolModifier.Private;
             return (x) => {
@@ -1083,10 +1083,12 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
     }
 
     private _toCompletionItem(s: PhpSymbol) {
-        let item = lsp.CompletionItem.create(s.name);
+        let name = s.kind === SymbolKind.Namespace ? s.name : PhpSymbol.notFqn(s.name);
+        let item = lsp.CompletionItem.create(name);
+        item.insertText = s.name;
         item.kind = symbolKindToLspSymbolKind(s.kind);
-        if (s.kind !== SymbolKind.Namespace) {
-            item.sortText = item.filterText = s.name;
+        if (s.kind !== SymbolKind.Namespace && name !== s.name) {
+            item.detail = s.name;
         }
 
         if (s.doc && s.doc.description) {
@@ -1106,7 +1108,7 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
 
     private _modifierToSymbolKind(token: Token) {
         if (!token) {
-            return SymbolKind.Class | SymbolKind.Namespace;
+            return SymbolKind.Class | SymbolKind.Interface | SymbolKind.Namespace;
         }
 
         switch (token.tokenType) {
@@ -1115,7 +1117,7 @@ class NamespaceUseClauseCompletion implements CompletionStrategy {
             case TokenType.Const:
                 return SymbolKind.Constant;
             default:
-                return SymbolKind.Class | SymbolKind.Namespace;
+                return SymbolKind.Class | SymbolKind.Interface | SymbolKind.Namespace;
         }
     }
 
@@ -1153,10 +1155,10 @@ class NamespaceUseGroupClauseCompletion implements CompletionStrategy {
         let nsUseDeclModifier = traverser.child(this._isModifier) as Token;
         let kind = this._modifierToSymbolKind(nsUseGroupClauseModifier || nsUseDeclModifier);
         let prefix = '';
-        if(nsUseDeclModifier) {
+        if (nsUseDeclModifier) {
             traverser.parent();
         }
-        
+
         if (traverser.child(this._isNamespaceName)) {
             prefix = traverser.text.toLowerCase();
         }

@@ -4,6 +4,7 @@ import { ParsedDocumentStore, ParsedDocument } from '../src/parsedDocument';
 import * as lsp from 'vscode-languageserver-types';
 import { assert } from 'chai';
 import 'mocha';
+import {ReferenceReader} from '../src/referenceReader';
 
 var noCompletions: lsp.CompletionList = {
     items: [],
@@ -149,7 +150,10 @@ function setup(src: string) {
     let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore);
     let doc = new ParsedDocument('test', src);
     parsedDocumentStore.add(doc);
-    symbolStore.add(SymbolTable.create(doc));
+    let table = SymbolTable.create(doc);
+    symbolStore.add(table);
+    ReferenceReader.discoverReferences(doc, table, symbolStore);
+    symbolStore.indexReferences(table);
     return completionProvider;
 }
 

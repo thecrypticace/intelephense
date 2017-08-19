@@ -425,7 +425,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                         scope.references = [];
                     }
                     let ref = (<ReferenceNodeTransform>transform).reference;
-
+                    
                     if (ref) {
                         scope.references.push(ref);
                     }
