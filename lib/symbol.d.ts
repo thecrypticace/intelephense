@@ -54,6 +54,7 @@ export interface SymbolIdentifier {
     location?: HashedLocation;
 }
 export declare namespace PhpSymbol {
+    function keys(s: PhpSymbol): string[];
     function isClassLike(s: PhpSymbol): boolean;
     function signatureString(s: PhpSymbol): string;
     function hasParameters(s: PhpSymbol): boolean;

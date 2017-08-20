@@ -6,7 +6,7 @@
 
 import {ParsedDocument} from './parsedDocument';
 import {SymbolTable} from './symbolStore';
-import {PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
+import {PhpSymbol, SymbolKind, SymbolModifier, SymbolIdentifier } from './symbol';
 import {Position, TextEdit, Range} from 'vscode-languageserver-types';
 import {TreeVisitor} from './types';
 import {Phrase, Token, PhraseType, TokenType} from 'php7parser';
@@ -16,7 +16,7 @@ export class UseDeclarationHelper {
 
     private _useDeclarations:PhpSymbol[];
     private _afterNode:Phrase;
-    private _afterNodeEndPosition:Position;
+    private _afterNodeRange:Range;
     private _cursor:Position;
 
     constructor(public doc:ParsedDocument, public table:SymbolTable, cursor:Position) { 
@@ -24,7 +24,7 @@ export class UseDeclarationHelper {
         this._cursor = cursor;
     }
 
-    insertDeclarationTextEdit(symbol:PhpSymbol, alias?:string) {
+    insertDeclarationTextEdit(symbol:SymbolIdentifier, alias?:string) {
         let afterNode = this._insertAfterNode();
 
         let text = '\n';
@@ -32,6 +32,7 @@ export class UseDeclarationHelper {
             text += '\n';
         }
 
+        text += util.whitespace(this._insertAfterNodeRange().start.character);
         text += 'use ';
 
         switch(symbol.kind) {
@@ -57,7 +58,7 @@ export class UseDeclarationHelper {
 
     }
 
-    replaceDeclarationTextEdit(symbol:PhpSymbol, alias:string) {
+    replaceDeclarationTextEdit(symbol:SymbolIdentifier, alias:string) {
         let useSymbol = this.findUseSymbolByFqn(symbol.name);
         let node = this.findNamespaceUseClauseByRange(useSymbol.location.range) as Phrase;
         let aliasingClause = ParsedDocument.findChild(node, this._isNamespaceAliasingClause) as Phrase;
@@ -119,12 +120,18 @@ export class UseDeclarationHelper {
         return this._afterNode = visitor.lastNamespaceUseDeclaration || visitor.namespaceDefinition || visitor.openingInlineText;
     }
 
-    private _insertPosition() {
-        if(this._afterNodeEndPosition) {
-            return this._afterNodeEndPosition;
+    private _insertAfterNodeRange() {
+
+        if(this._afterNodeRange) {
+            return this._afterNodeRange;
         }
 
-        return this._afterNodeEndPosition = this.doc.nodeRange(this._insertAfterNode()).end;
+        return this._afterNodeRange = this.doc.nodeRange(this._insertAfterNode());
+
+    }
+
+    private _insertPosition() {
+        return this._insertAfterNodeRange().end;
     }
 
     private _isNamespaceAliasingClause(node:Phrase|Token) {

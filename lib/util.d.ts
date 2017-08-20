@@ -7,7 +7,7 @@ export declare function isInRange(position: Position, range: Range): 1 | 0 | -1;
 export declare function rangeEquality(r1: Range, r2: Range): boolean;
 export declare function acronym(text: string): string;
 export declare function trigrams(text: string): Set<string>;
-export declare function fuzzyStringMatch(query: string, subject: string): boolean;
+export declare function ciStringContains(query: string, subject: string): boolean;
 export declare function ciStringMatch(a: string, b: string): boolean;
 export declare function whitespace(n: number): string;
 /**

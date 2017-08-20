@@ -23,24 +23,23 @@ export class NameTextEditProvider {
 
     provideContractFqnTextEdits(uri:string, position:Position, alias?:string) {
 
+        const kindMask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.Function | SymbolKind.Constant | SymbolKind.Constructor;
         let edits:TextEdit[] = [];
         let doc = this.docStore.find(uri);
         let table = this.symbolStore.getSymbolTable(uri);
-
-        if(!doc) {
+        if(!doc || !this._fullyQualifiedNamePhrase(position, doc, table)) {
             return edits;
         }
 
-        let fqnNode = this._fullyQualifiedNamePhrase(position, doc, table);
-        let symbol = this.symbolStore.find(doc.nodeText(fqnNode)).shift();
-
-        if(!symbol) {
+        let ref = table.referenceAtPosition(position);
+        
+        if(!(ref.kind & kindMask)) {
             return edits;
         }
 
         let helper = new UseDeclarationHelper(doc, table, position);
-        let fqnUseSymbol = helper.findUseSymbolByFqn(symbol.name);
-        let nameUseSymbol = helper.findUseSymbolByName(PhpSymbol.notFqn(symbol.name));
+        let fqnUseSymbol = helper.findUseSymbolByFqn(ref.name);
+        let nameUseSymbol = helper.findUseSymbolByName(PhpSymbol.notFqn(ref.name));
 
         if (!fqnUseSymbol){
             if(!alias && nameUseSymbol) {
@@ -48,16 +47,16 @@ export class NameTextEditProvider {
                 return edits;
             }
 
-            edits.push(helper.insertDeclarationTextEdit(symbol, alias));
+            edits.push(helper.insertDeclarationTextEdit(ref, alias));
 
         } else if(alias && fqnUseSymbol.name !== alias) {
             //replace existing 
-            edits.push(helper.replaceDeclarationTextEdit(symbol, alias));
+            edits.push(helper.replaceDeclarationTextEdit(ref, alias));
         }
 
-        let name = alias || PhpSymbol.notFqn(symbol.name);
-        const kindMask = SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.Function | SymbolKind.Constant | SymbolKind.Constructor;
-        let lcName = symbol.name.toLowerCase();
+        let name = alias || PhpSymbol.notFqn(ref.name);
+        
+        let lcName = ref.name.toLowerCase();
 
         let fn = (r:Reference) => {
             return (r.kind & kindMask) > 0 && lcName === r.name.toLowerCase();
@@ -76,13 +75,7 @@ export class NameTextEditProvider {
     private _fullyQualifiedNamePhrase(position:Position, doc:ParsedDocument, table:SymbolTable) {
         let traverser = new ParseTreeTraverser(doc, table);
         traverser.position(position);
-        let fqnNode = traverser.ancestor(this._isFullyQualifiedName);
-        if(!fqnNode && position.character > 0) {
-            traverser.position(Position.create(position.line, position.character - 1));
-            return traverser.ancestor(this._isFullyQualifiedName);
-        } else {
-            return fqnNode;
-        }
+        return traverser.ancestor(this._isFullyQualifiedName);
     } 
 
     private _isFullyQualifiedName(node:Phrase|Token) {

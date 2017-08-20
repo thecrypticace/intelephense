@@ -54,7 +54,7 @@ export declare class SymbolStore {
      */
     find(text: string, filter?: Predicate<PhpSymbol>): PhpSymbol[];
     /**
-     * Fuzzy matches indexed symbols.
+     * matches indexed symbols where symbol keys begin with text.
      * Case insensitive
      */
     match(text: string, filter?: Predicate<PhpSymbol>): PhpSymbol[];
@@ -77,4 +77,30 @@ export declare class SymbolStore {
     private _indexFilter(s);
     private _symbolKeys(s);
     private _referenceKeys(ref);
+}
+export declare type KeysDelegate<T> = (t: T) => string[];
+export declare class NameIndex<T> {
+    private _keysDelegate;
+    private _nodeArray;
+    private _binarySearch;
+    private _collator;
+    constructor(keysDelegate: KeysDelegate<T>);
+    add(item: T): void;
+    addMany(items: T[]): void;
+    remove(item: T): void;
+    removeMany(items: T[]): void;
+    /**
+     * Matches all items that are prefixed with text
+     * @param text
+     */
+    match(text: string): PhpSymbol[];
+    /**
+     * Finds all items that match (case insensitive) text exactly
+     * @param text
+     */
+    find(text: string): T[];
+    private _nodeMatch(lcText);
+    private _nodeFind(lcText);
+    private _insertNode(node);
+    private _deleteNode(node);
 }

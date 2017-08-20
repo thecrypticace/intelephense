@@ -3,7 +3,8 @@ import { assert } from 'chai';
 import 'mocha';
 import { ParsedDocument, ParsedDocumentStore } from '../src/parsedDocument';
 import { SymbolStore, SymbolTable } from '../src/symbolStore';
-import { importSymbol } from '../src/commands';
+import { NameTextEditProvider } from '../src/commands';
+import {ReferenceReader} from '../src/referenceReader';
 
 describe('importSymbol', () => {
 
@@ -25,8 +26,14 @@ describe('importSymbol', () => {
     docStore.add(doc1);
     docStore.add(doc2);
     let symbolStore = new SymbolStore();
-    symbolStore.add(SymbolTable.create(doc1));
-    symbolStore.add(SymbolTable.create(doc2));
+    let t1 = SymbolTable.create(doc1);
+    let t2 = SymbolTable.create(doc2);
+    symbolStore.add(t1);
+    symbolStore.add(t2);
+    ReferenceReader.discoverReferences(doc1, t1, symbolStore);
+    ReferenceReader.discoverReferences(doc2, t2, symbolStore);
+    symbolStore.indexReferences(t1);
+    symbolStore.indexReferences(t2);
 
     let expected = [
         {
@@ -60,7 +67,8 @@ describe('importSymbol', () => {
 
     it('Should return text edits when a symbol can be imported', () => {
 
-        let edits = importSymbol(symbolStore, docStore, 'doc2', { line: 2, character: 27 });
+        let provider = new NameTextEditProvider(symbolStore, docStore);
+        let edits = provider.provideContractFqnTextEdits('doc2', { line: 2, character: 27 });
         //console.log(JSON.stringify(edits, null, 4));
         assert.deepEqual(edits, expected);
     });
