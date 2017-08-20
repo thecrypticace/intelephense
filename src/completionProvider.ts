@@ -30,7 +30,7 @@ function keywordCompletionItems(keywords: string[], text: string) {
     for (let n = 0, l = keywords.length; n < l; ++n) {
 
         kw = keywords[n];
-        if (util.fuzzyStringMatch(text, kw)) {
+        if (util.ciStringContains(text, kw)) {
             items.push({
                 label: kw,
                 kind: lsp.CompletionItemKind.Keyword
@@ -282,7 +282,7 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         let r: PhpSymbol;
         for (let n = 0, l = rules.length; n < l; ++n) {
             r = rules[n];
-            if (r.associated && r.associated.length > 0 && util.fuzzyStringMatch(text, r.name)) {
+            if (r.associated && r.associated.length > 0 && util.ciStringContains(text, r.name)) {
                 filteredRules.push(r);
             }
         }
@@ -869,13 +869,13 @@ class ScopedAccessCompletion extends MemberAccessCompletion {
         if (classContext && scopeName === classContext.name.toLowerCase()) {
             //public, protected, private
             return (x) => {
-                return (x.modifiers & SymbolModifier.Static) > 0 && util.fuzzyStringMatch(word, x.name);
+                return (x.modifiers & SymbolModifier.Static) > 0 && util.ciStringContains(word, x.name);
             };
         } else if (classContext && classContext.isBaseClass(scopeName)) {
             //public, protected
             //looking for non static here as well to handle parent keyword
             return (x) => {
-                return !(x.modifiers & SymbolModifier.Private) && util.fuzzyStringMatch(word, x.name);
+                return !(x.modifiers & SymbolModifier.Private) && util.ciStringContains(word, x.name);
             };
 
         } else if (classContext && classContext!.isAssociated(scopeName)) {
@@ -883,14 +883,14 @@ class ScopedAccessCompletion extends MemberAccessCompletion {
             return (x) => {
                 return (x.modifiers & SymbolModifier.Static) > 0 &&
                     !(x.modifiers & SymbolModifier.Private) &&
-                    util.fuzzyStringMatch(word, x.name);
+                    util.ciStringContains(word, x.name);
             };
 
         } else {
             //public
             const mask = SymbolModifier.Static | SymbolModifier.Public;
             return (x) => {
-                return (x.modifiers & mask) === mask && util.fuzzyStringMatch(word, x.name);
+                return (x.modifiers & mask) === mask && util.ciStringContains(word, x.name);
             };
         }
     }
@@ -914,20 +914,20 @@ class ObjectAccessCompletion extends MemberAccessCompletion {
         if (classContext && scopeName === classContext.name.toLowerCase()) {
             //public, protected, private
             return (x) => {
-                return !(x.modifiers & SymbolModifier.Static) && util.fuzzyStringMatch(word, x.name);
+                return !(x.modifiers & SymbolModifier.Static) && util.ciStringContains(word, x.name);
             };
         } else if (classContext && classContext.isAssociated(scopeName)) {
             //public, protected
             const mask = SymbolModifier.Static | SymbolModifier.Private;
             return (x) => {
-                return !(x.modifiers & mask) && util.fuzzyStringMatch(word, x.name);
+                return !(x.modifiers & mask) && util.ciStringContains(word, x.name);
             };
 
         } else {
             //public
             const mask = SymbolModifier.Static | SymbolModifier.Protected | SymbolModifier.Private;
             return (x) => {
-                return !(x.modifiers & mask) && util.fuzzyStringMatch(word, x.name);
+                return !(x.modifiers & mask) && util.ciStringContains(word, x.name);
             };
         }
     }
@@ -1291,7 +1291,7 @@ class MethodDeclarationHeaderCompletion implements CompletionStrategy {
                 (!modifiers || (x.modifiers & modifiers) > 0) &&
                 !(x.modifiers & (SymbolModifier.Final | SymbolModifier.Private)) &&
                 existingMethodNames.indexOf(x.name) < 0 &&
-                util.fuzzyStringMatch(word, x.name);
+                util.ciStringContains(word, x.name);
         }
 
         let aggregate = new TypeAggregate(this.symbolStore, classSymbol, true);

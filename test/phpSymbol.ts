@@ -12,7 +12,7 @@ describe('PhpSymbol', () => {
                 kind:SymbolKind.Class,
                 name:'Foo\\MyFooClass'
             } 
-            assert.equal(acronym(s.name), 'mfc');
+            assert.equal(acronym(PhpSymbol.notFqn(s.name)), 'mfc');
         });
 
         it('Should return correct acronym for lower case underscore separated name', () => {
@@ -36,12 +36,12 @@ describe('PhpSymbol', () => {
                 kind:SymbolKind.Variable,
                 name:'THIS_IS_A_CONSTANT'
             } 
-            assert.equal(acronym(s), 'tiac');
+            assert.equal(acronym(s.name), 'tiac');
         });
 
     });
 
-    describe('#suffixArray()', () => {
+    describe('#keys()', () => {
 
         it('Should return correct suffixes for camel case fqn', () => {
             let s:PhpSymbol = {
@@ -56,7 +56,7 @@ describe('PhpSymbol', () => {
                 'class'
             ];
 
-            assert.deepEqual(PhpSymbol.suffixArray(s), expected);
+            assert.deepEqual(PhpSymbol.keys(s), expected);
         });
 
         it('Should return correct suffixes for lower case underscore separated name', () => {
@@ -71,7 +71,7 @@ describe('PhpSymbol', () => {
                 'function'
             ];
 
-            assert.deepEqual(PhpSymbol.suffixArray(s), expected);
+            assert.deepEqual(PhpSymbol.keys(s), expected);
         });
 
         it('Should return correct suffixes for camel case variable/property', () => {
@@ -86,7 +86,7 @@ describe('PhpSymbol', () => {
                 'property'
             ];
 
-            assert.deepEqual(PhpSymbol.suffixArray(s), expected);
+            assert.deepEqual(PhpSymbol.keys(s), expected);
         });
 
         it('Should return correct suffixes for upper case underscore separated name', () => {
@@ -102,7 +102,7 @@ describe('PhpSymbol', () => {
                 'constant'
             ];
 
-            assert.deepEqual(PhpSymbol.suffixArray(s), expected);
+            assert.deepEqual(PhpSymbol.keys(s), expected);
         });
 
     });

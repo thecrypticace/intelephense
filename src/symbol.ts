@@ -77,11 +77,45 @@ export interface SymbolIdentifier {
 
 export namespace PhpSymbol {
 
+    export function keys(s: PhpSymbol) {
+        if (!s.name) {
+            return [];
+        }
+
+        let text = notFqn(s.name);
+        let lcText = text.toLowerCase();
+        let suffixes = [s.name.toLowerCase()];
+        if (text !== s.name) {
+            suffixes.push(lcText);
+        }
+        let n = 0;
+        let c: string;
+        let l = text.length;
+
+        while (n < l) {
+
+            c = text[n];
+
+            if ((c === '$' || c === '_') && n + 1 < l && text[n + 1] !== '_') {
+                ++n;
+                suffixes.push(lcText.slice(n));
+            } else if (n > 0 && c !== lcText[n] && text[n - 1] === lcText[n - 1]) {
+                //uppercase
+                suffixes.push(lcText.slice(n));
+            }
+
+            ++n;
+
+        }
+
+        return suffixes;
+    }
+
     function isParameter(s: PhpSymbol) {
         return s.kind === SymbolKind.Parameter;
     }
 
-    export function isClassLike(s:PhpSymbol) {
+    export function isClassLike(s: PhpSymbol) {
         return (s.kind & (SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait)) > 0;
     }
 
@@ -206,17 +240,17 @@ export namespace PhpSymbol {
         return util.filter<PhpSymbol>(parent.children, fn);
     }
 
-    export function findChild(parent:PhpSymbol, fn:Predicate<PhpSymbol>) {
-        if(!parent || !parent.children) {
+    export function findChild(parent: PhpSymbol, fn: Predicate<PhpSymbol>) {
+        if (!parent || !parent.children) {
             return undefined;
         }
 
         return util.find<PhpSymbol>(parent.children, fn);
     }
 
-    export function isAssociated(symbol:PhpSymbol, name:string) {
+    export function isAssociated(symbol: PhpSymbol, name: string) {
         let lcName = name.toLowerCase();
-        let fn = (x:PhpSymbol) => {
+        let fn = (x: PhpSymbol) => {
             return lcName === x.name.toLowerCase();
         }
         return util.find(symbol.associated, fn);
@@ -226,19 +260,19 @@ export namespace PhpSymbol {
      * uniqueness determined by name and symbol kind
      * @param symbol 
      */
-    export function unique(symbols:PhpSymbol[]) {
-        
-        let uniqueSymbols:PhpSymbol[] = [];
-        if(!symbols) {
+    export function unique(symbols: PhpSymbol[]) {
+
+        let uniqueSymbols: PhpSymbol[] = [];
+        if (!symbols) {
             return uniqueSymbols;
         }
-        
-        let map:{[index:string]:SymbolKind} = {};
-        let s:PhpSymbol;
 
-        for(let n = 0, l = symbols.length; n < l; ++n) {
+        let map: { [index: string]: SymbolKind } = {};
+        let s: PhpSymbol;
+
+        for (let n = 0, l = symbols.length; n < l; ++n) {
             s = symbols[n];
-            if(!(map[s.name] & s.kind)){
+            if (!(map[s.name] & s.kind)) {
                 uniqueSymbols.push(s);
                 map[s.name] |= s.kind;
             }

@@ -96,33 +96,12 @@ export function trigrams(text: string) {
     return trigrams;
 }
 
-export function fuzzyStringMatch(query: string, subject: string) {
+export function ciStringContains(query: string, subject: string) {
     if (!query) {
         return true;
     }
 
-    query = query.toLowerCase();
-    let lcSubject = subject.toLowerCase();
-
-    let substrings = trigrams(query);
-    substrings.add(query);
-
-    let iterator = substrings.values();
-    let result: IteratorResult<string>;
-
-    while (true) {
-
-        result = iterator.next();
-
-        if (result.done) {
-            break;
-        } else if (lcSubject.indexOf(result.value) > -1) {
-            return true;
-        }
-
-    }
-
-    return acronym(subject).indexOf(query) > -1;
+    return subject.toLowerCase().indexOf(query.toLowerCase()) > -1
 
 }
 

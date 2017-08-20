@@ -1,4 +1,5 @@
-import { PhpSymbol, SymbolKind, SymbolIndex } from '../src/symbol';
+import { PhpSymbol, SymbolKind } from '../src/symbol';
+import {NameIndex} from '../src/symbolStore';
 import { assert } from 'chai';
 import 'mocha';
 
@@ -35,7 +36,7 @@ describe('SymbolIndex', () => {
 
     describe('#match()', () => {
 
-        let index = new SymbolIndex();
+        let index = new NameIndex<PhpSymbol>(PhpSymbol.keys);
         index.addMany(symbols);
 
         it('Should return single element array of matching item when given a unique string that exists', () => {

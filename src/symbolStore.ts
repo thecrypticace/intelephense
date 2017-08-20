@@ -271,7 +271,7 @@ export class SymbolStore {
     }
 
     /**
-     * Fuzzy matches indexed symbols.
+     * matches indexed symbols where symbol keys begin with text.
      * Case insensitive
      */
     match(text: string, filter?: Predicate<PhpSymbol>) {
@@ -280,23 +280,10 @@ export class SymbolStore {
             return [];
         }
 
-        let substrings: string[];
-
-        if (text.length > 3) {
-            let trigrams = util.trigrams(text);
-            trigrams.add(text);
-            substrings = Array.from(trigrams);
-        } else {
-            substrings = [text];
-        }
-
-        let matches: PhpSymbol[] = [];
-        for (let n = 0; n < substrings.length; ++n) {
-            Array.prototype.push.apply(matches, this._symbolIndex.match(substrings[n]));
-        }
+        let matches: PhpSymbol[] = this._symbolIndex.match(text);
 
         if (!filter) {
-            return this._sortMatches(text, matches);
+            return matches;
         }
 
         let filtered: PhpSymbol[] = [];
@@ -309,7 +296,7 @@ export class SymbolStore {
             }
         }
 
-        return this._sortMatches(text, filtered);
+        return filtered;
     }
 
     findSymbolsByReference(ref: Reference, memberMergeStrategy?: MemberMergeStrategy): PhpSymbol[] {
@@ -611,22 +598,7 @@ export class SymbolStore {
             return Array.from(keys);
         }
 
-        let notFqn = PhpSymbol.notFqn(s.name);
-        let lcNotFqn = notFqn.toLowerCase();
-        let lcFqn = s.name.toLowerCase();
-
-        let keys = util.trigrams(lcNotFqn);
-        if (lcNotFqn) {
-            keys.add(lcNotFqn);
-        }
-
-        keys.add(lcFqn);
-
-        let acronym = util.acronym(notFqn);
-        if (acronym.length > 1) {
-            keys.add(acronym);
-        }
-        return Array.from(keys);
+        return PhpSymbol.keys(s);
     }
 
     private _referenceKeys(ref: Reference) {
@@ -806,9 +778,9 @@ interface NameIndexNode<T> {
     items: T[];
 }
 
-type KeysDelegate<T> = (t: T) => string[];
+export type KeysDelegate<T> = (t: T) => string[];
 
-class NameIndex<T> {
+export class NameIndex<T> {
 
     private _keysDelegate: KeysDelegate<T>;
     private _nodeArray: NameIndexNode<T>[];
