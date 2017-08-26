@@ -18,6 +18,8 @@ import * as lsp from 'vscode-languageserver-types';
 import { NameTextEditProvider } from './commands';
 import { ReferenceReader } from './referenceReader';
 import { NameResolver } from './nameResolver';
+import { ReferenceProvider } from './referenceProvider';
+import { ReferenceParams } from 'vscode-languageserver-protocol';
 
 export namespace Intelephense {
 
@@ -33,6 +35,7 @@ export namespace Intelephense {
     let definitionProvider = new DefinitionProvider(symbolStore, documentStore);
     let formatProvider = new FormatProvider(documentStore);
     let nameTextEditProvider = new NameTextEditProvider(symbolStore, documentStore);
+    let referenceProvider = new ReferenceProvider(documentStore, symbolStore);
     let unsubscribeMap: { [index: string]: Unsubscribe } = {};
 
     function unsubscribe(key: string) {
@@ -162,12 +165,12 @@ export namespace Intelephense {
 
         if (documentStore.has(uri)) {
             //if document is in doc store/opened then dont rediscover.
-            
+
             return symbolTable ? symbolTable.referenceCount : 0;
         }
 
-        if(!symbolTable) {
-            //symbols must have already been discovered
+        if (!symbolTable) {
+            //symbols must be discovered first
             return 0;
         }
 
@@ -214,6 +217,11 @@ export namespace Intelephense {
     export function provideDocumentRangeFormattingEdits(doc: lsp.TextDocumentIdentifier, range: lsp.Range, formatOptions: lsp.FormattingOptions) {
         flushParseDebounce(doc.uri);
         return formatProvider.provideDocumentRangeFormattingEdits(doc, range, formatOptions);
+    }
+
+    export function provideReferences(params: ReferenceParams) {
+        flushParseDebounce(params.textDocument.uri);
+        return referenceProvider.provideReferenceLocations(params.textDocument.uri, params.position, params.context);
     }
 
     function flushParseDebounce(uri: string) {
