@@ -69,16 +69,10 @@ export namespace Intelephense {
 
     }
 
-    export function setDiagnosticsProviderDebounce(value: number) {
-        diagnosticsProvider.debounceWait = value;
-    }
-
-    export function setDiagnosticsProviderMaxItems(value: number) {
-        diagnosticsProvider.maxItems = value;
-    }
-
-    export function setCompletionProviderConfig(config: CompletionOptions) {
-        completionProvider.config = config;
+    export function setConfig(config:IntelephenseConfig) {
+        diagnosticsProvider.debounceWait = config.diagnosticsProvider.debounce;
+        diagnosticsProvider.maxItems = config.diagnosticsProvider.maxItems;
+        completionProvider.config = config.completionProvider;
     }
 
     export function openDocument(textDocument: lsp.TextDocumentItem) {
@@ -230,5 +224,23 @@ export namespace Intelephense {
         }
     }
 
+}
+
+export interface IntelephenseConfig {
+	debug: {
+		enable: boolean;
+	},
+	diagnosticsProvider: {
+		debounce: number,
+		maxItems: number
+	},
+	completionProvider: {
+        maxItems: number,
+        addUseDeclaration:boolean,
+        backslashPrefix:boolean
+	},
+	file: {
+		maxSize: number
+	}
 }
 
