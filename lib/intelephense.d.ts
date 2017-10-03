@@ -1,13 +1,10 @@
-import { CompletionOptions } from './completionProvider';
 import { PublishDiagnosticsEventArgs } from './diagnosticsProvider';
 import * as lsp from 'vscode-languageserver-types';
 export declare namespace Intelephense {
     function onDiagnosticsStart(fn: (uri: string) => void): void;
     function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void): void;
     function initialise(): void;
-    function setDiagnosticsProviderDebounce(value: number): void;
-    function setDiagnosticsProviderMaxItems(value: number): void;
-    function setCompletionProviderConfig(config: CompletionOptions): void;
+    function setConfig(config: IntelephenseConfig): void;
     function openDocument(textDocument: lsp.TextDocumentItem): void;
     function closeDocument(textDocument: lsp.TextDocumentIdentifier): void;
     function editDocument(textDocument: lsp.VersionedTextDocumentIdentifier, contentChanges: lsp.TextDocumentContentChangeEvent[]): void;
@@ -26,4 +23,21 @@ export declare namespace Intelephense {
     function provideDocumentFormattingEdits(doc: lsp.TextDocumentIdentifier, formatOptions: lsp.FormattingOptions): lsp.TextEdit[];
     function provideDocumentRangeFormattingEdits(doc: lsp.TextDocumentIdentifier, range: lsp.Range, formatOptions: lsp.FormattingOptions): lsp.TextEdit[];
     function provideReferences(doc: lsp.TextDocumentIdentifier, pos: lsp.Position, context: lsp.ReferenceContext): lsp.Location[];
+}
+export interface IntelephenseConfig {
+    debug: {
+        enable: boolean;
+    };
+    diagnosticsProvider: {
+        debounce: number;
+        maxItems: number;
+    };
+    completionProvider: {
+        maxItems: number;
+        addUseDeclaration: boolean;
+        backslashPrefix: boolean;
+    };
+    file: {
+        maxSize: number;
+    };
 }
