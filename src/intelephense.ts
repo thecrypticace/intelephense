@@ -19,7 +19,6 @@ import { NameTextEditProvider } from './commands';
 import { ReferenceReader } from './referenceReader';
 import { NameResolver } from './nameResolver';
 import { ReferenceProvider } from './referenceProvider';
-import { ReferenceParams } from 'vscode-languageserver-protocol';
 
 export namespace Intelephense {
 
@@ -219,9 +218,9 @@ export namespace Intelephense {
         return formatProvider.provideDocumentRangeFormattingEdits(doc, range, formatOptions);
     }
 
-    export function provideReferences(params: ReferenceParams) {
-        flushParseDebounce(params.textDocument.uri);
-        return referenceProvider.provideReferenceLocations(params.textDocument.uri, params.position, params.context);
+    export function provideReferences(doc:lsp.TextDocumentIdentifier, pos:lsp.Position, context:lsp.ReferenceContext) {
+        flushParseDebounce(doc.uri);
+        return referenceProvider.provideReferenceLocations(doc.uri, pos, context);
     }
 
     function flushParseDebounce(uri: string) {
