@@ -352,7 +352,12 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
                 } else if ((<Token>node).tokenType === TokenType.VariableName && parentNode.phraseType === PhraseType.CatchClause) {
                     //catch clause vars
-                    parentTransform.push(new CatchClauseVariableNameTransform(this.document.tokenText(<Token>node), this.document.nodeLocation(node)));
+                    for (let n = this._transformStack.length - 1; n > -1; --n) {
+                        if (this._transformStack[n]) {
+                            this._transformStack[n].push(new CatchClauseVariableNameTransform(this.document.tokenText(<Token>node), this.document.nodeLocation(node)));
+                            break;
+                        }
+                    }
 
                 } else if (parentTransform && (<Token>node).tokenType > TokenType.EndOfFile && (<Token>node).tokenType < TokenType.Equals) {
 
