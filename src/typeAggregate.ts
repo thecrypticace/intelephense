@@ -90,6 +90,7 @@ export class TypeAggregate {
         let members: PhpSymbol[] = [];
         let s: PhpSymbol;
         let traits: PhpSymbol[] = [];
+        let p = predicate;
         let noPrivate = (x: PhpSymbol) => {
             return !(x.modifiers & SymbolModifier.Private) && (!predicate || predicate(x));
         };
@@ -99,16 +100,16 @@ export class TypeAggregate {
             if (s.kind === SymbolKind.Trait) {
                 traits.push(s);
             } else if (s.children) {
-                Array.prototype.push.apply(members, predicate ? s.children.filter(predicate) : s.children);
+                Array.prototype.push.apply(members, p ? s.children.filter(p) : s.children);
             }
 
-            predicate = noPrivate;
+            p = noPrivate;
         }
 
-        predicate = noPrivate;
+        p = noPrivate;
         members = this._mergeMembers(members, strategy);
         //@todo trait precendence/alias
-        Array.prototype.push.apply(members, this._traitMembers(traits, predicate));
+        Array.prototype.push.apply(members, this._traitMembers(traits, p));
         return members;
 
     }
