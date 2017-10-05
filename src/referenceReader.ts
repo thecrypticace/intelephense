@@ -35,7 +35,10 @@ interface TextNodeTransform extends NodeTransform {
     text: string;
 }
 
-function symbolsToTypeReduceFn(prev: string, current: PhpSymbol) {
+function symbolsToTypeReduceFn(prev: string, current: PhpSymbol, index:number, array:PhpSymbol[]) {
+    if(!current) {
+        throw new Error(JSON.stringify(array));
+    }
     return TypeString.merge(prev, PhpSymbol.type(current));
 }
 
