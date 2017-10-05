@@ -1105,24 +1105,6 @@ class InstanceOfExpressionTransform implements TypeNodeTransform, VariableNodeTr
             this._varType = (<TypeDesignatorTransform>transform).type;
         }
 
-        switch (transform.phraseType) {
-            case PhraseType.InstanceofTypeDesignator:
-                this.variable.type = (<TypeDesignatorTransform>transform).type;
-                break;
-
-            case PhraseType.SimpleVariable:
-                {
-                    let ref = (<SimpleVariableTransform>transform).reference;
-                    if (ref) {
-                        this.variable.name = ref.name;
-                    }
-                }
-                break;
-
-            default:
-                break;
-        }
-
     }
 
     get variable() {
