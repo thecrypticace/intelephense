@@ -36,9 +36,6 @@ interface TextNodeTransform extends NodeTransform {
 }
 
 function symbolsToTypeReduceFn(prev: string, current: PhpSymbol, index:number, array:PhpSymbol[]) {
-    if(!current) {
-        throw new Error(JSON.stringify(array));
-    }
     return TypeString.merge(prev, PhpSymbol.type(current));
 }
 
@@ -1386,6 +1383,10 @@ class MemberAccessExpressionTransform implements TypeNodeTransform, ReferenceNod
     }
 
     get type() {
+        let symbols = this.referenceSymbolDelegate(this.reference);
+        if(symbols.indexOf(null) > -1) {
+            throw new Error(JSON.stringify(this.reference));
+        }
         return this.referenceSymbolDelegate(this.reference).reduce(symbolsToTypeReduceFn, '');
     }
 
