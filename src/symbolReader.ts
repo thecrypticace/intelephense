@@ -1263,7 +1263,7 @@ class MethodDeclarationTransform implements SymbolNodeTransform {
 
         if (transform instanceof MethodDeclarationHeaderTransform) {
             this._symbol.modifiers = transform.modifiers;
-            this._symbol.name = this.nameResolver.resolveRelative(transform.name);
+            this._symbol.name = transform.name;
             this._children.pushMany(transform.parameters);
             this._symbol.type = transform.returnType;
         } else if (transform.phraseType === PhraseType.MethodDeclarationBody) {
