@@ -1384,7 +1384,7 @@ class MemberAccessExpressionTransform implements TypeNodeTransform, ReferenceNod
 
     get type() {
         let symbols = this.referenceSymbolDelegate(this.reference);
-        if(symbols.indexOf(null) > -1) {
+        if(symbols.findIndex((x)=>{return !x;}) > -1) {
             throw new Error(JSON.stringify(this.reference));
         }
         return this.referenceSymbolDelegate(this.reference).reduce(symbolsToTypeReduceFn, '');
