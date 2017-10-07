@@ -894,7 +894,11 @@ class ListIntrinsicTransform implements NodeTransform {
     }
 
     push(transform: NodeTransform) {
-        //only ArrayInitialiserList should get pushed
+        
+        if(transform.phraseType !== PhraseType.ArrayInitialiserList) {
+            return;
+        }
+
         this.variables = (<ArrayInititialiserListTransform>transform).variables;
         for (let n = 0; n < this.variables.length; ++n) {
             this.variables[n].arrayDereferenced--;
