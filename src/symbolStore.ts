@@ -390,14 +390,14 @@ export class SymbolStore {
 
         let fqnArray = TypeString.atomicClassArray(scope);
         let type: TypeAggregate;
-        let members = new Set<PhpSymbol>();
+        let members:PhpSymbol[] = [];
         for (let n = 0; n < fqnArray.length; ++n) {
             type = TypeAggregate.create(this, fqnArray[n]);
             if (type) {
-                Set.prototype.add.apply(members, type.members(memberMergeStrategy, predicate));
+                Array.prototype.push.apply(members, type.members(memberMergeStrategy, predicate));
             }
         }
-        return Array.from(members);
+        return Array.from(new Set<PhpSymbol>(members));
     }
 
     findBaseMember(symbol: PhpSymbol) {

@@ -11,6 +11,24 @@ describe('intelephense', function(){
             Intelephense.initialise();
             assert.isAbove(Intelephense.numberSymbolsKnown(), 1);
 
+            let src = 
+            `<?php
+            class Result implements Iterator, ResultInterface
+            {
+                /**
+                 * @var \mysqli|\mysqli_result|\mysqli_stmt
+                 */
+                protected $resource = null;
+
+                function fn()
+                {
+                    $data = $this->resource->result_metadata();
+                }
+            }
+            `;
+
+            Intelephense.openDocument({uri:'test', text:src, languageId:'php', version:0});
+
         });
 
     });
