@@ -133,10 +133,9 @@ export class TypeAggregate {
 
     private _mergeMembers(symbols: PhpSymbol[], strategy: MemberMergeStrategy) {
 
-        let map: { [index: string]: number } = {};
-        let merged: PhpSymbol[] = [];
+        let map: { [index: string]: PhpSymbol } = {};
         let s: PhpSymbol;
-        let index: number;
+        let mapped:PhpSymbol;
 
         if (strategy === MemberMergeStrategy.None) {
             return symbols;
@@ -144,20 +143,28 @@ export class TypeAggregate {
 
         for (let n = 0; n < symbols.length; ++n) {
             s = symbols[n];
-            index = map[s.name];
-            if (index === undefined) {
-                merged.push(s);
-                map[s.name] = merged.length - 1;
-            } else if (
-                ((merged[index].modifiers & SymbolModifier.Magic) > 0 && !(s.modifiers & SymbolModifier.Magic)) || //always prefer non magic
-                (strategy === MemberMergeStrategy.Documented && !merged[index].doc && s.doc) ||
+            mapped = map[s.name];
+            if (
+                !mapped ||
+                ((mapped.modifiers & SymbolModifier.Magic) > 0 && !(s.modifiers & SymbolModifier.Magic)) || //always prefer non magic
+                (strategy === MemberMergeStrategy.Documented && (!mapped.doc || this.hasInheritdoc(mapped.doc.description)) && s.doc) ||
                 (strategy === MemberMergeStrategy.Base)
             ) {
-                merged[index] = s;
-            }
+                map[s.name] = s;
+            } 
+            
         }
 
-        return merged;
+        return Object.keys(map).map((v:string)=>{ return map[v]; });
+    }
+
+    private hasInheritdoc(description:string) {
+        if(!description) {
+            return false;
+        }
+
+        description = description.toLowerCase().trim();
+        return description === '@inheritdoc' || description === '{@inheritdoc}';
     }
 
     private _getAssociated() {

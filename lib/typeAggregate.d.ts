@@ -28,6 +28,7 @@ export declare class TypeAggregate {
     private _interfaceMembers(interfaces, predicate?);
     private _traitMembers(traits, predicate?);
     private _mergeMembers(symbols, strategy);
+    private hasInheritdoc(description);
     private _getAssociated();
     static create(symbolStore: SymbolStore, fqn: string): TypeAggregate;
 }
