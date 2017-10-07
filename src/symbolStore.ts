@@ -581,8 +581,7 @@ export class SymbolStore {
      * @param s 
      */
     private _indexFilter(s: PhpSymbol) {
-        return s.kind !== SymbolKind.Parameter &&
-            s.kind !== SymbolKind.Variable &&
+        return !(s.kind & (SymbolKind.Parameter | SymbolKind.Variable | SymbolKind.File)) &&
             !(s.modifiers & (SymbolModifier.Use | SymbolModifier.Private)) &&
             s.name.length > 0;
     }
