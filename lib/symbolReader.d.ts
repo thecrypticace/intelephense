@@ -9,7 +9,6 @@ export declare class SymbolReader implements TreeVisitor<Phrase | Token> {
     nameResolver: NameResolver;
     lastPhpDoc: PhpDoc;
     lastPhpDocLocation: HashedLocation;
-    externalOnly: boolean;
     private _transformStack;
     private _uriHash;
     constructor(document: ParsedDocument, nameResolver: NameResolver);

@@ -159,7 +159,6 @@ export class SymbolTable implements Traversable<PhpSymbol> {
     static create(parsedDocument: ParsedDocument, externalOnly?: boolean) {
 
         let symbolReader = new SymbolReader(parsedDocument, new NameResolver());
-        symbolReader.externalOnly = externalOnly;
 
         parsedDocument.traverse(symbolReader);
         return new SymbolTable(

@@ -17,7 +17,6 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
     lastPhpDoc: PhpDoc;
     lastPhpDocLocation: HashedLocation;
-    externalOnly = false;
 
     private _transformStack: NodeTransform[];
     private _uriHash = 0;
@@ -113,9 +112,6 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.FunctionDeclarationBody:
             case PhraseType.MethodDeclarationBody:
                 this._transformStack.push(new FunctionDeclarationBodyTransform((<Phrase>node).phraseType));
-                if (this.externalOnly) {
-                    return false;
-                }
                 break;
 
             case PhraseType.ClassDeclaration:
