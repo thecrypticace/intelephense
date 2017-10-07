@@ -915,6 +915,7 @@ class ArrayInititialiserListTransform implements TypeNodeTransform {
 
     constructor() {
         this.variables = [];
+        this._types = [];
     }
 
     push(transform: NodeTransform) {
