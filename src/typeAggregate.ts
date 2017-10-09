@@ -24,7 +24,7 @@ export class TypeAggregate {
 
     constructor(public symbolStore: SymbolStore, symbol: PhpSymbol, excludeTraits?:boolean) {
         if (!symbol || !(symbol.kind & (SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait))) {
-            throw new Error('Invalid Argument');
+            throw new Error('Invalid Argument' + JSON.stringify(symbol, null, 4));
         }
         this._symbol = symbol;
         this._excludeTraits = excludeTraits;
