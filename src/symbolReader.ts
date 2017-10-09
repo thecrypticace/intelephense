@@ -450,6 +450,10 @@ class UniqueSymbolCollection {
         this._varMap = Object.assign({}, UniqueSymbolCollection._inbuilt);
     }
 
+    get length() {
+        return this._symbols.length;
+    }
+
     push(s: PhpSymbol) {
         if (s.kind & (SymbolKind.Parameter | SymbolKind.Variable)) {
             if (this._varMap[s.name] === undefined) {
@@ -1088,18 +1092,38 @@ class ClassInterfaceClauseTransform implements SymbolsNodeTransform {
 class NamespaceDefinitionTransform implements SymbolNodeTransform {
 
     phraseType = PhraseType.NamespaceDefinition;
-    symbol: PhpSymbol;
+    private _symbol: PhpSymbol;
+    private _children: UniqueSymbolCollection;
 
     constructor(location: HashedLocation) {
-        this.symbol = PhpSymbol.create(SymbolKind.Namespace, '', location);
+        this._symbol = PhpSymbol.create(SymbolKind.Namespace, '', location);
+        this._children = new UniqueSymbolCollection();
     }
 
     push(transform: NodeTransform) {
         if (transform.phraseType === PhraseType.NamespaceName) {
-            this.symbol.name = (<NamespaceNameTransform>transform).text;
+            this._symbol.name = (<NamespaceNameTransform>transform).text;
+        } else {
+            let s = (<SymbolNodeTransform>transform).symbol;
+            if (s) {
+                this._children.push(s);
+                return;
+            }
+    
+            let symbols = (<SymbolsNodeTransform>transform).symbols;
+            if(symbols) {
+                this._children.pushMany(symbols);
+            }
         }
     }
 
+    get symbol() {
+        if(this._children.length > 0) {
+            this._symbol.children = this._children.toArray();
+        }
+        
+        return this._symbol;
+    }
 }
 
 class ClassDeclarationTransform implements SymbolNodeTransform {
