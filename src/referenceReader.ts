@@ -48,7 +48,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
     private _symbols: PhpSymbol[];
     private _symbolFilter: Predicate<PhpSymbol> = (x) => {
         const mask = SymbolKind.Namespace | SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.Method | SymbolKind.Function | SymbolKind.File;
-        return (x.kind & mask) > 0;
+        return (x.kind & mask) > 0 && !(x.modifiers & SymbolModifier.Magic);
     };
 
     constructor(
