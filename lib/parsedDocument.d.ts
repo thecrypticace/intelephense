@@ -20,6 +20,7 @@ export declare class ParsedDocument implements Traversable<Phrase | Token> {
     constructor(uri: string, text: string);
     readonly tree: Phrase;
     readonly uri: string;
+    readonly text: string;
     readonly changeEvent: Event<ParsedDocumentChangeEventArgs>;
     find(predicate: Predicate<Phrase | Token>): Phrase;
     textBeforeOffset(offset: number, length: number): string;

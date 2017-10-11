@@ -49,6 +49,15 @@ let endWithBlkLineSrc =
 `<?php
 $var = 1;`;
 
+let caseColonSrc = 
+`<?php
+switch ($foo) {
+    case 1 :
+        echo 'bar';
+}
+
+`;
+
 describe('provideDocumentFormattingEdits', ()=>{
 
 
@@ -143,6 +152,28 @@ describe('provideDocumentFormattingEdits', ()=>{
                     }
                 },
                 newText: "\n\n"
+            }
+        ];
+        assert.deepEqual(edits, expected);
+    });
+
+    it('case colon no space', ()=>{
+        let provider = setup(caseColonSrc);
+        let edits = provider.provideDocumentFormattingEdits({uri: 'test'}, {tabSize:4, insertSpaces:true});
+        //console.log(JSON.stringify(edits, null, 4));
+        let expected = [
+            {
+                range: {
+                    start: {
+                        line: 2,
+                        character: 10
+                    },
+                    end: {
+                        line: 2,
+                        character: 11
+                    }
+                },
+                newText: ""
             }
         ];
         assert.deepEqual(edits, expected);
