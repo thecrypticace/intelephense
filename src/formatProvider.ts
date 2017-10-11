@@ -682,6 +682,10 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.FunctionDeclarationHeader:
             case PhraseType.MethodDeclarationHeader:
             case PhraseType.ObjectCreationExpression:
+            case PhraseType.RequireExpression:
+            case PhraseType.RequireOnceExpression:
+            case PhraseType.IncludeExpression:
+            case PhraseType.IncludeOnceExpression:
                 return true;
             default:
                 return false;
