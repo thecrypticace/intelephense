@@ -15,6 +15,8 @@ interface FormatRule {
 
 export class FormatProvider {
 
+    private static blkLinePattern = /^(\r\n|\r|\n){2}$/;
+
     constructor(public docStore: ParsedDocumentStore) { }
 
     provideDocumentFormattingEdits(doc: lsp.TextDocumentIdentifier, formatOptions: lsp.FormattingOptions): lsp.TextEdit[] {
@@ -27,8 +29,53 @@ export class FormatProvider {
 
         let visitor = new FormatVisitor(parsedDoc, formatOptions);
         parsedDoc.traverse(visitor);
-        return visitor.edits;
+        let edits = visitor.edits;
+        let text = parsedDoc.text;
 
+        if (
+            visitor.firstToken &&
+            visitor.firstToken.tokenType === TokenType.OpenTag &&
+            visitor.OpenTagCount === 1
+        ) {
+            //must omit close tag if php only and end in blank line
+            let closeTagIndex = visitor.last3Tokens.findIndex(this._isCloseTag);
+            let endEdit: lsp.TextEdit;
+            let lastToken = visitor.last3Tokens.length ? visitor.last3Tokens[visitor.last3Tokens.length - 1] : undefined;
+            let lastTokenText = parsedDoc.tokenText(lastToken);
+
+            if (closeTagIndex < 0) {
+                //last token should be \n\n
+                if (lastToken && lastToken.tokenType === TokenType.Whitespace && lastTokenText.search(FormatProvider.blkLinePattern) < 0) {
+                    endEdit = lsp.TextEdit.replace(parsedDoc.tokenRange(lastToken), '\n\n');
+                } else if (lastToken && lastToken.tokenType !== TokenType.Whitespace) {
+                    endEdit = lsp.TextEdit.insert(parsedDoc.tokenRange(lastToken).end, '\n\n');
+                }
+            } else if (closeTagIndex > 0 && (lastToken.tokenType === TokenType.CloseTag || (lastToken.tokenType === TokenType.Text && !lastTokenText.trim()))) {
+                let tokenBeforeClose = visitor.last3Tokens[closeTagIndex - 1];
+                let replaceStart: lsp.Position;
+                if (tokenBeforeClose.tokenType === TokenType.Whitespace) {
+                    replaceStart = parsedDoc.tokenRange(tokenBeforeClose).start;
+                } else {
+                    replaceStart = parsedDoc.tokenRange(visitor.last3Tokens[closeTagIndex]).start;
+                }
+                endEdit = lsp.TextEdit.replace({ start: replaceStart, end: parsedDoc.tokenRange(lastToken).end }, '\n\n');
+                if (edits.length) {
+                    let lastEdit = edits[edits.length - 1];
+                    if (lastEdit.range.end.line > endEdit.range.start.line ||
+                        (lastEdit.range.end.line === endEdit.range.start.line && lastEdit.range.end.character > endEdit.range.start.character)) {
+                        edits.shift();
+                    }
+                }
+                
+            }
+
+            if(endEdit) {
+                edits.unshift(endEdit);
+            }
+
+        }
+
+        return edits;
     }
 
     provideDocumentRangeFormattingEdits(doc: lsp.TextDocumentIdentifier, range: lsp.Range, formatOptions: lsp.FormattingOptions): lsp.TextEdit[] {
@@ -43,6 +90,10 @@ export class FormatProvider {
         parsedDoc.traverse(visitor);
         return visitor.edits;
 
+    }
+
+    private _isCloseTag(t: Token) {
+        return t.tokenType === TokenType.CloseTag;
     }
 
 }
@@ -61,6 +112,10 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
     private _endOffset = -1;
     private _active = true;
 
+    firstToken: Token;
+    last3Tokens: Token[];
+    OpenTagCount = 0;
+
     haltTraverse: boolean;
 
     constructor(
@@ -75,7 +130,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             this._endOffset = this.doc.offsetAtPosition(range.end);
             this._active = false;
         }
-
+        this.last3Tokens = [];
     }
 
     get edits() {
@@ -168,6 +223,20 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         if (this._previousToken.tokenType !== TokenType.Whitespace) {
             this._previousNonWsToken = this._previousToken;
         }
+
+        if (!this.firstToken) {
+            this.firstToken = this._previousToken;
+        }
+
+        this.last3Tokens.push(this._previousToken);
+        if (this.last3Tokens.length > 3) {
+            this.last3Tokens.shift();
+        }
+
+        if (this._previousToken.tokenType === TokenType.OpenTag || this._previousToken.tokenType === TokenType.OpenTagEcho) {
+            this.OpenTagCount++;
+        }
+
         this._nextFormatRule = null;
 
         if (!previous) {
@@ -309,10 +378,10 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         }
 
         //keywords should be lowercase
-        if(this._isKeyword(<Token>node)) {
+        if (this._isKeyword(<Token>node)) {
             let text = this.doc.tokenText(<Token>node);
             let lcText = text.toLowerCase();
-            if(text !== lcText) {
+            if (text !== lcText) {
                 this._edits.push(lsp.TextEdit.replace(this.doc.tokenRange(<Token>node), lcText));
             }
         }

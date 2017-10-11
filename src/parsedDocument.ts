@@ -54,6 +54,10 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         return this._textDocument.uri;
     }
 
+    get text() {
+        return this._textDocument.text;
+    }
+
     get changeEvent() {
         return this._changeEvent;
     }

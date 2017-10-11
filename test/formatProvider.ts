@@ -21,6 +21,7 @@ function fn()
 {
     //dont put newlines after this
 }
+
 `;
 
 let conditionalCurlySrc =
@@ -29,13 +30,24 @@ if (true) {
 }
 else {
 }
+
 `;
 
 let lcKeywords = 
 `<?php
 $foo = Array();
+
 `;
 
+let removeCloseTagSrc = 
+`<?php
+$var = 1;
+?>
+`;
+
+let endWithBlkLineSrc = 
+`<?php
+$var = 1;`;
 
 describe('provideDocumentFormattingEdits', ()=>{
 
@@ -87,6 +99,50 @@ describe('provideDocumentFormattingEdits', ()=>{
                     }
                 },
                 newText: "array"
+            }
+        ];
+        assert.deepEqual(edits, expected);
+    });
+
+    it('remove close tag', ()=>{
+        let provider = setup(removeCloseTagSrc);
+        let edits = provider.provideDocumentFormattingEdits({uri: 'test'}, {tabSize:4, insertSpaces:true});
+        //console.log(JSON.stringify(edits, null, 4));
+        let expected = [
+            {
+                range: {
+                    start: {
+                        line: 1,
+                        character: 9
+                    },
+                    end: {
+                        line: 3,
+                        character: 0
+                    }
+                },
+                newText: "\n\n"
+            }
+        ];
+        assert.deepEqual(edits, expected);
+    });
+
+    it('end of file blank newline', ()=>{
+        let provider = setup(endWithBlkLineSrc);
+        let edits = provider.provideDocumentFormattingEdits({uri: 'test'}, {tabSize:4, insertSpaces:true});
+        //console.log(JSON.stringify(edits, null, 4));
+        let expected = [
+            {
+                range: {
+                    start: {
+                        line: 1,
+                        character: 9
+                    },
+                    end: {
+                        line: 1,
+                        character: 9
+                    }
+                },
+                newText: "\n\n"
             }
         ];
         assert.deepEqual(edits, expected);

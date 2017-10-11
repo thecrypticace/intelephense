@@ -29,7 +29,7 @@
     "url": "https://github.com/bmewburn/intelephense.git"
   },
   "dependencies": {
-    "php7parser": "^1.0.0",
+    "php7parser": "^1.0.1",
     "vscode-languageserver-types": "^3.4.0"
   },
   "devDependencies": {
