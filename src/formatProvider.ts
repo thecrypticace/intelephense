@@ -51,6 +51,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
     private _edits: lsp.TextEdit[];
     private _previousToken: Token;
+    private _previousNonWsToken:Token;
     private _nextFormatRule: FormatRule;
     private _isMultilineCommaDelimitedListStack: boolean[];
     private _indentUnit: string;
@@ -162,7 +163,11 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
         let rule = this._nextFormatRule;
         let previous = this._previousToken;
+        let previousNonWsToken = this._previousNonWsToken;
         this._previousToken = node as Token;
+        if(this._previousToken.tokenType !== TokenType.Whitespace) {
+            this._previousNonWsToken = this._previousToken;
+        }
         this._nextFormatRule = null;
 
         if (!previous) {
@@ -224,7 +229,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
             case TokenType.Else:
             case TokenType.ElseIf:
-                if (this._hasColonChild(parent)) {
+                if (previousNonWsToken && previousNonWsToken.tokenType === TokenType.CloseBrace) {
                     rule = FormatVisitor.singleSpaceBefore;
                 }
                 break;
