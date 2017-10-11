@@ -52,6 +52,12 @@ let nameSrc =
     fn();
 `;
 
+let defineSrc = 
+`<?php
+define('FOO', 'Bar');
+echo FOO;
+`;
+
 describe('DefintionProvider', function(){
 
     describe('#provideDefinition', function(){
@@ -141,7 +147,7 @@ describe('DefintionProvider', function(){
 
         describe('Name', function(){
 
-            let provider:DefinitionProvider
+            let provider:DefinitionProvider;
             before(function(){
                 provider = setup(nameSrc);
             }); 
@@ -159,6 +165,20 @@ describe('DefintionProvider', function(){
                 //console.log(JSON.stringify(loc, null, 4));
             });
 
+        });
+
+        it('defines', function(){
+            let provider = setup(defineSrc);
+            let loc = provider.provideDefinition('test', {line:2, character:8});
+            let expected:lsp.Location = {
+                uri:'test',
+                range:{
+                    start:{line:1, character:0},
+                    end:{line:1, character:20}
+                }
+            }
+            //console.log(JSON.stringify(loc, null, 4));
+            assert.deepEqual(loc, expected);
         });
 
     });
