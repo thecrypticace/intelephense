@@ -58,6 +58,12 @@ define('FOO', 'Bar');
 echo FOO;
 `;
 
+let constSrc = 
+`<?php
+const FOO = 'Bar';
+echo FOO;
+`
+
 describe('DefintionProvider', function(){
 
     describe('#provideDefinition', function(){
@@ -179,6 +185,58 @@ describe('DefintionProvider', function(){
             }
             //console.log(JSON.stringify(loc, null, 4));
             assert.deepEqual(loc, expected);
+        });
+
+        it('multiple locations', ()=> {
+
+            let symbolStore = new SymbolStore();
+            let doc = new ParsedDocument('test', defineSrc);
+            let doc2 = new ParsedDocument('test2', constSrc);
+            let table = SymbolTable.create(doc);
+            let table2 = SymbolTable.create(doc2);
+            let docStore = new ParsedDocumentStore();
+            docStore.add(doc);
+            docStore.add(doc2);
+            symbolStore.add(table);
+            symbolStore.add(table2);
+            ReferenceReader.discoverReferences(doc, table, symbolStore);
+            symbolStore.indexReferences(table);
+            ReferenceReader.discoverReferences(doc2, table2, symbolStore);
+            symbolStore.indexReferences(table2);
+        
+            let provider = new DefinitionProvider(symbolStore,docStore);
+            let locs = provider.provideDefinition('test2', {line:2, character:8});
+            let expected:lsp.Location[] = [
+                {
+                    uri: "test",
+                    range: {
+                        start: {
+                            line: 1,
+                            character: 0
+                        },
+                        end: {
+                            line: 1,
+                            character: 20
+                        }
+                    }
+                },
+                {
+                    uri: "test2",
+                    range: {
+                        start: {
+                            line: 1,
+                            character: 6
+                        },
+                        end: {
+                            line: 1,
+                            character: 17
+                        }
+                    }
+                }
+            ]
+            //console.log(JSON.stringify(locs, null, 4));
+            assert.deepEqual(locs, expected);
+
         });
 
     });
