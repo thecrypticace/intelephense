@@ -125,9 +125,15 @@ var closureSrc =
     class Foo {
         function fooFn(){}
     }
+    class Bar {
+        function barFn(){}
+    }
     $var = new Foo();
-    $fn = function() use ($var){
-        $var->
+    $fn = function(string $param) use ($var){
+        $bar = new Bar();
+        $var->fooFn();
+        echo $param;
+        $bar->barFn();
     };
 `;
 
@@ -170,11 +176,25 @@ describe('CompletionProvider', () => {
             completionProvider = setup(closureSrc);
         });
 
-        it('completions', function () {
-            var completions = completionProvider.provideCompletions('test', { line: 6, character: 14 });
+        it('use var completions', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 10, character: 16 });
             //console.log(JSON.stringify(completions, null, 4));
             assert.equal(completions.items[0].label, 'fooFn');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+        });
+
+        it('internal var completions', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 12, character: 16 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, 'barFn');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+        });
+
+        it('param var completions', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 11, character: 16 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, '$param');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Variable);
         });
 
     });
