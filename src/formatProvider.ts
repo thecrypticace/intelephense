@@ -51,7 +51,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
     private _edits: lsp.TextEdit[];
     private _previousToken: Token;
-    private _previousNonWsToken:Token;
+    private _previousNonWsToken: Token;
     private _nextFormatRule: FormatRule;
     private _isMultilineCommaDelimitedListStack: boolean[];
     private _indentUnit: string;
@@ -165,7 +165,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         let previous = this._previousToken;
         let previousNonWsToken = this._previousNonWsToken;
         this._previousToken = node as Token;
-        if(this._previousToken.tokenType !== TokenType.Whitespace) {
+        if (this._previousToken.tokenType !== TokenType.Whitespace) {
             this._previousNonWsToken = this._previousToken;
         }
         this._nextFormatRule = null;
@@ -307,6 +307,16 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         if (edit) {
             this._edits.push(edit);
         }
+
+        //keywords should be lowercase
+        if(this._isKeyword(<Token>node)) {
+            let text = this.doc.tokenText(<Token>node);
+            let lcText = text.toLowerCase();
+            if(text !== lcText) {
+                this._edits.push(lsp.TextEdit.replace(this.doc.tokenRange(<Token>node), lcText));
+            }
+        }
+
         return false;
     }
 
@@ -612,6 +622,86 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         }
         return false;
 
+    }
+
+    private _isKeyword(t: Token) {
+        if (!t) {
+            return false;
+        }
+        switch (t.tokenType) {
+            case TokenType.Abstract:
+            case TokenType.Array:
+            case TokenType.As:
+            case TokenType.Break:
+            case TokenType.Callable:
+            case TokenType.Case:
+            case TokenType.Catch:
+            case TokenType.Class:
+            case TokenType.ClassConstant:
+            case TokenType.Clone:
+            case TokenType.Const:
+            case TokenType.Continue:
+            case TokenType.Declare:
+            case TokenType.Default:
+            case TokenType.Do:
+            case TokenType.Echo:
+            case TokenType.Else:
+            case TokenType.ElseIf:
+            case TokenType.Empty:
+            case TokenType.EndDeclare:
+            case TokenType.EndFor:
+            case TokenType.EndForeach:
+            case TokenType.EndIf:
+            case TokenType.EndSwitch:
+            case TokenType.EndWhile:
+            case TokenType.EndHeredoc:
+            case TokenType.Eval:
+            case TokenType.Exit:
+            case TokenType.Extends:
+            case TokenType.Final:
+            case TokenType.Finally:
+            case TokenType.For:
+            case TokenType.ForEach:
+            case TokenType.Function:
+            case TokenType.Global:
+            case TokenType.Goto:
+            case TokenType.HaltCompiler:
+            case TokenType.If:
+            case TokenType.Implements:
+            case TokenType.Include:
+            case TokenType.IncludeOnce:
+            case TokenType.InstanceOf:
+            case TokenType.InsteadOf:
+            case TokenType.Interface:
+            case TokenType.Isset:
+            case TokenType.List:
+            case TokenType.And:
+            case TokenType.Or:
+            case TokenType.Xor:
+            case TokenType.Namespace:
+            case TokenType.New:
+            case TokenType.Print:
+            case TokenType.Private:
+            case TokenType.Public:
+            case TokenType.Protected:
+            case TokenType.Require:
+            case TokenType.RequireOnce:
+            case TokenType.Return:
+            case TokenType.Static:
+            case TokenType.Switch:
+            case TokenType.Throw:
+            case TokenType.Trait:
+            case TokenType.Try:
+            case TokenType.Unset:
+            case TokenType.Use:
+            case TokenType.Var:
+            case TokenType.While:
+            case TokenType.Yield:
+            case TokenType.YieldFrom:
+                return true;
+            default:
+                return false;
+        }
     }
 
 }

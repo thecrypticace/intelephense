@@ -29,7 +29,12 @@ if (true) {
 }
 else {
 }
-`
+`;
+
+let lcKeywords = 
+`<?php
+$foo = Array();
+`;
 
 
 describe('provideDocumentFormattingEdits', ()=>{
@@ -60,6 +65,28 @@ describe('provideDocumentFormattingEdits', ()=>{
                     }
                 },
                 newText: " "
+            }
+        ];
+        assert.deepEqual(edits, expected);
+    });
+
+    it('lowercase keywords', ()=>{
+        let provider = setup(lcKeywords);
+        let edits = provider.provideDocumentFormattingEdits({uri: 'test'}, {tabSize:4, insertSpaces:true});
+        //console.log(JSON.stringify(edits, null, 4));
+        let expected = [
+            {
+                range: {
+                    start: {
+                        line: 1,
+                        character: 7
+                    },
+                    end: {
+                        line: 1,
+                        character: 12
+                    }
+                },
+                newText: "array"
             }
         ];
         assert.deepEqual(edits, expected);
