@@ -62,7 +62,14 @@ let constSrc =
 `<?php
 const FOO = 'Bar';
 echo FOO;
-`
+`;
+
+let unprefixedSrc = 
+`<?php
+function foo() { }
+namespace Bar;
+foo();
+`;
 
 describe('DefintionProvider', function(){
 
@@ -237,6 +244,20 @@ describe('DefintionProvider', function(){
             //console.log(JSON.stringify(locs, null, 4));
             assert.deepEqual(locs, expected);
 
+        });
+
+        it('unprefixed global function', function(){
+            let provider = setup(unprefixedSrc);
+            let loc = provider.provideDefinition('test', {line:3, character:2});
+            let expected:lsp.Location = {
+                uri:'test',
+                range:{
+                    start:{line:1, character:0},
+                    end:{line:1, character:18}
+                }
+            }
+            //console.log(JSON.stringify(loc, null, 4));
+            assert.deepEqual(loc, expected);
         });
 
     });
