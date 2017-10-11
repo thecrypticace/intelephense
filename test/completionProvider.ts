@@ -150,6 +150,21 @@ var importSrc2 =
     $obj = new F
 `;
 
+var traitSrc = 
+`<?php
+trait Bar {
+    function barFn() { }
+}
+class Foo {
+    use Bar;
+    function fooFn() {
+        $this->barFn();
+    }
+}
+$foo = new Foo();
+$foo->barFn();
+`;
+
 function setup(src: string) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -483,6 +498,29 @@ describe('CompletionProvider', () => {
         });
 
     });
+
+    describe('traits', () => {
+        
+                let completionProvider: CompletionProvider;
+                before(function () {
+                    completionProvider = setup(traitSrc);
+                });
+        
+                it('internal completions', function () {
+                    var completions = completionProvider.provideCompletions('test', { line: 7, character: 16 });
+                    //console.log(JSON.stringify(completions, null, 4));
+                    assert.equal(completions.items[0].label, 'barFn');
+                    assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+                });
+
+                it('external completions', function () {
+                    var completions = completionProvider.provideCompletions('test', { line: 11, character: 7 });
+                    //console.log(JSON.stringify(completions, null, 4));
+                    assert.equal(completions.items[0].label, 'barFn');
+                    assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+                });
+        
+            });
 
 });
 
