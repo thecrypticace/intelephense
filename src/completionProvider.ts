@@ -364,10 +364,15 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
     protected _setInsertText(item: lsp.CompletionItem, s: PhpSymbol, namespaceName: string, namePhraseType: PhraseType, useDeclarationHelper: UseDeclarationHelper) {
         const kindMask = SymbolKind.Constant | SymbolKind.Function;
         let notFqn = PhpSymbol.notFqn(s.name);
-        if ((s.modifiers & SymbolModifier.Use) > 0) {
+        
+        if (
+            (s.modifiers & SymbolModifier.Use) > 0 || 
+            (s.kind === SymbolKind.Constant && this._isMagicConstant(s.name)) ||
+            ((s.kind & kindMask) > 0 && notFqn === s.name && (!this.config.backslashPrefix || !namespaceName))
+        ) {
             item.insertText = s.name;
 
-        } else if (this.config.addUseDeclaration && (namespaceName || notFqn !== s.name) && !useDeclarationHelper.findUseSymbolByName(notFqn)) {
+        } else if (this.config.addUseDeclaration && notFqn !== s.name && !useDeclarationHelper.findUseSymbolByName(notFqn)) {
             item.insertText = notFqn;
             item.additionalTextEdits = [useDeclarationHelper.insertDeclarationTextEdit(s)];
 
@@ -384,6 +389,22 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         }
 
         return item;
+    }
+
+    private _isMagicConstant(text:string) {
+        switch(text){
+            case '__DIR__':
+            case '__FILE__':
+            case '__CLASS__':
+            case '__LINE__':
+            case '__FUNCTION__':
+            case '__TRAIT__':
+            case '__METHOD__':
+            case '__NAMESPACE__':
+                return true;
+            default:
+                return false;
+        }
     }
 
     protected _isNamePhrase(node: Phrase | Token) {
