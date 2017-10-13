@@ -599,6 +599,14 @@ describe('CompletionProvider', () => {
             assert.deepEqual(completions.items[0].additionalTextEdits, expected);
         });
 
+        it('no additional text edit if disabled', function () {
+            let completionProvider = setup([additionalUseDeclSrc1, additionalUseDeclSrc2]);
+            completionProvider.config = { backslashPrefix: true, maxItems: 100, addUseDeclaration: false };
+            var completions = completionProvider.provideCompletions('test2', { line: 3, character: 14 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.isUndefined(completions.items[0].additionalTextEdits);
+        });
+
     });
 
 });
