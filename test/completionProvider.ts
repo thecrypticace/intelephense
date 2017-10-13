@@ -172,16 +172,36 @@ namespace Foo;
 barFn();
 `;
 
-function setup(src: string) {
+var additionalUseDeclSrc1 = 
+`<?php
+namespace Foo;
+class Bar {}
+`;
+
+var additionalUseDeclSrc2 =
+`<?php
+namespace Baz;
+
+$bar = new Bar
+`;
+
+function setup(src: string | string[]) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
     let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore);
-    let doc = new ParsedDocument('test', src);
-    parsedDocumentStore.add(doc);
-    let table = SymbolTable.create(doc);
-    symbolStore.add(table);
-    ReferenceReader.discoverReferences(doc, table, symbolStore);
-    symbolStore.indexReferences(table);
+
+    if(!Array.isArray(src)) {
+        src = [src];
+    }
+
+    for(let n = 0; n < src.length; ++n) {
+        let doc = new ParsedDocument('test' + (n > 0 ? n + 1 : ''), src[n]);
+        parsedDocumentStore.add(doc);
+        let table = SymbolTable.create(doc);
+        symbolStore.add(table);
+        ReferenceReader.discoverReferences(doc, table, symbolStore);
+        symbolStore.indexReferences(table);
+    }
     return completionProvider;
 }
 
@@ -546,6 +566,37 @@ describe('CompletionProvider', () => {
             //console.log(JSON.stringify(completions, null, 4));
             assert.equal(completions.items[0].insertText, 'barFn($0)');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Function);
+        });
+
+    });
+
+    describe('additional use decl', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup([additionalUseDeclSrc1, additionalUseDeclSrc2]);
+        });
+
+        let expected = [
+            {
+                range: {
+                    start: {
+                        line: 1,
+                        character: 14
+                    },
+                    end: {
+                        line: 1,
+                        character: 14
+                    }
+                },
+                newText: "\n\nuse Foo\\Bar;"
+            }
+        ];
+
+        it('additional text edit', function () {
+            var completions = completionProvider.provideCompletions('test2', { line: 3, character: 14 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.deepEqual(completions.items[0].additionalTextEdits, expected);
         });
 
     });
