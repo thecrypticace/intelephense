@@ -8,6 +8,7 @@ import { PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
 import { SymbolStore } from './symbolStore';
 import { Predicate } from './types';
 import * as util from './util';
+import {TypeString} from './typeString';
 
 export const enum MemberMergeStrategy {
     None, //returns all symbols
@@ -66,17 +67,52 @@ export class TypeAggregate {
 
         let associated = this._getAssociated().slice(0);
         associated.unshift(this._symbol);
+        let members:PhpSymbol[];
 
         switch (this._symbol.kind) {
             case SymbolKind.Class:
-                return this._classMembers(associated, mergeStrategy, predicate);
+                members = this._classMembers(associated, mergeStrategy, predicate);
+                break;
             case SymbolKind.Interface:
-                return this._interfaceMembers(associated, predicate);
+                members = this._interfaceMembers(associated, predicate);
+                break;
             case SymbolKind.Trait:
-                return this._traitMembers(associated, predicate);
+                members = this._traitMembers(associated, predicate);
+                break;
             default:
-                return [];
+                members = [];
+                break;
         }
+
+        //$this and static return types are resolved to fqn at this point as fqn is known
+        return this._resolveThisAndStaticReturnType(members, this._symbol.name);
+
+    }
+
+    private _resolveThisAndStaticReturnType(members:PhpSymbol[], name:string) {
+
+        let resolved:PhpSymbol[] = [];
+        let s:PhpSymbol;
+        let type:string;
+        let sClone:PhpSymbol;
+
+        for(let n = 0; n < members.length; ++n) {
+            s = members[n];
+            if((s.kind & (SymbolKind.Method | SymbolKind.Property)) > 0 && s.doc && s.doc.type) {
+                type = TypeString.resolveThisOrStatic(s.doc.type, name);
+                
+                if(type !== s.doc.type) {
+                    //clone the symbol to use resolved type
+                    sClone = PhpSymbol.clone(s);
+                    sClone.doc = {description:s.doc.description, type:type}
+                    resolved.push(sClone);
+                    continue;
+                }
+            }
+            resolved.push(s);
+        }
+        
+        return resolved;
 
     }
 

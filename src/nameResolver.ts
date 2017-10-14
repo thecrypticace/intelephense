@@ -60,12 +60,18 @@ export class NameResolver {
             return '';
         }
 
-        if (notFqn === 'self' || notFqn === 'static' || notFqn === '$this') {
-            return this.className;
-        }
+        let lcNotFqn = notFqn.toLowerCase();
 
-        if (notFqn === 'parent') {
-            return this.classBaseName;
+        switch(lcNotFqn) {
+            case 'self':
+                return this.className;
+            case 'static':
+            case '$this':
+                return lcNotFqn;
+            case 'parent':
+                return this.classBaseName;
+            default:
+                break;
         }
 
         let pos = notFqn.indexOf('\\');
@@ -88,10 +94,18 @@ export class NameResolver {
      * @param kind 
      */
     matchImportedSymbol(text: string, kind: SymbolKind) {
+        
+        if(kind !== SymbolKind.Constant) {
+            text = text.toLowerCase();
+        }
         let s: PhpSymbol;
+
         for (let n = 0, l = this.rules.length; n < l; ++n) {
             s = this.rules[n];
-            if (s.name && s.kind === kind && text === s.name) {
+            if (
+                s.name && s.kind === kind && 
+                ((kind === SymbolKind.Constant && text === s.name) || 
+                (kind !== SymbolKind.Constant && text === s.name.toLowerCase()))) {
                 return s;
             }
         }

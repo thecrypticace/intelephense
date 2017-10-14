@@ -7,4 +7,5 @@ export declare namespace TypeString {
     function mergeMany(typeStrings: string[]): string;
     function nameResolve(typeString: string, nameResolver: NameResolver): string;
     function count(typeString: string): number;
+    function resolveThisOrStatic(typeString: string, fqn: string): string;
 }

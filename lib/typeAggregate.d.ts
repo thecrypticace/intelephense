@@ -19,6 +19,7 @@ export declare class TypeAggregate {
     isAssociated(name: string): boolean;
     associated(filter?: Predicate<PhpSymbol>): PhpSymbol[];
     members(mergeStrategy: MemberMergeStrategy, predicate?: Predicate<PhpSymbol>): PhpSymbol[];
+    private _resolveThisAndStaticReturnType(members, name);
     /**
      * root type should be first element of associated array
      * @param associated

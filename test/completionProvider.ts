@@ -207,6 +207,22 @@ namespace Baz;
 $bar = new Bar
 `;
 
+var staticAndThisSrc = 
+`<?php
+class A {
+    /** @return static */
+    static function factory(){}
+    /** @return $this */
+    function setter() {}
+}
+class B extends A {
+    function fn(){}
+}
+$var = B::factory();
+$var->fn();
+$var->setter()->fn();
+`;
+
 function setup(src: string | string[]) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -610,21 +626,22 @@ describe('CompletionProvider', () => {
     });
 
     describe('stubs - duplicate names', () => {
-        
-                let completionProvider: CompletionProvider;
-                before(function () {
-                    completionProvider = setup(duplicateNameSrc);
-                });
-        
-                it('all methods external', function () {
-                    var completions = completionProvider.provideCompletions('test', { line: 11, character: 7 });
-                    console.log(JSON.stringify(completions, null, 4));
-                    assert.equal(completions.items[0].label, 'barFn');
-                    assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
-                });
-        
-        
-            });
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(duplicateNameSrc);
+        });
+
+        it('all methods external', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 11, character: 7 });
+            console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, 'barFn');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+        });
+
+
+    });
+
     describe('additional use decl', () => {
 
         let completionProvider: CompletionProvider;
@@ -661,6 +678,30 @@ describe('CompletionProvider', () => {
             //console.log(JSON.stringify(completions, null, 4));
             assert.isUndefined(completions.items[0].additionalTextEdits);
         });
+
+    });
+
+    describe('$this and static return types', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(staticAndThisSrc);
+        });
+
+        it('static', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 11, character: 7 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, 'fn');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+        });
+
+        it('$this', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 12, character: 17 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, 'fn');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+        });
+
 
     });
 

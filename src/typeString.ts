@@ -15,7 +15,7 @@ export namespace TypeString {
         'string', 'integer', 'int', 'boolean', 'bool', 'float',
         'double', 'object', 'mixed', 'array', 'resource',
         'void', 'null', 'false', 'true', 'self', 'static',
-        'callable', '$this', 'real'
+        'callable', '$this', 'real', 'iterable'
     ];
 
     export function atomicClassArray(typeString:string) {
@@ -126,7 +126,7 @@ export namespace TypeString {
 
             let lcMatch = match.toLowerCase();
 
-            if (lcMatch === 'self' || lcMatch === '$this' || lcMatch === 'static') {
+            if (lcMatch === 'self') {
                 return nameResolver.className;
             } else if (keywords.indexOf(lcMatch) >= 0) {
                 return match;
@@ -143,6 +143,22 @@ export namespace TypeString {
 
     export function count(typeString:string) {
         return chunk(typeString).length;
+    }
+
+    export function resolveThisOrStatic(typeString:string, fqn:string) {
+        if(!typeString) {
+            return '';
+        }
+
+        let replacer = (match, offset, text) => {
+            let lcMatch = match.toLowerCase();
+            if(lcMatch === '$this' || lcMatch === 'static') {
+                return fqn;
+            }
+            return match;
+        }
+
+        return typeString.replace(classNamePattern, replacer);
     }
 
     function unique(parts: string[]) {
