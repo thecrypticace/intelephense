@@ -239,6 +239,14 @@ $foo = new Bar;
 $foo->foo();
 `;
 
+var encapsExprSrc =
+`<?php
+class Foo {
+    function fn(){}
+}
+(new Foo())->fn();
+`;
+
 function setup(src: string | string[]) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -650,7 +658,7 @@ describe('CompletionProvider', () => {
 
         it('all methods external', function () {
             var completions = completionProvider.provideCompletions('test', { line: 11, character: 7 });
-            console.log(JSON.stringify(completions, null, 4));
+            //console.log(JSON.stringify(completions, null, 4));
             assert.equal(completions.items[0].label, 'barFn');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
         });
@@ -742,6 +750,22 @@ describe('CompletionProvider', () => {
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
         });
 
+
+    });
+
+    describe('encapsulated expr member access', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(encapsExprSrc);
+        });
+
+        it('completions', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 4, character: 14 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, 'fn');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+        });
 
     });
 

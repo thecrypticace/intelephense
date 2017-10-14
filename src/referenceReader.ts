@@ -366,6 +366,14 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                 }
                 break;
 
+            case PhraseType.EncapsulatedExpression:
+                if (parentTransform) {
+                    this._transformStack.push(new EncapsulatedExpressionTransform());
+                } else {
+                    this._transformStack.push(null);
+                }
+                break;
+
             case undefined:
                 //tokens
                 if (parentTransform && (<Token>node).tokenType > TokenType.EndOfFile && (<Token>node).tokenType < TokenType.Equals) {
@@ -1408,6 +1416,7 @@ class MemberAccessExpressionTransform implements TypeNodeTransform, ReferenceNod
             case PhraseType.FullyQualifiedName:
             case PhraseType.QualifiedName:
             case PhraseType.RelativeQualifiedName:
+            case PhraseType.EncapsulatedExpression:
                 this._scope = (<TypeNodeTransform>transform).type;
                 break;
 
@@ -1504,6 +1513,27 @@ class ParameterDeclarationTransform implements ReferenceNodeTransform {
         if(transform.tokenType === TokenType.VariableName) {
             this.reference = Reference.create(SymbolKind.Parameter, (<TokenTransform>transform).text, (<TokenTransform>transform).location);
         }
+    }
+
+}
+
+class EncapsulatedExpressionTransform implements ReferenceNodeTransform, TypeNodeTransform {
+
+    phraseType = PhraseType.EncapsulatedExpression;
+    private _transform:NodeTransform;
+
+    push(transform:NodeTransform) {
+        if(transform.phraseType || (transform.tokenType >= TokenType.DirectoryConstant && transform.tokenType <= TokenType.IntegerLiteral)) {
+            this._transform = transform;
+        }
+    }
+
+    get reference() {
+        return this._transform ? (<ReferenceNodeTransform>this._transform).reference : undefined;
+    }
+
+    get type() {
+        return this._transform ? (<TypeNodeTransform>this._transform).type : undefined;
     }
 
 }

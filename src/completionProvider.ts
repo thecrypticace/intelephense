@@ -764,12 +764,12 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
     private _resolveType(traverser: ParseTreeTraverser): string {
 
         //assumed that traverser is on the member scope node
-        let node = traverser.node as Phrase;
+        let node:Phrase;
         let arrayDereference = 0;
         let ref: Reference;
 
         while (true) {
-
+            node = traverser.node as Phrase;
             switch (node.phraseType) {
                 case PhraseType.FullyQualifiedName:
                 case PhraseType.RelativeQualifiedName:
@@ -785,6 +785,25 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
                 case PhraseType.ClassConstantAccessExpression:
                     if (traverser.child(this._isMemberName)) {
                         ref = traverser.reference;
+                    }
+                    break;
+
+                case PhraseType.EncapsulatedExpression:
+                    if(traverser.child(ParsedDocument.isPhrase)){
+                        continue;
+                    }
+                    break;
+
+                case PhraseType.ObjectCreationExpression:
+                    if(traverser.child(this._isClassTypeDesignator) && traverser.child(ParsedDocument.isNamePhrase)) {
+                        ref = traverser.reference;
+                    }
+                    break;
+
+                case PhraseType.SimpleAssignmentExpression:
+                case PhraseType.ByRefAssignmentExpression:
+                    if(traverser.nthChild(0)) {
+                        continue;
                     }
                     break;
 
@@ -854,6 +873,10 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
 
     private _isMemberName(node: Phrase | Token) {
         return (<Phrase>node).phraseType === PhraseType.MemberName || (<Phrase>node).phraseType === PhraseType.ScopedMemberName;
+    }
+
+    private _isClassTypeDesignator(node:Phrase |Token) {
+        return (<Phrase>node).phraseType === PhraseType.ClassTypeDesignator;
     }
 
 }
