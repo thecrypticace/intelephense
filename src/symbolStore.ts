@@ -857,13 +857,13 @@ export class NameIndex<T> {
 
         text = text.toLowerCase();
         let nodes = this._nodeMatch(text);
-        let matches = new Set<PhpSymbol>();
+        let matches:PhpSymbol[] = [];
 
         for (let n = 0; n < nodes.length; ++n) {
-            Set.prototype.add.apply(matches, nodes[n].items);
+            Array.prototype.push.apply(matches, nodes[n].items);
         }
 
-        return Array.from(matches);
+        return Array.from(new Set<PhpSymbol>(matches));
 
     }
 
