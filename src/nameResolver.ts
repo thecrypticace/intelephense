@@ -104,6 +104,9 @@ export class NameResolver {
     }
 
     private _resolveUnqualified(name: string, kind: SymbolKind) {
+        if(kind === SymbolKind.Constructor) {
+            kind = SymbolKind.Class;
+        }
         let s = this.matchImportedSymbol(name, kind);
         return s ? s.associated[0].name : this.resolveRelative(name);
     }

@@ -43,6 +43,13 @@ var objectSrc =
     $var->b
 `;
 
+var objSrc2 = 
+`<?php
+use Foo\\Bar\\Baz;
+$var = new Baz();
+$var->
+`;
+
 var variableSrc =
     `<?php
     function foo($foo){ 
@@ -348,6 +355,23 @@ describe('CompletionProvider', () => {
 
         });
 
+        it('with use decl', function () {
+
+            let src = `<?php
+            namespace Foo\\Bar;
+            class Baz {
+                function fn() {}
+            }
+            `;
+
+            let provider = setup([src, objSrc2]);
+            let completions = provider.provideCompletions('test2', { line: 3, character: 6 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items.length, 1);
+            assert.equal(completions.items[0].label, 'fn');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+        })
+
     });
 
     describe('Variables', function () {
@@ -608,6 +632,8 @@ describe('CompletionProvider', () => {
         });
 
     });
+
+
 
 });
 
