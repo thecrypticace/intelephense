@@ -247,6 +247,26 @@ class Foo {
 (new Foo())->fn();
 `;
 
+var foreachSrc =
+`<?php
+class Foo {
+    function fn(){}
+}
+/**@var Foo[] $array */
+foreach($array as $foo) {
+    $foo->fn();
+}
+`;
+
+var arrayDerefSrc =
+`<?php
+class Foo {
+    function fn(){}
+}
+/**@var Foo[] $array */
+$array[0]->fn();
+`;
+
 function setup(src: string | string[]) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -762,6 +782,38 @@ describe('CompletionProvider', () => {
 
         it('completions', function () {
             var completions = completionProvider.provideCompletions('test', { line: 4, character: 14 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, 'fn');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+        });
+
+    });
+
+    describe('foreach', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(foreachSrc);
+        });
+
+        it('value', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 6, character: 11 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, 'fn');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+        });
+
+    });
+
+    describe('array deref', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(arrayDerefSrc);
+        });
+
+        it('members', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 5, character: 12 });
             //console.log(JSON.stringify(completions, null, 4));
             assert.equal(completions.items[0].label, 'fn');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
