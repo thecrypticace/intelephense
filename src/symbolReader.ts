@@ -675,10 +675,18 @@ class DefineFunctionCallExpressionTransform implements SymbolNodeTransform {
 
     push(transform: NodeTransform) {
         if (transform.phraseType === PhraseType.ArgumentExpressionList) {
+            
             let arg1: TextNodeTransform, arg2: TextNodeTransform;
             [arg1, arg2] = (<DelimiteredListTransform>transform).transforms as TextNodeTransform[];
-            this.symbol.name = arg1.text.slice(1, -1); //remove quotes
-            this.symbol.value = arg2.text;
+            
+            if(arg1) {
+                this.symbol.name = arg1.text.slice(1, -1); //remove quotes
+            }
+
+            if(arg2) {
+                this.symbol.value = arg2.text;
+            }
+            
             if (this.symbol.name && this.symbol.name[0] === '\\') {
                 this.symbol.name = this.symbol.name.slice(1);
             }

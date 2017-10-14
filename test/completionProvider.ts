@@ -43,6 +43,13 @@ var objectSrc =
     $var->b
 `;
 
+var objSrc2 = 
+`<?php
+use Foo\\Bar\\Baz;
+$var = new Baz();
+$var->
+`;
+
 var variableSrc =
     `<?php
     function foo($foo){ 
@@ -187,16 +194,36 @@ $foo = new Foo();
 $foo->fnA();
 `;
 
-function setup(src: string) {
+var additionalUseDeclSrc1 = 
+`<?php
+namespace Foo;
+class Bar {}
+`;
+
+var additionalUseDeclSrc2 =
+`<?php
+namespace Baz;
+
+$bar = new Bar
+`;
+
+function setup(src: string | string[]) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
     let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore);
-    let doc = new ParsedDocument('test', src);
-    parsedDocumentStore.add(doc);
-    let table = SymbolTable.create(doc);
-    symbolStore.add(table);
-    ReferenceReader.discoverReferences(doc, table, symbolStore);
-    symbolStore.indexReferences(table);
+
+    if(!Array.isArray(src)) {
+        src = [src];
+    }
+
+    for(let n = 0; n < src.length; ++n) {
+        let doc = new ParsedDocument('test' + (n > 0 ? n + 1 : ''), src[n]);
+        parsedDocumentStore.add(doc);
+        let table = SymbolTable.create(doc);
+        symbolStore.add(table);
+        ReferenceReader.discoverReferences(doc, table, symbolStore);
+        symbolStore.indexReferences(table);
+    }
     return completionProvider;
 }
 
@@ -342,6 +369,23 @@ describe('CompletionProvider', () => {
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Property);
 
         });
+
+        it('with use decl', function () {
+
+            let src = `<?php
+            namespace Foo\\Bar;
+            class Baz {
+                function fn() {}
+            }
+            `;
+
+            let provider = setup([src, objSrc2]);
+            let completions = provider.provideCompletions('test2', { line: 3, character: 6 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items.length, 1);
+            assert.equal(completions.items[0].label, 'fn');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+        })
 
     });
 
@@ -581,6 +625,46 @@ describe('CompletionProvider', () => {
         
         
             });
+    describe('additional use decl', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup([additionalUseDeclSrc1, additionalUseDeclSrc2]);
+        });
+
+        let expected = [
+            {
+                range: {
+                    start: {
+                        line: 1,
+                        character: 14
+                    },
+                    end: {
+                        line: 1,
+                        character: 14
+                    }
+                },
+                newText: "\n\nuse Foo\\Bar;"
+            }
+        ];
+
+        it('additional text edit', function () {
+            var completions = completionProvider.provideCompletions('test2', { line: 3, character: 14 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.deepEqual(completions.items[0].additionalTextEdits, expected);
+        });
+
+        it('no additional text edit if disabled', function () {
+            let completionProvider = setup([additionalUseDeclSrc1, additionalUseDeclSrc2]);
+            completionProvider.config = { backslashPrefix: true, maxItems: 100, addUseDeclaration: false };
+            var completions = completionProvider.provideCompletions('test2', { line: 3, character: 14 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.isUndefined(completions.items[0].additionalTextEdits);
+        });
+
+    });
+
+
 
 });
 
