@@ -172,6 +172,21 @@ namespace Foo;
 barFn();
 `;
 
+var duplicateNameSrc = 
+`<?php
+class Foo {
+    function fnA(){}
+}
+class Foo {
+    function fnB(){}
+    function fnC(){
+        $this->fnA();
+    }
+}
+$foo = new Foo();
+$foo->fnA();
+`;
+
 function setup(src: string) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -549,6 +564,23 @@ describe('CompletionProvider', () => {
         });
 
     });
+
+    describe('stubs - duplicate names', () => {
+        
+                let completionProvider: CompletionProvider;
+                before(function () {
+                    completionProvider = setup(duplicateNameSrc);
+                });
+        
+                it('all methods external', function () {
+                    var completions = completionProvider.provideCompletions('test', { line: 11, character: 7 });
+                    console.log(JSON.stringify(completions, null, 4));
+                    assert.equal(completions.items[0].label, 'barFn');
+                    assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+                });
+        
+        
+            });
 
 });
 
