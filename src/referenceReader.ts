@@ -18,6 +18,7 @@ import { isInRange } from './util';
 import { TypeString } from './typeString';
 import { TypeAggregate, MemberMergeStrategy } from './typeAggregate';
 import * as util from './util';
+import { PhpDocParser, Tag } from './phpDoc';
 
 interface TypeNodeTransform extends NodeTransform {
     type: string;
@@ -50,6 +51,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
         const mask = SymbolKind.Namespace | SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait | SymbolKind.Method | SymbolKind.Function | SymbolKind.File;
         return (x.kind & mask) > 0 && !(x.modifiers & SymbolModifier.Magic);
     };
+    private _lastVarTypehints:Tag[];
 
     constructor(
         public doc: ParsedDocument,
@@ -182,7 +184,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.SimpleAssignmentExpression:
             case PhraseType.ByRefAssignmentExpression:
-                this._transformStack.push(new SimpleAssignmentExpressionTransform((<Phrase>node).phraseType));
+                this._transformStack.push(new SimpleAssignmentExpressionTransform((<Phrase>node).phraseType, this._lastVarTypehints));
                 break;
 
             case PhraseType.InstanceOfExpression:
@@ -371,6 +373,18 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                     if (parentTransform.phraseType === PhraseType.CatchClause && (<Token>node).tokenType === TokenType.VariableName) {
                         this._variableTable.setVariable((<CatchClauseTransform>parentTransform).variable);
                     }
+                } else if ((<Token>node).tokenType === TokenType.DocumentComment) {
+                    let phpDoc = PhpDocParser.parse(this.doc.tokenText(<Token>node));
+                    if (phpDoc) {
+                        this._lastVarTypehints = phpDoc.varTags;
+                        let varTag: Tag;
+                        for (let n = 0, l = this._lastVarTypehints.length; n < l; ++n) {
+                            varTag = this._lastVarTypehints[n];
+                            this._variableTable.setVariable(Variable.create(varTag.name, TypeString.nameResolve(varTag.typeString, this.nameResolver)));
+                        }
+                    }
+                } else if((<Token>node).tokenType === TokenType.OpenBrace || (<Token>node).tokenType === TokenType.CloseBrace || (<Token>node).tokenType === TokenType.Semicolon) {
+                    this._lastVarTypehints = undefined;
                 }
                 break;
 
@@ -832,7 +846,7 @@ class SimpleAssignmentExpressionTransform implements TypeNodeTransform {
     type = '';
     private _pushCount = 0;
 
-    constructor(public phraseType: PhraseType) {
+    constructor(public phraseType: PhraseType, private varTypeOverrides:Tag[]) {
         this._variables = [];
     }
 
@@ -846,6 +860,20 @@ class SimpleAssignmentExpressionTransform implements TypeNodeTransform {
             this.type = (<TypeNodeTransform>transform).type || '';
         }
 
+    }
+
+    private _typeOverride(name:string, tags:Tag[]) {
+        if(!tags) {
+            return undefined;
+        }
+        let t:Tag;
+        for(let n = 0; n < tags.length; ++n) {
+            t = tags[n];
+            if(name === t.name) {
+                return t.typeString;
+            }
+        }
+        return undefined;
     }
 
     private _lhs(lhs: NodeTransform) {
@@ -876,8 +904,10 @@ class SimpleAssignmentExpressionTransform implements TypeNodeTransform {
 
     get variables() {
         let type = this.type;
+        let tags = this.varTypeOverrides;
+        let typeOverrideFn = this._typeOverride;
         let fn = (x: Variable) => {
-            return Variable.resolveBaseVariable(x, type);
+            return Variable.resolveBaseVariable(x, typeOverrideFn(x.name, tags) || type);
         };
         return this._variables.map(fn);
     }

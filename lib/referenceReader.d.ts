@@ -14,6 +14,7 @@ export declare class ReferenceReader implements TreeVisitor<Phrase | Token> {
     private _scopeStack;
     private _symbols;
     private _symbolFilter;
+    private _lastVarTypehints;
     constructor(doc: ParsedDocument, nameResolver: NameResolver, symbolStore: SymbolStore, symbolTable: SymbolTable);
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
     postorder(node: Phrase | Token, spine: (Phrase | Token)[]): void;

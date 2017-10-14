@@ -4,7 +4,7 @@ import { ParsedDocumentStore, ParsedDocument } from '../src/parsedDocument';
 import * as lsp from 'vscode-languageserver-types';
 import { assert } from 'chai';
 import 'mocha';
-import {ReferenceReader} from '../src/referenceReader';
+import { ReferenceReader } from '../src/referenceReader';
 
 var noCompletions: lsp.CompletionList = {
     items: [],
@@ -43,8 +43,8 @@ var objectSrc =
     $var->b
 `;
 
-var objSrc2 = 
-`<?php
+var objSrc2 =
+    `<?php
 use Foo\\Bar\\Baz;
 $var = new Baz();
 $var->
@@ -157,8 +157,8 @@ var importSrc2 =
     $obj = new F
 `;
 
-var traitSrc = 
-`<?php
+var traitSrc =
+    `<?php
 trait Bar {
     function barFn() { }
 }
@@ -172,15 +172,15 @@ $foo = new Foo();
 $foo->barFn();
 `;
 
-var prefixSrc = 
-`<?php
+var prefixSrc =
+    `<?php
 function barFn() { }
 namespace Foo;
 barFn();
 `;
 
-var duplicateNameSrc = 
-`<?php
+var duplicateNameSrc =
+    `<?php
 class Foo {
     function fnA(){}
 }
@@ -194,21 +194,21 @@ $foo = new Foo();
 $foo->fnA();
 `;
 
-var additionalUseDeclSrc1 = 
-`<?php
+var additionalUseDeclSrc1 =
+    `<?php
 namespace Foo;
 class Bar {}
 `;
 
 var additionalUseDeclSrc2 =
-`<?php
+    `<?php
 namespace Baz;
 
 $bar = new Bar
 `;
 
-var staticAndThisSrc = 
-`<?php
+var staticAndThisSrc =
+    `<?php
 class A {
     /** @return static */
     static function factory(){}
@@ -223,16 +223,32 @@ $var->fn();
 $var->setter()->fn();
 `;
 
+var varTypehintSrc =
+    `<?php
+class Foo {
+    function foo(){}
+}
+class Bar {
+    function bar(){}
+}
+/** @var Bar $bar */
+$bar = new Foo;
+$bar->bar();
+$foo = new Bar;
+/** @var Foo $foo */
+$foo->foo();
+`;
+
 function setup(src: string | string[]) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
     let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore);
 
-    if(!Array.isArray(src)) {
+    if (!Array.isArray(src)) {
         src = [src];
     }
 
-    for(let n = 0; n < src.length; ++n) {
+    for (let n = 0; n < src.length; ++n) {
         let doc = new ParsedDocument('test' + (n > 0 ? n + 1 : ''), src[n]);
         parsedDocumentStore.add(doc);
         let table = SymbolTable.create(doc);
@@ -705,6 +721,29 @@ describe('CompletionProvider', () => {
 
     });
 
+    describe('@var typehinting', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(varTypehintSrc);
+        });
+
+        it('overrides assignment', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 9, character: 8 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, 'bar');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+        });
+
+        it('non assignment context', function() {
+            var completions = completionProvider.provideCompletions('test', { line: 12, character: 8 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, 'foo');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+        });
+
+
+    });
 
 
 });
