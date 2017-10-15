@@ -19,13 +19,13 @@ export const enum MemberMergeStrategy {
 
 export class TypeAggregate {
 
-    private _symbol: PhpSymbol;
+    private _symbol: PhpSymbol | PhpSymbol[];
     private _associated: PhpSymbol[];
     private _excludeTraits = false;
 
-    constructor(public symbolStore: SymbolStore, symbol: PhpSymbol, excludeTraits?:boolean) {
-        if (!symbol || !(symbol.kind & (SymbolKind.Class | SymbolKind.Interface | SymbolKind.Trait))) {
-            throw new Error('Invalid Argument' + JSON.stringify(symbol, null, 4));
+    constructor(public symbolStore: SymbolStore, symbol: PhpSymbol | PhpSymbol[], excludeTraits?:boolean) {
+        if (!symbol) {
+            throw new Error('Invalid Argument');
         }
         this._symbol = symbol;
         this._excludeTraits = excludeTraits;
@@ -36,7 +36,7 @@ export class TypeAggregate {
     }
 
     get name() {
-        return this._symbol.name;
+        return Array.isArray(this._symbol) ? this._symbol[0].name : this._symbol.name;
     }
 
     isBaseClass(name:string) {
@@ -44,7 +44,7 @@ export class TypeAggregate {
         let fn = (x:PhpSymbol) => {
             return x.kind === SymbolKind.Class && lcName === x.name.toLowerCase();
         }
-        return PhpSymbol.findChild(this._symbol, fn) !== undefined;
+        return !!this.associated(fn);
     }
 
     isAssociated(name: string) {
@@ -66,10 +66,22 @@ export class TypeAggregate {
     members(mergeStrategy: MemberMergeStrategy, predicate?: Predicate<PhpSymbol>) {
 
         let associated = this._getAssociated().slice(0);
-        associated.unshift(this._symbol);
+        let kind:SymbolKind;
+        let name:string;
+
+        if(Array.isArray(this._symbol)) {
+            associated.unshift(...this._symbol);
+            kind = this._symbol[0].kind;
+            name = this._symbol[0].name;
+        } else {
+            associated.unshift(this._symbol);
+            kind = this._symbol.kind;
+            name = this._symbol.name;
+        }
+        
         let members:PhpSymbol[];
 
-        switch (this._symbol.kind) {
+        switch (kind) {
             case SymbolKind.Class:
                 members = this._classMembers(associated, mergeStrategy, predicate);
                 break;
@@ -85,7 +97,7 @@ export class TypeAggregate {
         }
 
         //$this and static return types are resolved to fqn at this point as fqn is known
-        return this._resolveThisAndStaticReturnType(members, this._symbol.name);
+        return this._resolveThisAndStaticReturnType(members, name);
 
     }
 
@@ -209,15 +221,31 @@ export class TypeAggregate {
             return this._associated;
         }
 
-        this._associated = [];
-        let symbol = this._symbol;
-        if (!symbol.associated || !symbol.associated.length) {
-            return this._associated;
-        }
-
+        let associated = new Set<PhpSymbol>();
+        let symbols:PhpSymbol[];
         let queue: PhpSymbol[] = [];
         let stub: PhpSymbol;
-        Array.prototype.push.apply(queue, symbol.associated);
+
+        let symbolAssociatedReduceFn = (accum:PhpSymbol[], current:PhpSymbol) => {
+            if(current.associated) {
+                Array.prototype.push.apply(accum, current.associated);
+            }
+            return accum;
+        }
+        
+        if(Array.isArray(this._symbol)) {
+            Array.prototype.push.apply(queue, this._symbol.reduce(symbolAssociatedReduceFn, []));
+        } else if(this._symbol.associated) {
+            Array.prototype.push.apply(queue, this._symbol.associated);
+        }
+
+        let filterFn = (x:PhpSymbol) => {
+            return PhpSymbol.isClassLike(x) && !associated.has(x);
+        }
+
+        let addToSetFn = (x:PhpSymbol) => {
+            associated.add(x);
+        }
 
         while ((stub = queue.shift())) {
 
@@ -225,17 +253,12 @@ export class TypeAggregate {
                 continue;
             }
 
-            symbol = this.symbolStore.find(stub.name, PhpSymbol.isClassLike).shift();
-            if (!symbol || this._associated.indexOf(symbol) > -1) {
-                continue;
-            }
-            this._associated.push(symbol);
-            if (symbol.associated) {
-                Array.prototype.push.apply(queue, symbol.associated);
-            }
+            symbols = this.symbolStore.find(stub.name, filterFn);
+            symbols.forEach(addToSetFn);
+            Array.prototype.push.apply(queue, symbols.reduce(symbolAssociatedReduceFn, []));
         }
 
-        return this._associated;
+        return this._associated = Array.from(associated);
 
     }
 
@@ -245,12 +268,14 @@ export class TypeAggregate {
             return null;
         }
 
-        let symbol = symbolStore.find(fqn, PhpSymbol.isClassLike).shift();
-        if (!symbol) {
+        let symbols = symbolStore.find(fqn, PhpSymbol.isClassLike);
+        if (!symbols.length) {
             return null;
+        } else if(symbols.length === 1) {
+            return new TypeAggregate(symbolStore, symbols[0]);    
+        } else {
+            return new TypeAggregate(symbolStore, symbols);
         }
-
-        return new TypeAggregate(symbolStore, symbol);
 
     }
 

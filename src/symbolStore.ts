@@ -427,6 +427,7 @@ export class SymbolStore {
 
     }
 
+    /*
     findOverrides(baseSymbol: PhpSymbol): PhpSymbol[] {
 
         if (
@@ -465,6 +466,7 @@ export class SymbolStore {
         return this.find(baseSymbol.name, filterFn);
 
     }
+    */
 
     findReferences(name: string, filter?: Predicate<Reference>): Reference[] {
 

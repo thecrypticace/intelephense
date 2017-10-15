@@ -155,7 +155,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                     let s = this._symbols.shift();
                     this._scopeStack.push(s);
                     this.nameResolver.pushClass(s);
-                    this._classStack.push(new TypeAggregate(this.symbolStore, s));
+                    this._classStack.push(TypeAggregate.create(this.symbolStore, s.name));
                     this._variableTable.pushScope();
                     this._variableTable.setVariable(Variable.create('$this', s.name));
                     this._transformStack.push(null);
@@ -339,7 +339,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.RelativeScope:
                 if (parentTransform) {
                     let context = this._classStack.length ? this._classStack[this._classStack.length - 1] : null;
-                    let name = context ? context.type.name : '';
+                    let name = context ? context.name : '';
                     this._transformStack.push(new RelativeScopeTransform(name));
                 } else {
                     this._transformStack.push(null);

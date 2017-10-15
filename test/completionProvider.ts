@@ -679,8 +679,21 @@ describe('CompletionProvider', () => {
         it('all methods external', function () {
             var completions = completionProvider.provideCompletions('test', { line: 11, character: 7 });
             //console.log(JSON.stringify(completions, null, 4));
-            assert.equal(completions.items[0].label, 'barFn');
-            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+            assert.equal(completions.items.length, 3);
+            let fnNames = ['fnA', 'fnB', 'fnC'];
+            assert.oneOf(completions.items[0].label, fnNames);
+            assert.oneOf(completions.items[1].label, fnNames);
+            assert.oneOf(completions.items[2].label, fnNames);
+        });
+
+        it('all methods internal', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 7, character: 16 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items.length, 3);
+            let fnNames = ['fnA', 'fnB', 'fnC'];
+            assert.oneOf(completions.items[0].label, fnNames);
+            assert.oneOf(completions.items[1].label, fnNames);
+            assert.oneOf(completions.items[2].label, fnNames);
         });
 
 

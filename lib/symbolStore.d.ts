@@ -61,7 +61,6 @@ export declare class SymbolStore {
     findSymbolsByReference(ref: Reference, memberMergeStrategy?: MemberMergeStrategy): PhpSymbol[];
     findMembers(scope: string, memberMergeStrategy: MemberMergeStrategy, predicate?: Predicate<PhpSymbol>): PhpSymbol[];
     findBaseMember(symbol: PhpSymbol): PhpSymbol;
-    findOverrides(baseSymbol: PhpSymbol): PhpSymbol[];
     findReferences(name: string, filter?: Predicate<Reference>): Reference[];
     identifierLocation(identifier: SymbolIdentifier): Location;
     referenceToTypeString(ref: Reference): string;

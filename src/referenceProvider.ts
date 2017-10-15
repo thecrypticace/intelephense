@@ -162,12 +162,10 @@ export class ReferenceProvider {
                 return map[lcScope];
             }
 
-            let type = store.find(r.scope, PhpSymbol.isClassLike).shift();
-            if (!type) {
+            let aggregateType = TypeAggregate.create(store, r.scope);
+            if(!aggregateType) {
                 return map[lcScope] = false;
             }
-
-            let aggregateType = new TypeAggregate(store, type);
             return map[lcScope] = aggregateType.associated(associatedFilterFn).length > 0;
 
         };

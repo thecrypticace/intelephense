@@ -719,11 +719,7 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
         }
 
         let nameResolver = traverser.nameResolver;
-        let classSymbol = nameResolver.class;
-        let classAggregateType: TypeAggregate;
-        if (classSymbol) {
-            classAggregateType = new TypeAggregate(this.symbolStore, classSymbol);
-        }
+        let classAggregateType = TypeAggregate.create(this.symbolStore, nameResolver.className);
         let typeName: string;
         let fn: Predicate<PhpSymbol>;
         let typeAggregate: TypeAggregate;
@@ -731,7 +727,7 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
 
         for (let n = 0, l = typeNames.length; n < l; ++n) {
             typeName = typeNames[n];
-            if (classSymbol && classSymbol.name.toLowerCase() === typeName.toLowerCase()) {
+            if (classAggregateType && classAggregateType.name.toLowerCase() === typeName.toLowerCase()) {
                 typeAggregate = classAggregateType;
             } else {
                 typeAggregate = TypeAggregate.create(this.symbolStore, typeName);

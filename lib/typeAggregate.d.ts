@@ -12,8 +12,8 @@ export declare class TypeAggregate {
     private _symbol;
     private _associated;
     private _excludeTraits;
-    constructor(symbolStore: SymbolStore, symbol: PhpSymbol, excludeTraits?: boolean);
-    readonly type: PhpSymbol;
+    constructor(symbolStore: SymbolStore, symbol: PhpSymbol | PhpSymbol[], excludeTraits?: boolean);
+    readonly type: PhpSymbol | PhpSymbol[];
     readonly name: string;
     isBaseClass(name: string): boolean;
     isAssociated(name: string): boolean;
