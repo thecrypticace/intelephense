@@ -15,22 +15,18 @@ export class ReferenceStore {
 
 
     getReferenceTable(uri:string) {
-        
+
     }
 
     add(table:ReferenceTable) {
 
     }
 
-    remove(uri:string) {
+    remove(uri:string, purge?:boolean) {
 
     }
 
     close(uri:string) {
-
-    }
-
-    open(uri:string):Promise<ReferenceTable> {
 
     }
 
