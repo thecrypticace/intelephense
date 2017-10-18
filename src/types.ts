@@ -534,4 +534,158 @@ export interface BinarySearchResult {
     isExactMatch: boolean
 }
 
+interface NameIndexNode<T> {
+    key: string;
+    items: T[];
+}
 
+export type KeysDelegate<T> = (t: T) => string[];
+
+export class NameIndex<T> {
+
+    private _keysDelegate: KeysDelegate<T>;
+    private _nodeArray: NameIndexNode<T>[];
+    private _binarySearch: BinarySearch<NameIndexNode<T>>;
+    private _collator: Intl.Collator;
+
+    constructor(keysDelegate: KeysDelegate<T>) {
+        this._keysDelegate = keysDelegate;
+        this._nodeArray = [];
+        this._binarySearch = new BinarySearch<NameIndexNode<T>>(this._nodeArray);
+        this._collator = new Intl.Collator('en');
+    }
+
+    add(item: T) {
+
+        let suffixes = this._keysDelegate(item);
+        let node: NameIndexNode<T>;
+
+        for (let n = 0; n < suffixes.length; ++n) {
+
+            node = this._nodeFind(suffixes[n]);
+
+            if (node) {
+                node.items.push(item);
+            } else {
+                this._insertNode({ key: suffixes[n], items: [item] });
+            }
+        }
+
+    }
+
+    addMany(items: T[]) {
+        for (let n = 0; n < items.length; ++n) {
+            this.add(items[n]);
+        }
+    }
+
+    remove(item: T) {
+
+        let suffixes = this._keysDelegate(item);
+        let node: NameIndexNode<T>;
+        let i: number;
+
+        for (let n = 0; n < suffixes.length; ++n) {
+
+            node = this._nodeFind(suffixes[n]);
+            if (!node) {
+                continue;
+            }
+
+            i = node.items.indexOf(item);
+
+            if (i !== -1) {
+                node.items.splice(i, 1);
+                if (!node.items.length) {
+                    //uneccessary? save a lookup and splice
+                    //this._deleteNode(node);
+                }
+            }
+
+        }
+
+    }
+
+    removeMany(items: T[]) {
+        for (let n = 0; n < items.length; ++n) {
+            this.remove(items[n]);
+        }
+    }
+
+    /**
+     * Matches all items that are prefixed with text
+     * @param text 
+     */
+    match(text: string) {
+
+        text = text.toLowerCase();
+        let nodes = this._nodeMatch(text);
+        let matches:T[] = [];
+
+        for (let n = 0; n < nodes.length; ++n) {
+            Array.prototype.push.apply(matches, nodes[n].items);
+        }
+
+        return Array.from(new Set<T>(matches));
+
+    }
+
+    /**
+     * Finds all items that match (case insensitive) text exactly
+     * @param text 
+     */
+    find(text: string) {
+        let node = this._nodeFind(text.toLowerCase());
+        return node ? node.items : [];
+    }
+
+    private _nodeMatch(lcText: string) {
+
+        let collator = this._collator;
+        let compareLowerFn = (n: NameIndexNode<T>) => {
+            return collator.compare(n.key, lcText);
+        };
+        let compareUpperFn = (n: NameIndexNode<T>) => {
+            return n.key.slice(0, lcText.length) === lcText ? -1 : 1;
+        }
+
+        return this._binarySearch.range(compareLowerFn, compareUpperFn);
+
+    }
+
+    private _nodeFind(lcText: string) {
+
+        let collator = this._collator;
+        let compareFn = (n: NameIndexNode<T>) => {
+            return collator.compare(n.key, lcText);
+        }
+
+        return this._binarySearch.find(compareFn);
+
+    }
+
+    private _insertNode(node: NameIndexNode<T>) {
+
+        let collator = this._collator;
+        let rank = this._binarySearch.rank((n) => {
+            return collator.compare(n.key, node.key);
+        });
+
+        this._nodeArray.splice(rank, 0, node);
+
+    }
+
+    private _deleteNode(node: NameIndexNode<T>) {
+
+        let collator = this._collator;
+        let rank = this._binarySearch.rank((n) => {
+            return collator.compare(n.key, node.key);
+        });
+
+        if (this._nodeArray[rank] === node) {
+            this._nodeArray.splice(rank, 1);
+        }
+
+    }
+
+}

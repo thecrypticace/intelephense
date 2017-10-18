@@ -65,14 +65,13 @@ export interface PhpSymbol extends SymbolIdentifier {
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
     value?: string;
-    references?: Reference[];
+    location?: HashedLocation;
 }
 
 export interface SymbolIdentifier {
     kind: SymbolKind;
     name: string;
     scope?: string;
-    location?: HashedLocation;
 }
 
 export namespace PhpSymbol {
@@ -223,15 +222,6 @@ export namespace PhpSymbol {
         };
     }
 
-    export function filterReferences(parent: PhpSymbol, fn: Predicate<Reference>) {
-
-        if (!parent || !parent.references) {
-            return [];
-        }
-
-        return util.filter<Reference>(parent.references, fn);
-    }
-
     export function filterChildren(parent: PhpSymbol, fn: Predicate<PhpSymbol>) {
         if (!parent || !parent.children) {
             return [];
@@ -281,19 +271,4 @@ export namespace PhpSymbol {
         return uniqueSymbols;
     }
 
-}
-
-export interface Reference extends SymbolIdentifier {
-    type?: string;
-    altName?: string;
-}
-
-export namespace Reference {
-    export function create(kind: SymbolKind, name: string, location: HashedLocation): Reference {
-        return {
-            kind: kind,
-            name: name,
-            location: location
-        };
-    }
 }
