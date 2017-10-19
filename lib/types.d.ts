@@ -107,3 +107,29 @@ export interface BinarySearchResult {
     rank: number;
     isExactMatch: boolean;
 }
+export declare type KeysDelegate<T> = (t: T) => string[];
+export declare class NameIndex<T> {
+    private _keysDelegate;
+    private _nodeArray;
+    private _binarySearch;
+    private _collator;
+    constructor(keysDelegate: KeysDelegate<T>);
+    add(item: T): void;
+    addMany(items: T[]): void;
+    remove(item: T): void;
+    removeMany(items: T[]): void;
+    /**
+     * Matches all items that are prefixed with text
+     * @param text
+     */
+    match(text: string): T[];
+    /**
+     * Finds all items that match (case insensitive) text exactly
+     * @param text
+     */
+    find(text: string): T[];
+    private _nodeMatch(lcText);
+    private _nodeFind(lcText);
+    private _insertNode(node);
+    private _deleteNode(node);
+}

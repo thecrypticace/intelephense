@@ -14,7 +14,7 @@ export declare namespace Intelephense {
     function provideSignatureHelp(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): lsp.SignatureHelp;
     function provideDefinition(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): lsp.Location | lsp.Location[];
     function discoverSymbols(textDocument: lsp.TextDocumentItem): number;
-    function discoverReferences(textDocument: lsp.TextDocumentItem): number;
+    function discoverReferences(textDocument: lsp.TextDocumentItem): any;
     function forget(uri: string): number;
     function provideContractFqnTextEdits(uri: string, position: lsp.Position, alias?: string): lsp.TextEdit[];
     function numberDocumentsOpen(): number;

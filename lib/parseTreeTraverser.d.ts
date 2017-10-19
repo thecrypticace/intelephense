@@ -1,4 +1,4 @@
-import { PhpSymbol, Reference } from './symbol';
+import { PhpSymbol } from './symbol';
 import { SymbolTable } from './symbolStore';
 import { NameResolver } from './nameResolver';
 import { TreeTraverser } from './types';
@@ -13,7 +13,7 @@ export declare class ParseTreeTraverser extends TreeTraverser<Phrase | Token> {
     readonly symbolTable: SymbolTable;
     readonly text: string;
     readonly range: Range;
-    readonly reference: Reference;
+    readonly reference: any;
     readonly scope: PhpSymbol;
     readonly nameResolver: NameResolver;
     /**

@@ -45,13 +45,12 @@ export interface PhpSymbol extends SymbolIdentifier {
     associated?: PhpSymbol[];
     children?: PhpSymbol[];
     value?: string;
-    references?: Reference[];
+    location?: HashedLocation;
 }
 export interface SymbolIdentifier {
     kind: SymbolKind;
     name: string;
     scope?: string;
-    location?: HashedLocation;
 }
 export declare namespace PhpSymbol {
     function keys(s: PhpSymbol): string[];
@@ -67,7 +66,6 @@ export declare namespace PhpSymbol {
     function type(s: PhpSymbol): string;
     function setScope(symbols: PhpSymbol[], scope: string): PhpSymbol[];
     function create(kind: SymbolKind, name: string, location?: HashedLocation): PhpSymbol;
-    function filterReferences(parent: PhpSymbol, fn: Predicate<Reference>): Reference[];
     function filterChildren(parent: PhpSymbol, fn: Predicate<PhpSymbol>): PhpSymbol[];
     function findChild(parent: PhpSymbol, fn: Predicate<PhpSymbol>): PhpSymbol;
     function isAssociated(symbol: PhpSymbol, name: string): PhpSymbol;
@@ -76,11 +74,4 @@ export declare namespace PhpSymbol {
      * @param symbol
      */
     function unique(symbols: PhpSymbol[]): PhpSymbol[];
-}
-export interface Reference extends SymbolIdentifier {
-    type?: string;
-    altName?: string;
-}
-export declare namespace Reference {
-    function create(kind: SymbolKind, name: string, location: HashedLocation): Reference;
 }

@@ -1,4 +1,5 @@
-import { PhpSymbol, Reference, SymbolIdentifier } from './symbol';
+import { PhpSymbol, SymbolIdentifier } from './symbol';
+import { Reference } from './reference';
 import { Predicate, TreeVisitor, Traversable } from './types';
 import { Position, Location } from 'vscode-languageserver-types';
 import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
@@ -14,7 +15,6 @@ export declare class SymbolTable implements Traversable<PhpSymbol> {
     readonly hash: number;
     readonly symbols: PhpSymbol[];
     readonly symbolCount: number;
-    readonly referenceCount: number;
     parent(s: PhpSymbol): PhpSymbol;
     traverse(visitor: TreeVisitor<PhpSymbol>): TreeVisitor<PhpSymbol>;
     filter(predicate: Predicate<PhpSymbol>): PhpSymbol[];
@@ -24,18 +24,14 @@ export declare class SymbolTable implements Traversable<PhpSymbol> {
     absoluteScope(pos: Position): PhpSymbol;
     scopeSymbols(): PhpSymbol[];
     symbolAtPosition(position: Position): PhpSymbol;
-    references(filter?: Predicate<Reference>): Reference[];
-    referenceAtPosition(position: Position): Reference;
     contains(identifier: SymbolIdentifier): boolean;
     private _isScopeSymbol(s);
-    private _hasReferences(s);
     static create(parsedDocument: ParsedDocument, externalOnly?: boolean): SymbolTable;
     static readBuiltInSymbols(): SymbolTable;
 }
 export declare class SymbolStore {
     private _tableIndex;
     private _symbolIndex;
-    private _referenceIndex;
     private _symbolCount;
     constructor();
     onParsedDocumentChange: (args: ParsedDocumentChangeEventArgs) => void;
@@ -44,7 +40,6 @@ export declare class SymbolStore {
     readonly symbolCount: number;
     add(symbolTable: SymbolTable): void;
     remove(uri: string): void;
-    indexReferences(symbolTable: SymbolTable): void;
     /**
      * Finds all indexed symbols that match text exactly.
      * Case sensitive for constants and variables and insensitive for
@@ -61,45 +56,16 @@ export declare class SymbolStore {
     findSymbolsByReference(ref: Reference, memberMergeStrategy?: MemberMergeStrategy): PhpSymbol[];
     findMembers(scope: string, memberMergeStrategy: MemberMergeStrategy, predicate?: Predicate<PhpSymbol>): PhpSymbol[];
     findBaseMember(symbol: PhpSymbol): PhpSymbol;
-    findReferences(name: string, filter?: Predicate<Reference>): Reference[];
     identifierLocation(identifier: SymbolIdentifier): Location;
     referenceToTypeString(ref: Reference): string;
     private _sortMatches(query, matches);
     private _classOrInterfaceFilter(s);
     private _classInterfaceTraitFilter(s);
     private _indexSymbols(root);
-    private _indexableReferenceFilter(ref);
     /**
      * No vars, params or symbols with use modifier or private modifier
      * @param s
      */
     private _indexFilter(s);
     private _symbolKeys(s);
-    private _referenceKeys(ref);
-}
-export declare type KeysDelegate<T> = (t: T) => string[];
-export declare class NameIndex<T> {
-    private _keysDelegate;
-    private _nodeArray;
-    private _binarySearch;
-    private _collator;
-    constructor(keysDelegate: KeysDelegate<T>);
-    add(item: T): void;
-    addMany(items: T[]): void;
-    remove(item: T): void;
-    removeMany(items: T[]): void;
-    /**
-     * Matches all items that are prefixed with text
-     * @param text
-     */
-    match(text: string): PhpSymbol[];
-    /**
-     * Finds all items that match (case insensitive) text exactly
-     * @param text
-     */
-    find(text: string): T[];
-    private _nodeMatch(lcText);
-    private _nodeFind(lcText);
-    private _insertNode(node);
-    private _deleteNode(node);
 }
