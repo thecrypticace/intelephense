@@ -4,7 +4,7 @@
 
 'use strict';
 
-import {Range} from 'vscode-languageserver-types';
+import { Range } from 'vscode-languageserver-types';
 
 export interface Predicate<T> {
     (t: T): boolean;
@@ -55,16 +55,16 @@ export interface HashedLocation {
 }
 
 export namespace HashedLocation {
-    export function create(uriHash:number, range:Range) {
+    export function create(uriHash: number, range: Range) {
         return <HashedLocation>{
-            uriHash:uriHash,
-            range:range
+            uriHash: uriHash,
+            range: range
         };
     }
 }
 
 export interface TreeLike {
-    [index:string]:any,
+    [index: string]: any,
     children?: TreeLike[]
 }
 
@@ -131,15 +131,15 @@ export class TreeTraverser<T extends TreeLike> {
 
     }
 
-    child(predicate:Predicate<T>) {
+    child(predicate: Predicate<T>) {
 
         let parent = this.node;
-        if(!parent || !parent.children) {
+        if (!parent || !parent.children) {
             return null;
         }
 
-        for(let n = 0; n < parent.children.length; ++n) {
-            if(predicate(<T>parent.children[n])) {
+        for (let n = 0; n < parent.children.length; ++n) {
+            if (predicate(<T>parent.children[n])) {
                 this._spine.push(<T>parent.children[n]);
                 return this.node;
             }
@@ -148,9 +148,9 @@ export class TreeTraverser<T extends TreeLike> {
         return null;
     }
 
-    nthChild(n:number) {
+    nthChild(n: number) {
         let parent = this.node;
-        if(!parent || !parent.children || n < 0 || n > parent.children.length - 1) {
+        if (!parent || !parent.children || n < 0 || n > parent.children.length - 1) {
             return undefined;
         }
 
@@ -341,7 +341,7 @@ export class Debounce<T> {
 
     private _handler: (e: T) => void;
     private _lastEvent: T;
-    private _timer: number;
+    private _timer: number | NodeJS.Timer;
 
     constructor(handler: (e: T) => void, public wait: number) {
         this._handler = handler;
@@ -349,7 +349,7 @@ export class Debounce<T> {
     }
 
     clear = () => {
-        clearTimeout(this._timer);
+        clearTimeout(<any>this._timer);
         this._timer = null;
         this._lastEvent = null;
     }
@@ -594,12 +594,13 @@ export class NameIndex<T> {
 
             i = node.items.indexOf(item);
 
-            if (i !== -1) {
+            if (i > -1) {
                 node.items.splice(i, 1);
+                /* uneccessary? save a lookup and splice
                 if (!node.items.length) {
-                    //uneccessary? save a lookup and splice
-                    //this._deleteNode(node);
+                    this._deleteNode(node);
                 }
+                */
             }
 
         }
@@ -620,7 +621,7 @@ export class NameIndex<T> {
 
         text = text.toLowerCase();
         let nodes = this._nodeMatch(text);
-        let matches:T[] = [];
+        let matches: T[] = [];
 
         for (let n = 0; n < nodes.length; ++n) {
             Array.prototype.push.apply(matches, nodes[n].items);
@@ -686,6 +687,79 @@ export class NameIndex<T> {
             this._nodeArray.splice(rank, 1);
         }
 
+    }
+
+}
+
+export type Comparer<T> = (a: T, b: T) => number;
+
+export class SortedList<T> {
+
+    private _items: T[];
+    private _search: BinarySearch<T>;
+
+    constructor(private compareFn: Comparer<T>) {
+        this._items = [];
+        this._search = new BinarySearch<T>(this._items);
+    }
+
+    get length() {
+        return this._items.length;
+    }
+
+    add(item: T) {
+        let cmpFn = this._createCompareClosure(item, this.compareFn);
+        let rank = this._search.rank(cmpFn);
+        this._items.splice(rank, 0, item);
+    }
+
+    remove(item: T) {
+        let cmpLow = this._createCompareLowerClosure(item, this.compareFn);
+        let cmpHigh = this._createCompareUpperClosure(item, this.compareFn);
+        let rankLow = this._search.rank(cmpLow);
+        let rankHigh = this._search.search(cmpHigh, rankLow).rank;
+
+        for (let i = rankLow; i < rankHigh; ++i) {
+            if (this._items[i] === item) {
+                this._items.splice(i, 1);
+                break;
+            }
+        }
+
+    }
+
+    find(compareFn: (t: T) => number) {
+        return this._search.find(compareFn);
+    }
+
+    findAll(compareFn: (t: T) => number) {
+        let lowFn = (t:T) => { return compareFn(t) >= 0 ? 1 : -1; }
+        let highFn = (t:T) => { return compareFn(t) <= 0 ? -1 : 1; }
+        return this._search.range(lowFn, highFn);
+    }
+
+    range(compareLowerFn: (t: T) => number, compareUpperFn: (t: T) => number) {
+        return this._search.range(compareLowerFn, compareUpperFn);
+    }
+
+    private _createCompareClosure(item: T, cmpFn: (a: T, b: T) => number) {
+        return (t: T): number => {
+            return cmpFn(t, item);
+        }
+    }
+
+    private _createCompareLowerClosure(item: T, cmpFn: (a: T, b: T) => number) {
+        return (t: T): number => {
+            let result = cmpFn(t, item);
+            return result >= 0 ? 1 : -1;
+        }
+    }
+
+    private _createCompareUpperClosure(item: T, cmpFn: (a: T, b: T) => number) {
+        return (t: T): number => {
+            let result = cmpFn(t, item);
+            return result <= 0 ? -1 : 1;
+        }
     }
 
 }

@@ -4,10 +4,11 @@
 
 'use strict';
 
-import { Predicate, TreeVisitor, TreeTraverser, NameIndex } from './types';
+import { Predicate, TreeVisitor, TreeTraverser, NameIndex, Traversable } from './types';
 import { SymbolIdentifier, SymbolKind } from './symbol';
 import { Range, Location } from 'vscode-languageserver-types';
 import * as util from './util';
+import { FileCache, Cache } from './cache';
 
 export interface Reference extends SymbolIdentifier {
     location: Location;
@@ -30,7 +31,7 @@ export interface Scope {
     children: (Scope | Range)[]
 }
 
-export class ReferenceTable {
+export class ReferenceTable implements Traversable<Scope | Reference> {
 
     private _uri: string;
     private _root: Scope;
@@ -70,38 +71,65 @@ export class ReferenceTable {
 
 
     }
+
+    traverse(visitor: TreeVisitor<Scope | Reference>) {
+        let traverser = new TreeTraverser([this.root]);
+        traverser.traverse(visitor);
+        return visitor;
+    }
 }
 
 interface ReferenceTableSummary {
-    uri:string;
-    identifiers:string[];
+    uri: string;
+    identifiers: string[];
+}
+
+namespace ReferenceTableSummary {
+    export function fromTable(table: ReferenceTable) {
+        return (<ReferenceTableSummaryVisitor>table.traverse(new ReferenceTableSummaryVisitor(table.uri))).referenceTableSummary;
+    }
+
+    export function create(uri: string, identifiers: string[]) {
+        return {
+            uri: this.uri,
+            identifiers: identifiers
+        };
+    }
+
 }
 
 export class ReferenceStore {
 
     private _tables: ReferenceTable[];
-    private _refIndex: NameIndex<ReferenceTableSummary>;
+    private _index: NameIndex<ReferenceTableSummary>;
+    private _cache: Cache;
 
-    constructor() {
-        this._refIndex = new NameIndex<ReferenceTableSummary>((x)=>{ return x.identifiers; });
+    constructor(cache: Cache) {
+        this._index = new NameIndex<ReferenceTableSummary>((x) => { return x.identifiers; });
         this._tables = [];
+        this._cache = cache;
     }
 
     getReferenceTable(uri: string) {
-        for(let n = 0; n < this._tables.length; ++n) {
-            if(this._tables[n].uri === uri) {
-                return this._tables[n];
-            }
-        }
-        return undefined;
+        return this._tables.find((t) => { return t.uri === uri; });
     }
 
     add(table: ReferenceTable) {
-        
+        if (this.getReferenceTable(table.uri)) {
+            this.remove(table.uri);
+        }
+        this._tables.push(table);
+        let summary = ReferenceTableSummary.fromTable(table);
+        this._index.add(summary);
     }
 
     remove(uri: string, purge?: boolean) {
-
+        let removed = this._tablesRemove(uri);
+        if(removed) {
+            let summary = ReferenceTableSummary.fromTable(removed);
+            let eqFn = (x:ReferenceTableSummary) => { return summary.uri === eq}
+            this._index.remove(summary, )
+        }
     }
 
     close(uri: string) {
@@ -137,24 +165,13 @@ export class ReferenceStore {
 
     }
 
-    private _indexableReferenceFilter(ref: Reference) {
-        return ref.kind !== SymbolKind.Parameter && ref.kind !== SymbolKind.Variable;
+    private _tablesRemove(uri:string) {
+        let index = this._tables.findIndex((t)=>{ return t.uri === uri; });
+        if(index > -1) {
+            return this._tables.splice(index, 1).shift();
+        }
+        return undefined;
     }
-
-    private _referenceKeys(ref: Reference) {
-        
-                let lcName = ref.name.toLowerCase();
-                let keys = [lcName];
-                if (ref.altName) {
-                    let lcAlt = ref.altName.toLowerCase();
-                    if (lcAlt !== lcName && lcAlt !== 'static' && lcAlt !== 'self' && lcAlt !== 'parent') {
-                        keys.push(lcAlt);
-                    }
-                }
-        
-                return keys;
-        
-            }
 
 
 }
@@ -181,6 +198,48 @@ class ReferencesVisitor implements TreeVisitor<Scope | Reference> {
 
         return true;
 
+    }
+
+}
+
+class ReferenceTableSummaryVisitor implements TreeVisitor<Scope | Reference> {
+
+    private identifiers: Set<string>;
+
+    constructor(private uri: string) {
+        this.identifiers = new Set<string>();
+    }
+
+    get referenceTableSummary(): ReferenceTableSummary {
+        return ReferenceTableSummary.create(this.uri, Array.from(this.identifiers));
+    }
+
+    preorder(node: Scope | Reference, spine: (Scope | Reference)[]) {
+        if (this._shouldIndex(node)) {
+            let lcName = (<Reference>node).name.toLowerCase();
+            let altName = (<Reference>node).altName;
+            if (lcName) {
+                this.identifiers.add(lcName);
+            }
+            if (altName) {
+                let lcAltName = altName.toLowerCase();
+                if (lcAltName !== lcName && lcAltName !== 'static' && lcAltName !== 'self' && lcAltName !== 'parent') {
+                    this.identifiers.add(lcAltName);
+                }
+            }
+        }
+        return true;
+    }
+
+    private _shouldIndex(node: Scope | Reference) {
+        switch ((<Reference>node).kind) {
+            case undefined:
+            case SymbolKind.Variable:
+            case SymbolKind.Parameter:
+                return false;
+            default:
+                return true;
+        }
     }
 
 }
