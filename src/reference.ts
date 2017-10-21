@@ -9,6 +9,7 @@ import { SymbolIdentifier, SymbolKind } from './symbol';
 import { Range, Location } from 'vscode-languageserver-types';
 import * as util from './util';
 import { FileCache, Cache } from './cache';
+import { Log } from './logger';
 
 export interface Reference extends SymbolIdentifier {
     location: Location;
@@ -97,16 +98,16 @@ namespace ReferenceTableSummary {
     }
 
     var collator = new Intl.Collator('en');
-    export function compare(a:ReferenceTableSummary, b:ReferenceTableSummary) {
+    export function compare(a: ReferenceTableSummary, b: ReferenceTableSummary) {
         return collator.compare(a.uri, b.uri);
     }
 
-    export function keys(x:ReferenceTableSummary) {
+    export function keys(x: ReferenceTableSummary) {
         return x.identifiers;
     }
 
-    export function uriCompareFn(uri:string) {
-        return (x:ReferenceTableSummary) => {
+    export function uriCompareFn(uri: string) {
+        return (x: ReferenceTableSummary) => {
             return collator.compare(x.uri, uri);
         }
     }
@@ -117,7 +118,7 @@ export class ReferenceStore {
 
     private _tables: ReferenceTable[];
     private _nameIndex: NameIndex<ReferenceTableSummary>;
-    private _summaryIndex:SortedList<ReferenceTableSummary>;
+    private _summaryIndex: SortedList<ReferenceTableSummary>;
     private _cache: Cache;
 
     constructor(cache: Cache) {
@@ -128,7 +129,7 @@ export class ReferenceStore {
     }
 
     getReferenceTable(uri: string) {
-        return this._tables.find((t) => { return t.uri === uri; });
+        return util.find<ReferenceTable>(this._tables, (t) => { return t.uri === uri; });
     }
 
     add(table: ReferenceTable) {
@@ -144,61 +145,142 @@ export class ReferenceStore {
     remove(uri: string, purge?: boolean) {
         this._tablesRemove(uri);
         let summary = this._summaryRemove(uri);
-        if(!summary) {
+        if (!summary) {
             return;
         }
         this._nameIndex.remove(summary);
-        if(purge) {
+        if (purge) {
             this._cache.delete(uri);
         }
     }
 
     close(uri: string) {
-
+        let table = this._tablesRemove(uri);
+        if (table) {
+            this._cache.write(table.uri, table);
+        }
     }
 
     closeAll() {
+        let tables = this._tables;
+        let cache = this._cache;
+        this._tables = [];
+
+        let writeTableFn = () => {
+            let table = tables.pop();
+            if (!table) {
+                return;
+            }
+            cache.write(table.uri, table).then(writeTableFn).catch(Log.warn);
+        }
+
+        let maxOpenFiles = Math.min(8, tables.length);
+        for (let n = 0; n < maxOpenFiles; ++n) {
+            writeTableFn();
+        }
 
     }
 
     find(name: string, filter?: Predicate<Reference>): Promise<Reference[]> {
 
-
         if (!name) {
-            return [];
+            return Promise.resolve<Reference[]>([]);
         }
 
-        let matches = this._referenceIndex.find(name);
-        let filtered: Reference[] = [];
-        let match: Reference;
-        const caseSensitiveKindMask = SymbolKind.Property | SymbolKind.Variable | SymbolKind.Constant | SymbolKind.ClassConstant;
+        //find uris that contain ref matching name
+        let summaries = this._nameIndex.find(name);
+        let count = summaries.length;
+        if(!count) {
+            return Promise.resolve<Reference[]>([]);
+        }
+        let tables: ReferenceTable[] = [];
+        let fetchTableFn = this._fetchTable;
+        let findInTablesFn = this._findInTables;
 
-        for (let n = 0; n < matches.length; ++n) {
-            match = matches[n];
-            if (!filter || filter(match)) {
-                if (!(match.kind & caseSensitiveKindMask) || name === match.name) {
-                    filtered.push(match);
+        return new Promise<Reference[]>((resolve, reject) => {
+
+            let onSuccess = (table:ReferenceTable) => {
+                tables.push(table);
+                onAlways();
+            }
+
+            let onFail = (msg:string) => {
+                Log.warn(msg);
+                onAlways();
+            }
+
+            let onAlways = () => {
+                count--;
+                if(count < 1) {
+                    resolve(findInTablesFn(tables, name, filter));
+                } else {
+                    let summary = summaries.pop();
+                    if(summary) {
+                        fetchTableFn(summary.uri).then(onSuccess).catch(onFail);
+                    }
                 }
             }
-        }
 
-        return filtered;
+            let maxOpenFiles = Math.min(8, summaries.length);
+            while(maxOpenFiles--) {
+                fetchTableFn(summaries.pop().uri).then(onSuccess).catch(onFail);
+            }
+
+        });
 
     }
 
-    private _tablesRemove(uri:string) {
-        let index = this._tables.findIndex((t)=>{ return t.uri === uri; });
-        if(index > -1) {
+    private _findInTables(tables:ReferenceTable[], name:string, filter?:Predicate<Reference>) {
+
+        const caseSensitiveKindMask = SymbolKind.Property | SymbolKind.Variable | SymbolKind.Constant | SymbolKind.ClassConstant;
+        let refs:Reference[] = [];
+        let lcName = name.toLowerCase();
+        let table:ReferenceTable;
+
+        if(!name || !tables.length) {
+            return refs;
+        }
+
+        let predicate = (r:Reference) => {
+            return (((r.kind & caseSensitiveKindMask) > 0 && name === r.name) || 
+                (!(r.kind & caseSensitiveKindMask) && lcName === r.name.toLowerCase())) &&
+                (!filter || filter(r));
+        }
+
+        for(let n = 0; n < tables.length; ++n) {
+            table = tables[n];
+            Array.prototype.push.apply(refs, table.references(predicate));
+        }
+
+        return refs;
+
+    }
+
+    private _fetchTable = (uri:string) => {
+        let findOpenTableFn = (t) => { return t.uri === uri };
+        let table = this.getReferenceTable(uri);
+
+        if (table) {
+            return Promise.resolve<ReferenceTable>(table);
+        } else {
+            return this._cache.read(uri).then((obj) => {
+                return Promise.resolve<ReferenceTable>(new ReferenceTable(uri, obj));
+            });
+        }
+    }
+
+    private _tablesRemove(uri: string) {
+        let index = this._tables.findIndex((t) => { return t.uri === uri; });
+        if (index > -1) {
             return this._tables.splice(index, 1).shift();
         }
         return undefined;
     }
 
-    private _summaryRemove(uri:string) {
+    private _summaryRemove(uri: string) {
         let cmpFn = ReferenceTableSummary.uriCompareFn(uri);
         return this._summaryIndex.remove(cmpFn);
     }
-
 
 }
 
