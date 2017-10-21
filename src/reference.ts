@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Predicate, TreeVisitor, TreeTraverser, NameIndex, Traversable } from './types';
+import { Predicate, TreeVisitor, TreeTraverser, NameIndex, Traversable, SortedList } from './types';
 import { SymbolIdentifier, SymbolKind } from './symbol';
 import { Range, Location } from 'vscode-languageserver-types';
 import * as util from './util';
@@ -96,16 +96,33 @@ namespace ReferenceTableSummary {
         };
     }
 
+    var collator = new Intl.Collator('en');
+    export function compare(a:ReferenceTableSummary, b:ReferenceTableSummary) {
+        return collator.compare(a.uri, b.uri);
+    }
+
+    export function keys(x:ReferenceTableSummary) {
+        return x.identifiers;
+    }
+
+    export function uriCompareFn(uri:string) {
+        return (x:ReferenceTableSummary) => {
+            return collator.compare(x.uri, uri);
+        }
+    }
+
 }
 
 export class ReferenceStore {
 
     private _tables: ReferenceTable[];
-    private _index: NameIndex<ReferenceTableSummary>;
+    private _nameIndex: NameIndex<ReferenceTableSummary>;
+    private _summaryIndex:SortedList<ReferenceTableSummary>;
     private _cache: Cache;
 
     constructor(cache: Cache) {
-        this._index = new NameIndex<ReferenceTableSummary>((x) => { return x.identifiers; });
+        this._nameIndex = new NameIndex<ReferenceTableSummary>(ReferenceTableSummary.keys);
+        this._summaryIndex = new SortedList<ReferenceTableSummary>(ReferenceTableSummary.compare);
         this._tables = [];
         this._cache = cache;
     }
@@ -120,15 +137,19 @@ export class ReferenceStore {
         }
         this._tables.push(table);
         let summary = ReferenceTableSummary.fromTable(table);
-        this._index.add(summary);
+        this._summaryIndex.add(summary);
+        this._nameIndex.add(summary);
     }
 
     remove(uri: string, purge?: boolean) {
-        let removed = this._tablesRemove(uri);
-        if(removed) {
-            let summary = ReferenceTableSummary.fromTable(removed);
-            let eqFn = (x:ReferenceTableSummary) => { return summary.uri === eq}
-            this._index.remove(summary, )
+        this._tablesRemove(uri);
+        let summary = this._summaryRemove(uri);
+        if(!summary) {
+            return;
+        }
+        this._nameIndex.remove(summary);
+        if(purge) {
+            this._cache.delete(uri);
         }
     }
 
@@ -171,6 +192,11 @@ export class ReferenceStore {
             return this._tables.splice(index, 1).shift();
         }
         return undefined;
+    }
+
+    private _summaryRemove(uri:string) {
+        let cmpFn = ReferenceTableSummary.uriCompareFn(uri);
+        return this._summaryIndex.remove(cmpFn);
     }
 
 

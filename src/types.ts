@@ -695,10 +695,10 @@ export type Comparer<T> = (a: T, b: T) => number;
 
 export class SortedList<T> {
 
-    private _items: T[];
-    private _search: BinarySearch<T>;
+    protected _items: T[];
+    protected _search: BinarySearch<T>;
 
-    constructor(private compareFn: Comparer<T>) {
+    constructor(protected compareFn: Comparer<T>) {
         this._items = [];
         this._search = new BinarySearch<T>(this._items);
     }
@@ -709,56 +709,28 @@ export class SortedList<T> {
 
     add(item: T) {
         let cmpFn = this._createCompareClosure(item, this.compareFn);
-        let rank = this._search.rank(cmpFn);
-        this._items.splice(rank, 0, item);
+        let result = this._search.search(cmpFn);
+        if(result.isExactMatch) {
+            throw new Error('Duplicate key');
+        }
+        this._items.splice(result.rank, 0, item);
     }
 
-    remove(item: T) {
-        let cmpLow = this._createCompareLowerClosure(item, this.compareFn);
-        let cmpHigh = this._createCompareUpperClosure(item, this.compareFn);
-        let rankLow = this._search.rank(cmpLow);
-        let rankHigh = this._search.search(cmpHigh, rankLow).rank;
-
-        for (let i = rankLow; i < rankHigh; ++i) {
-            if (this._items[i] === item) {
-                this._items.splice(i, 1);
-                break;
-            }
+    remove(compareFn: (t: T) => number) {
+        let result = this._search.search(compareFn);
+        if(result.isExactMatch) {
+            return this._items.splice(result.rank, 1).shift();
         }
-
+        return undefined;
     }
 
     find(compareFn: (t: T) => number) {
         return this._search.find(compareFn);
     }
 
-    findAll(compareFn: (t: T) => number) {
-        let lowFn = (t:T) => { return compareFn(t) >= 0 ? 1 : -1; }
-        let highFn = (t:T) => { return compareFn(t) <= 0 ? -1 : 1; }
-        return this._search.range(lowFn, highFn);
-    }
-
-    range(compareLowerFn: (t: T) => number, compareUpperFn: (t: T) => number) {
-        return this._search.range(compareLowerFn, compareUpperFn);
-    }
-
     private _createCompareClosure(item: T, cmpFn: (a: T, b: T) => number) {
         return (t: T): number => {
             return cmpFn(t, item);
-        }
-    }
-
-    private _createCompareLowerClosure(item: T, cmpFn: (a: T, b: T) => number) {
-        return (t: T): number => {
-            let result = cmpFn(t, item);
-            return result >= 0 ? 1 : -1;
-        }
-    }
-
-    private _createCompareUpperClosure(item: T, cmpFn: (a: T, b: T) => number) {
-        return (t: T): number => {
-            let result = cmpFn(t, item);
-            return result <= 0 ? -1 : 1;
         }
     }
 
