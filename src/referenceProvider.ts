@@ -8,12 +8,13 @@ import { Position, ReferenceContext, Location } from 'vscode-languageserver-type
 import { ParsedDocumentStore, ParsedDocument } from './parsedDocument';
 import { ParseTreeTraverser } from './parseTreeTraverser';
 import { SymbolStore, SymbolTable } from './symbolStore';
-import { Reference, PhpSymbol, SymbolKind, SymbolModifier, SymbolIdentifier } from './symbol';
+import { PhpSymbol, SymbolKind, SymbolModifier, SymbolIdentifier } from './symbol';
 import { MemberMergeStrategy, TypeAggregate } from './typeAggregate';
+import {Reference, ReferenceStore, ReferenceTable} from './reference';
 
 export class ReferenceProvider {
 
-    constructor(public documentStore: ParsedDocumentStore, public symbolStore: SymbolStore) {
+    constructor(public documentStore: ParsedDocumentStore, public symbolStore: SymbolStore, public refStore:ReferenceStore) {
 
     }
 
@@ -21,7 +22,7 @@ export class ReferenceProvider {
 
         let locations: Location[] = [];
         let doc = this.documentStore.find(uri);
-        let table = this.symbolStore.getSymbolTable(uri);
+        let table = this.refStore.getReferenceTable(uri);
 
         if (!doc || !table) {
             return locations;
@@ -33,7 +34,7 @@ export class ReferenceProvider {
             //get symbol definition
             //for constructors get the class instead of __construct
             if (ref.kind === SymbolKind.Constructor) {
-                ref = { kind: SymbolKind.Class, name: ref.name };
+                ref = { kind: SymbolKind.Class, name: ref.name, location:ref.location };
             }
 
             //if class member then make sure base symbol is fetched
@@ -57,9 +58,9 @@ export class ReferenceProvider {
      * @param table 
      * @param includeDeclaration 
      */
-    provideReferences(symbols: PhpSymbol[], table: SymbolTable, includeDeclaration: boolean): SymbolIdentifier[] {
+    provideReferences(symbols: PhpSymbol[], table: ReferenceTable, includeDeclaration: boolean): Reference[] {
 
-        let refs: SymbolIdentifier[] = [];
+        let refs: Reference[] = [];
         let s: PhpSymbol;
 
         for (let n = 0; n < symbols.length; ++n) {
@@ -75,7 +76,7 @@ export class ReferenceProvider {
 
     }
 
-    private _provideReferences(symbol: PhpSymbol, table: SymbolTable): Reference[] {
+    private _provideReferences(symbol: PhpSymbol, table: ReferenceTable): Reference[] {
 
         switch (symbol.kind) {
             case SymbolKind.Parameter:
@@ -86,7 +87,7 @@ export class ReferenceProvider {
             case SymbolKind.Trait:
             case SymbolKind.Function:
             case SymbolKind.Constant:
-                return this.symbolStore.findReferences(symbol.name);
+                return this.refStore.find(symbol.name);
             case SymbolKind.Property:
                 return this._propertyReferences(symbol, table);
             case SymbolKind.ClassConstant:
