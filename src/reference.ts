@@ -6,7 +6,7 @@
 
 import { Predicate, TreeVisitor, TreeTraverser, NameIndex, Traversable, SortedList } from './types';
 import { SymbolIdentifier, SymbolKind } from './symbol';
-import { Range, Location } from 'vscode-languageserver-types';
+import { Range, Location, Position } from 'vscode-languageserver-types';
 import * as util from './util';
 import { FileCache, Cache } from './cache';
 import { Log } from './logger';
@@ -28,8 +28,8 @@ export namespace Reference {
 }
 
 export interface Scope {
-    range: Range;
-    children: (Scope | Range)[]
+    location: Location;
+    children: (Scope | Reference)[]
 }
 
 export class ReferenceTable implements Traversable<Scope | Reference> {
@@ -69,7 +69,10 @@ export class ReferenceTable implements Traversable<Scope | Reference> {
 
     referenceAtPosition(position: Position) {
 
-
+        let visitor = new LocateVisitor(position);
+        this.traverse(visitor);
+        let ref = visitor.node as Reference;
+        return ref.kind ? ref : undefined;
 
     }
 
@@ -348,6 +351,33 @@ class ReferenceTableSummaryVisitor implements TreeVisitor<Scope | Reference> {
             default:
                 return true;
         }
+    }
+
+}
+
+interface Locatable {
+    location: { range: Range };
+}
+
+class LocateVisitor implements TreeVisitor<Locatable> {
+
+    private _node:Locatable;
+
+    constructor(private position:Position) { }
+
+    get node() {
+        return this._node;
+    }
+
+    preorder(node:Locatable, spine:Locatable[]) {
+
+        if(node.location && node.location.range && util.isInRange(this.position, node.location.range) === 0) {
+            this._node = node;
+            return true;
+        }
+
+        return false;
+
     }
 
 }
