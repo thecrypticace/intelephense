@@ -16,6 +16,10 @@ export interface Cache {
     delete(key: string): Promise<void>;
 }
 
+export function createCache(path:string) {
+    return new FileCache(path);
+}
+
 type Bucket = Item[];
 type Item = [string, any];
 

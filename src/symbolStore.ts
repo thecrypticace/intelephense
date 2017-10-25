@@ -191,6 +191,8 @@ export class SymbolStore {
     }
 
     add(symbolTable: SymbolTable) {
+        //if table already exists replace it
+        this.remove(symbolTable.uri);
         this._tableIndex.add(symbolTable);
         this._symbolIndex.addMany(this._indexSymbols(symbolTable.root));
         this._symbolCount += symbolTable.symbolCount;
