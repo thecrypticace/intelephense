@@ -42,11 +42,12 @@ export function isInRange(position: Position, range: Range) {
 
 }
 
+export function positionEquality(p1:Position, p2:Position) {
+    return p1 && p2 && p1.character === p2.character && p1.line === p2.character; 
+}
+
 export function rangeEquality(r1: Range, r2: Range) {
-    return r1.start.line === r2.start.line &&
-        r1.start.character === r2.start.character &&
-        r1.end.line === r2.end.line &&
-        r1.end.character === r2.end.character;
+    return r1 && r2 && positionEquality(r1.start, r2.start) && positionEquality(r1.end, r2.end);
 }
 
 export function acronym(text: string) {

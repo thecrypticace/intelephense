@@ -76,6 +76,10 @@ export class ReferenceTable implements Traversable<Scope | Reference> {
 
     }
 
+    createTraverser() {
+        return new TreeTraverser([this.root]);
+    }
+
     traverse(visitor: TreeVisitor<Scope | Reference>) {
         let traverser = new TreeTraverser([this.root]);
         traverser.traverse(visitor);

@@ -73,6 +73,10 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         return visitor;
     }
 
+    createTraverser() {
+        return new TreeTraverser([this.root]);
+    }
+
     filter(predicate: Predicate<PhpSymbol>) {
         let traverser = new TreeTraverser([this.root]);
         return traverser.filter(predicate)
