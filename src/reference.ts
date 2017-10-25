@@ -32,6 +32,15 @@ export interface Scope {
     children: (Scope | Reference)[]
 }
 
+export namespace Scope {
+    export function create(location:Location):Scope {
+        return {
+            location:location,
+            children:[]
+        }
+    }
+}
+
 export class ReferenceTable implements Traversable<Scope | Reference> {
 
     private _uri: string;

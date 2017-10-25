@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Position, Range } from 'vscode-languageserver-types';
+import { Position, Range, Location } from 'vscode-languageserver-types';
 import { Predicate } from './types';
 
 export function popMany<T>(array: T[], count: number) {
@@ -42,8 +42,8 @@ export function isInRange(position: Position, range: Range) {
 
 }
 
-export function positionEquality(p1:Position, p2:Position) {
-    return p1 && p2 && p1.character === p2.character && p1.line === p2.character; 
+export function positionEquality(p1: Position, p2: Position) {
+    return p1 && p2 && p1.character === p2.character && p1.line === p2.character;
 }
 
 export function rangeEquality(r1: Range, r2: Range) {
@@ -163,4 +163,13 @@ export function find<T>(items: T[], fn: Predicate<T>) {
     }
 
     return undefined;
+}
+
+export function cloneRange(range: Range): Range {
+    return Range.create(
+        range.start.line,
+        range.start.character,
+        range.end.line,
+        range.end.character
+    );
 }

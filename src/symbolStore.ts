@@ -116,9 +116,7 @@ export class SymbolTable implements Traversable<PhpSymbol> {
     symbolAtPosition(position: Position) {
 
         let pred = (x: PhpSymbol) => {
-            return x.location &&
-                x.location.range.start.line === position.line &&
-                x.location.range.start.character === position.character;
+            return x.location && util.positionEquality(x.location.range.start, position);
         };
 
         return this.filter(pred).pop();

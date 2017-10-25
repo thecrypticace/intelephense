@@ -117,7 +117,7 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         return r;
     }
 
-    nodeLocation(node: Phrase | Token) {
+    nodeHashedLocation(node: Phrase | Token) {
         if (!node) {
             return null;
         }
@@ -129,6 +129,22 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         }
 
         return HashedLocation.create(this._uriHash, range);
+    }
+
+    nodeLocation(node: Phrase | Token) {
+
+        if (!node) {
+            return undefined;
+        }
+
+        let range = this.nodeRange(node);
+
+        if (!range) {
+            return undefined;
+        }
+
+        return lsp.Location.create(this.uri, range);
+
     }
 
     nodeRange(node: Phrase | Token) {
@@ -270,13 +286,13 @@ export namespace ParsedDocument {
 
     }
 
-    export function findChild(parent:Phrase, fn:Predicate<Phrase|Token>) {
+    export function findChild(parent: Phrase, fn: Predicate<Phrase | Token>) {
 
-        if(!parent || !parent.children) {
+        if (!parent || !parent.children) {
             return undefined;
         }
 
-        let child: Phrase|Token;
+        let child: Phrase | Token;
         for (let n = 0, l = parent.children.length; n < l; ++n) {
             child = parent.children[n];
             if (fn(child)) {
@@ -286,17 +302,17 @@ export namespace ParsedDocument {
         return undefined;
     }
 
-    export function filterChildren(parent:Phrase, fn:Predicate<Phrase|Token>) {
+    export function filterChildren(parent: Phrase, fn: Predicate<Phrase | Token>) {
 
-        let filtered:(Phrase|Token)[] = [];
-        if(!parent || !parent.children) {
+        let filtered: (Phrase | Token)[] = [];
+        if (!parent || !parent.children) {
             return filtered;
         }
 
-        let child:Phrase|Token;
-        for(let n = 0, l = parent.children.length; n < l; ++n) {
+        let child: Phrase | Token;
+        for (let n = 0, l = parent.children.length; n < l; ++n) {
             child = parent.children[n];
-            if(fn(child)){
+            if (fn(child)) {
                 filtered.push(child);
             }
         }

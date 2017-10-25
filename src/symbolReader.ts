@@ -25,7 +25,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
         public document: ParsedDocument,
         public nameResolver: NameResolver
     ) {
-        this._transformStack = [new FileTransform(this.document.uri, this.document.nodeLocation(this.document.tree))];
+        this._transformStack = [new FileTransform(this.document.uri, this.document.nodeHashedLocation(this.document.tree))];
         this._uriHash = util.hash32(document.uri);
     }
 
@@ -47,7 +47,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.NamespaceDefinition:
                 {
-                    let t = new NamespaceDefinitionTransform(this.document.nodeLocation(node));
+                    let t = new NamespaceDefinitionTransform(this.document.nodeHashedLocation(node));
                     this._transformStack.push(t);
                     this.nameResolver.namespace = t.symbol;
                 }
@@ -65,7 +65,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.NamespaceUseClause:
             case PhraseType.NamespaceUseGroupClause:
                 {
-                    let t = new NamespaceUseClauseTransform((<Phrase>node).phraseType, this.document.nodeLocation(node));
+                    let t = new NamespaceUseClauseTransform((<Phrase>node).phraseType, this.document.nodeHashedLocation(node));
                     this._transformStack.push(t);
                     this.nameResolver.rules.push(t.symbol);
                 }
@@ -77,13 +77,13 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.ConstElement:
                 this._transformStack.push(
-                    new ConstElementTransform(this.nameResolver, this.document.nodeLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
+                    new ConstElementTransform(this.nameResolver, this.document.nodeHashedLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
                     ));
                 break;
 
             case PhraseType.FunctionDeclaration:
                 this._transformStack.push(new FunctionDeclarationTransform(
-                    this.nameResolver, this.document.nodeLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
+                    this.nameResolver, this.document.nodeHashedLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
                 ));
                 break;
 
@@ -97,7 +97,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.ParameterDeclaration:
                 this._transformStack.push(new ParameterDeclarationTransform(
-                    this.document.nodeLocation(node), this.lastPhpDoc, this.lastPhpDocLocation, this.nameResolver
+                    this.document.nodeHashedLocation(node), this.lastPhpDoc, this.lastPhpDocLocation, this.nameResolver
                 ));
                 break;
 
@@ -117,7 +117,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.ClassDeclaration:
                 {
                     let t = new ClassDeclarationTransform(
-                        this.nameResolver, this.document.nodeLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
+                        this.nameResolver, this.document.nodeHashedLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
                     );
                     this._transformStack.push(t);
                     this.nameResolver.pushClass(t.symbol);
@@ -151,7 +151,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.InterfaceDeclaration:
                 {
                     let t = new InterfaceDeclarationTransform(
-                        this.nameResolver, this.document.nodeLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
+                        this.nameResolver, this.document.nodeHashedLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
                     );
                     this._transformStack.push(t);
                     this.nameResolver.pushClass(t.symbol);
@@ -172,7 +172,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.TraitDeclaration:
                 this._transformStack.push(new TraitDeclarationTransform(
-                    this.nameResolver, this.document.nodeLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
+                    this.nameResolver, this.document.nodeHashedLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
                 ));
                 break;
 
@@ -194,7 +194,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.ClassConstElement:
                 this._transformStack.push(new ClassConstantElementTransform(
-                    this.nameResolver, this.document.nodeLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
+                    this.nameResolver, this.document.nodeHashedLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
                 ));
                 break;
 
@@ -208,7 +208,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.PropertyElement:
                 this._transformStack.push(new PropertyElementTransform(
-                    this.nameResolver, this.document.nodeLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
+                    this.nameResolver, this.document.nodeHashedLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
                 ));
                 break;
 
@@ -222,7 +222,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.MethodDeclaration:
                 this._transformStack.push(new MethodDeclarationTransform(
-                    this.nameResolver, this.document.nodeLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
+                    this.nameResolver, this.document.nodeHashedLocation(node), this.lastPhpDoc, this.lastPhpDocLocation
                 ));
                 break;
 
@@ -245,7 +245,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.AnonymousClassDeclaration:
                 {
                     let t = new AnonymousClassDeclarationTransform(
-                        this.document.nodeLocation(node), this.document.createAnonymousName(<Phrase>node)
+                        this.document.nodeHashedLocation(node), this.document.createAnonymousName(<Phrase>node)
                     );
                     this._transformStack.push(t);
                     this.nameResolver.pushClass(t.symbol);
@@ -258,7 +258,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.AnonymousFunctionCreationExpression:
                 this._transformStack.push(new AnonymousFunctionCreationExpressionTransform(
-                    this.document.nodeLocation(node), this.document.createAnonymousName(<Phrase>node)
+                    this.document.nodeHashedLocation(node), this.document.createAnonymousName(<Phrase>node)
                 ));
                 break;
 
@@ -275,11 +275,11 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 break;
 
             case PhraseType.AnonymousFunctionUseVariable:
-                this._transformStack.push(new AnonymousFunctionUseVariableTransform(this.document.nodeLocation(node)));
+                this._transformStack.push(new AnonymousFunctionUseVariableTransform(this.document.nodeHashedLocation(node)));
                 break;
 
             case PhraseType.SimpleVariable:
-                this._transformStack.push(new SimpleVariableTransform(this.document.nodeLocation(node)));
+                this._transformStack.push(new SimpleVariableTransform(this.document.nodeHashedLocation(node)));
                 break;
 
             case PhraseType.FunctionCallExpression:
@@ -287,7 +287,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 if ((<Phrase>node).children.length) {
                     let name = this.document.nodeText((<Phrase>node).children[0]).toLowerCase();
                     if (name === 'define' || name === '\\define') {
-                        this._transformStack.push(new DefineFunctionCallExpressionTransform(this.document.nodeLocation(node)));
+                        this._transformStack.push(new DefineFunctionCallExpressionTransform(this.document.nodeHashedLocation(node)));
                         break;
                     }
                 }
@@ -339,7 +339,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                 if ((<Token>node).tokenType === TokenType.DocumentComment) {
 
                     this.lastPhpDoc = PhpDocParser.parse(this.document.nodeText(node));
-                    this.lastPhpDocLocation = this.document.nodeLocation(node);
+                    this.lastPhpDocLocation = this.document.nodeHashedLocation(node);
 
                 } else if ((<Token>node).tokenType === TokenType.CloseBrace) {
 
@@ -350,7 +350,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
                     //catch clause vars
                     for (let n = this._transformStack.length - 1; n > -1; --n) {
                         if (this._transformStack[n]) {
-                            this._transformStack[n].push(new CatchClauseVariableNameTransform(this.document.tokenText(<Token>node), this.document.nodeLocation(node)));
+                            this._transformStack[n].push(new CatchClauseVariableNameTransform(this.document.tokenText(<Token>node), this.document.nodeHashedLocation(node)));
                             break;
                         }
                     }
@@ -554,7 +554,7 @@ class TokenTransform implements TextNodeTransform {
     }
 
     get location() {
-        return this.doc.nodeLocation(this.token);
+        return this.doc.nodeHashedLocation(this.token);
     }
 
 }
