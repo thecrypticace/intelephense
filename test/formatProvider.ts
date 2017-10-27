@@ -58,6 +58,15 @@ switch ($foo) {
 
 `;
 
+let noFormatInsideTemplateString =
+`<?php
+$var = "Don't $format $this->var";
+$heredoc = <<<EOD
+Don't $format $this->var
+EOD;
+
+`;
+
 describe('provideDocumentFormattingEdits', ()=>{
 
 
@@ -177,6 +186,13 @@ describe('provideDocumentFormattingEdits', ()=>{
             }
         ];
         assert.deepEqual(edits, expected);
+    });
+
+    it('no format inside template strings', ()=>{
+        let provider = setup(noFormatInsideTemplateString);
+        let edits = provider.provideDocumentFormattingEdits({uri: 'test'}, {tabSize:4, insertSpaces:true});
+        //console.log(JSON.stringify(edits, null, 4));
+        assert.isEmpty(edits);
     });
 
 });

@@ -213,6 +213,9 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             default:
+                if (parent.phraseType === PhraseType.EncapsulatedVariableList) {
+                    this._nextFormatRule = FormatVisitor.noSpaceBefore;
+                }
                 return true;
         }
 
@@ -306,6 +309,12 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case TokenType.ElseIf:
                 if (previousNonWsToken && previousNonWsToken.tokenType === TokenType.CloseBrace) {
                     rule = FormatVisitor.singleSpaceBefore;
+                }
+                break;
+
+            case TokenType.Name:
+                if(parent.phraseType === PhraseType.PropertyAccessExpression || previousNonWsToken.tokenType === TokenType.Backslash) {
+                    rule = FormatVisitor.noSpaceBefore;
                 }
                 break;
 
@@ -733,7 +742,6 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case TokenType.EndIf:
             case TokenType.EndSwitch:
             case TokenType.EndWhile:
-            case TokenType.EndHeredoc:
             case TokenType.Eval:
             case TokenType.Exit:
             case TokenType.Extends:
