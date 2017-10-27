@@ -1,5 +1,5 @@
 import { PhpSymbol, SymbolKind } from '../src/symbol';
-import {NameIndex} from '../src/symbolStore';
+import {NameIndex} from '../src/types';
 import { assert } from 'chai';
 import 'mocha';
 
