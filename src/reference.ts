@@ -50,7 +50,7 @@ export class ReferenceTable implements Traversable<Scope | Reference> {
     constructor(uri: string, root: Scope) {
         this._uri = uri;
         this._root = root;
-        this._hash = util.hash32(uri);
+        this._hash = Math.abs(util.hash32(uri));
     }
 
     get uri() {
@@ -81,8 +81,15 @@ export class ReferenceTable implements Traversable<Scope | Reference> {
         let visitor = new LocateVisitor(position);
         this.traverse(visitor);
         let ref = visitor.node as Reference;
-        return ref.kind ? ref : undefined;
+        return ref && ref.kind ? ref : undefined;
 
+    }
+
+    scopeAtPosition(position:Position) {
+        let visitor = new LocateVisitor(position);
+        this.traverse(visitor);
+        let node = visitor.node;
+        return node && (<Reference>node).kind === undefined ? <Scope>node : undefined;
     }
 
     createTraverser() {

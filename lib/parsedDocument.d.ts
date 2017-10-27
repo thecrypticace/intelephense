@@ -30,7 +30,8 @@ export declare class ParsedDocument implements Traversable<Phrase | Token> {
     traverse(visitor: TreeVisitor<Phrase | Token>): TreeVisitor<Token | Phrase>;
     applyChanges(contentChanges: lsp.TextDocumentContentChangeEvent[]): void;
     tokenRange(t: Token): lsp.Range;
-    nodeLocation(node: Phrase | Token): HashedLocation;
+    nodeHashedLocation(node: Phrase | Token): HashedLocation;
+    nodeLocation(node: Phrase | Token): lsp.Location;
     nodeRange(node: Phrase | Token): lsp.Range;
     tokenText(t: Token): string;
     nodeText(node: Phrase | Token): string;

@@ -13,21 +13,23 @@ import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { Phrase, PhraseType, Token, TokenType } from 'php7parser';
 import * as util from './util';
 import { MemberMergeStrategy } from './typeAggregate';
+import {ReferenceStore} from './reference';
 
 
 export class SignatureHelpProvider {
 
-    constructor(public symbolStore: SymbolStore, public docStore: ParsedDocumentStore) { }
+    constructor(public symbolStore: SymbolStore, public docStore: ParsedDocumentStore, public refStore:ReferenceStore) { }
 
     provideSignatureHelp(uri: string, position: lsp.Position) {
 
         let doc = this.docStore.find(uri);
         let table = this.symbolStore.getSymbolTable(uri);
-        if (!doc || !table) {
+        let refTable = this.refStore.getReferenceTable(uri);
+        if (!doc || !table || !refTable) {
             return null;
         }
 
-        let traverser = new ParseTreeTraverser(doc, table);
+        let traverser = new ParseTreeTraverser(doc, table, refTable);
         let token = traverser.position(position);
         let callableExpr = traverser.ancestor(this._isCallablePhrase) as Phrase;
         if (!callableExpr || !token || token.tokenType === TokenType.CloseParenthesis) {

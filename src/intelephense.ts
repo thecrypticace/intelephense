@@ -62,21 +62,20 @@ export namespace Intelephense {
         symbolStore = new SymbolStore();
         refStore = new ReferenceStore(createCache(path.join(options.storagePath, 'intelephense', 'references')));
         symbolProvider = new SymbolProvider(symbolStore);
-        completionProvider = new CompletionProvider(symbolStore, documentStore);
+        completionProvider = new CompletionProvider(symbolStore, documentStore, refStore);
         diagnosticsProvider = new DiagnosticsProvider();
-        signatureHelpProvider = new SignatureHelpProvider(symbolStore, documentStore);
-        definitionProvider = new DefinitionProvider(symbolStore, documentStore);
+        signatureHelpProvider = new SignatureHelpProvider(symbolStore, documentStore, refStore);
+        definitionProvider = new DefinitionProvider(symbolStore, documentStore, refStore);
         formatProvider = new FormatProvider(documentStore);
-        nameTextEditProvider = new NameTextEditProvider(symbolStore, documentStore);
+        nameTextEditProvider = new NameTextEditProvider(symbolStore, documentStore, refStore);
         referenceProvider = new ReferenceProvider(documentStore, symbolStore, refStore);
 
         //keep stores in sync
         documentStore.parsedDocumentChangeEvent.subscribe((args) => {
             symbolStore.onParsedDocumentChange(args);
-            refStore.onParsedDocumentChange(args);
+            let refTable = ReferenceReader.discoverReferences(args.parsedDocument, symbolStore);
+            refStore.add(refTable);
         });
-
-
 
 
         symbolStore.add(SymbolTable.readBuiltInSymbols());
@@ -99,7 +98,7 @@ export namespace Intelephense {
         documentStore.add(parsedDocument);
         let symbolTable = SymbolTable.create(parsedDocument);
         symbolStore.add(symbolTable);
-        let refTable = ReferenceReader.discoverReferences(parsedDocument, symbolTable, symbolStore);
+        let refTable = ReferenceReader.discoverReferences(parsedDocument, symbolStore);
         refStore.add(refTable);
         diagnosticsProvider.add(parsedDocument);
 
@@ -182,8 +181,9 @@ export namespace Intelephense {
 
         let text = textDocument.text;
         let parsedDocument = new ParsedDocument(uri, text);
-        refTable = ReferenceReader.discoverReferences(parsedDocument, symbolTable, symbolStore);
+        refTable = ReferenceReader.discoverReferences(parsedDocument, symbolStore);
         refStore.add(refTable);
+        refStore.close(refTable.uri);
         return refTable.referenceCount;
     }
 

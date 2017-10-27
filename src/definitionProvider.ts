@@ -13,15 +13,16 @@ import { TypeString } from './typeString';
 import { Phrase, PhraseType, Token, TokenType } from 'php7parser';
 import { TreeTraverser } from './types';
 import { MemberMergeStrategy } from './typeAggregate';
+import { ReferenceStore } from './reference';
 
 export class DefinitionProvider {
 
-    constructor(public symbolStore: SymbolStore, public documentStore: ParsedDocumentStore) { }
+    constructor(public symbolStore: SymbolStore, public documentStore: ParsedDocumentStore, public refStore:ReferenceStore) { }
 
     provideDefinition(uri: string, position: Position) {
 
         let doc = this.documentStore.find(uri);
-        let table = this.symbolStore.getSymbolTable(uri);
+        let table = this.refStore.getReferenceTable(uri);
 
         if (!doc || !table) {
             return null;
@@ -40,7 +41,7 @@ export class DefinitionProvider {
 
         for (let n = 0; n < symbols.length; ++n) {
             s = symbols[n];
-            if (s.location && (loc = this.symbolStore.identifierLocation(s))) {
+            if (s.location && (loc = this.symbolStore.symbolLocation(s))) {
                 locations.push(loc);
             }
         }

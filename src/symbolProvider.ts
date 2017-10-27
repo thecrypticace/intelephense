@@ -73,7 +73,7 @@ export class SymbolProvider {
         let si: SymbolInformation = {
             kind: Kind.File,
             name: s.name,
-            location: uri ? Location.create(uri, s.location.range) : this.symbolStore.identifierLocation(s),
+            location: uri ? Location.create(uri, s.location.range) : this.symbolStore.symbolLocation(s),
             containerName: s.scope
         };
 

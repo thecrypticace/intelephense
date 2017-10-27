@@ -1,9 +1,9 @@
 import { PublishDiagnosticsEventArgs } from './diagnosticsProvider';
 import * as lsp from 'vscode-languageserver-types';
+import { LogWriter } from './logger';
 export declare namespace Intelephense {
-    function onDiagnosticsStart(fn: (uri: string) => void): void;
     function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void): void;
-    function initialise(): void;
+    function initialise(options: InitialisationOptions): void;
     function setConfig(config: IntelephenseConfig): void;
     function openDocument(textDocument: lsp.TextDocumentItem): void;
     function closeDocument(textDocument: lsp.TextDocumentIdentifier): void;
@@ -14,15 +14,15 @@ export declare namespace Intelephense {
     function provideSignatureHelp(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): lsp.SignatureHelp;
     function provideDefinition(textDocument: lsp.TextDocumentIdentifier, position: lsp.Position): lsp.Location | lsp.Location[];
     function discoverSymbols(textDocument: lsp.TextDocumentItem): number;
-    function discoverReferences(textDocument: lsp.TextDocumentItem): any;
-    function forget(uri: string): number;
+    function discoverReferences(textDocument: lsp.TextDocumentItem): number;
+    function forget(uri: string): void;
     function provideContractFqnTextEdits(uri: string, position: lsp.Position, alias?: string): lsp.TextEdit[];
     function numberDocumentsOpen(): number;
     function numberDocumentsKnown(): number;
     function numberSymbolsKnown(): number;
     function provideDocumentFormattingEdits(doc: lsp.TextDocumentIdentifier, formatOptions: lsp.FormattingOptions): lsp.TextEdit[];
     function provideDocumentRangeFormattingEdits(doc: lsp.TextDocumentIdentifier, range: lsp.Range, formatOptions: lsp.FormattingOptions): lsp.TextEdit[];
-    function provideReferences(doc: lsp.TextDocumentIdentifier, pos: lsp.Position, context: lsp.ReferenceContext): lsp.Location[];
+    function provideReferences(doc: lsp.TextDocumentIdentifier, pos: lsp.Position, context: lsp.ReferenceContext): Promise<lsp.Location[]>;
 }
 export interface IntelephenseConfig {
     debug: {
@@ -40,4 +40,8 @@ export interface IntelephenseConfig {
     file: {
         maxSize: number;
     };
+}
+export interface InitialisationOptions {
+    storagePath: string;
+    logWriter: LogWriter;
 }

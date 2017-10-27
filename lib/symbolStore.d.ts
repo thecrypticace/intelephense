@@ -1,6 +1,6 @@
-import { PhpSymbol, SymbolIdentifier } from './symbol';
+import { PhpSymbol } from './symbol';
 import { Reference } from './reference';
-import { Predicate, TreeVisitor, Traversable } from './types';
+import { TreeTraverser, Predicate, TreeVisitor, Traversable } from './types';
 import { Position, Location } from 'vscode-languageserver-types';
 import { ParsedDocument, ParsedDocumentChangeEventArgs } from './parsedDocument';
 import { NameResolver } from './nameResolver';
@@ -17,6 +17,7 @@ export declare class SymbolTable implements Traversable<PhpSymbol> {
     readonly symbolCount: number;
     parent(s: PhpSymbol): PhpSymbol;
     traverse(visitor: TreeVisitor<PhpSymbol>): TreeVisitor<PhpSymbol>;
+    createTraverser(): TreeTraverser<PhpSymbol>;
     filter(predicate: Predicate<PhpSymbol>): PhpSymbol[];
     find(predicate: Predicate<PhpSymbol>): PhpSymbol;
     nameResolver(pos: Position): NameResolver;
@@ -24,7 +25,7 @@ export declare class SymbolTable implements Traversable<PhpSymbol> {
     absoluteScope(pos: Position): PhpSymbol;
     scopeSymbols(): PhpSymbol[];
     symbolAtPosition(position: Position): PhpSymbol;
-    contains(identifier: SymbolIdentifier): boolean;
+    contains(s: PhpSymbol): boolean;
     private _isScopeSymbol(s);
     static create(parsedDocument: ParsedDocument, externalOnly?: boolean): SymbolTable;
     static readBuiltInSymbols(): SymbolTable;
@@ -56,7 +57,7 @@ export declare class SymbolStore {
     findSymbolsByReference(ref: Reference, memberMergeStrategy?: MemberMergeStrategy): PhpSymbol[];
     findMembers(scope: string, memberMergeStrategy: MemberMergeStrategy, predicate?: Predicate<PhpSymbol>): PhpSymbol[];
     findBaseMember(symbol: PhpSymbol): PhpSymbol;
-    identifierLocation(identifier: SymbolIdentifier): Location;
+    symbolLocation(symbol: PhpSymbol): Location;
     referenceToTypeString(ref: Reference): string;
     private _sortMatches(query, matches);
     private _classOrInterfaceFilter(s);

@@ -43,7 +43,7 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         this._textDocument = new TextDocument(uri, text);
         this._debounce = new Debounce<null>(this._reparse, textDocumentChangeDebounceWait);
         this._changeEvent = new Event<ParsedDocumentChangeEventArgs>();
-        this._uriHash = util.hash32(uri);
+        this._uriHash = Math.abs(util.hash32(uri));
     }
 
     get tree() {

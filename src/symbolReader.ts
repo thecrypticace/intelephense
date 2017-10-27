@@ -26,7 +26,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
         public nameResolver: NameResolver
     ) {
         this._transformStack = [new FileTransform(this.document.uri, this.document.nodeHashedLocation(this.document.tree))];
-        this._uriHash = util.hash32(document.uri);
+        this._uriHash = Math.abs(util.hash32(document.uri));
     }
 
     get symbol() {

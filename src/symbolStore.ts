@@ -26,7 +26,7 @@ export class SymbolTable implements Traversable<PhpSymbol> {
     constructor(uri: string, root: PhpSymbol) {
         this._uri = uri;
         this._root = root;
-        this._hash = util.hash32(uri);
+        this._hash = Math.abs(util.hash32(uri));
     }
 
     get uri() {
@@ -122,9 +122,9 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         return this.filter(pred).pop();
     }
 
-    contains(identifier: SymbolIdentifier) {
+    contains(s: PhpSymbol) {
         let traverser = new TreeTraverser([this.root]);
-        let visitor = new ContainsVisitor(identifier);
+        let visitor = new ContainsVisitor(s);
         traverser.traverse(visitor);
         return visitor.found;
     }
@@ -323,7 +323,8 @@ export class SymbolStore {
 
             case SymbolKind.Variable:
             case SymbolKind.Parameter:
-                table = this._tableIndex.findByIdentifier(ref);
+                //@todo global vars?
+                table = this.getSymbolTable(ref.location.uri);
                 if (table) {
                     let scope = table.scope(ref.location.range.start);
 
@@ -435,9 +436,9 @@ export class SymbolStore {
     }
     */
 
-    identifierLocation(identifier: SymbolIdentifier): Location {
-        let table = this._tableIndex.findByIdentifier(identifier);
-        return table ? Location.create(table.uri, identifier.location.range) : null;
+    symbolLocation(symbol: PhpSymbol): Location {
+        let table = this._tableIndex.findBySymbol(symbol);
+        return table ? Location.create(table.uri, symbol.location.range) : undefined;
     }
 
     referenceToTypeString(ref: Reference) {
@@ -625,24 +626,24 @@ class ContainsVisitor implements TreeVisitor<PhpSymbol> {
 
     haltTraverse = false;
     found = false;
-    private _identifier: SymbolIdentifier;
+    private _symbol: PhpSymbol;
 
-    constructor(identifier: SymbolIdentifier) {
-        this._identifier = identifier;
-        if (!identifier.location) {
+    constructor(symbol: PhpSymbol) {
+        this._symbol = symbol;
+        if (!symbol.location) {
             throw new Error('Invalid Argument');
         }
     }
 
     preorder(node: PhpSymbol, spine: PhpSymbol[]) {
 
-        if (node === this._identifier) {
+        if (node === this._symbol) {
             this.found = true;
             this.haltTraverse = true;
             return false;
         }
 
-        if (node.location && util.isInRange(this._identifier.location.range.start, node.location.range) !== 0) {
+        if (node.location && util.isInRange(this._symbol.location.range.start, node.location.range) !== 0) {
             return false;
         }
 
@@ -702,34 +703,34 @@ class SymbolTableIndex {
         return node ? node.tables.find(this._createUriFindFn(uri)) : null;
     }
 
-    findByIdentifier(i: SymbolIdentifier) {
-        if (!i.location) {
-            return null;
+    findBySymbol(s: PhpSymbol) {
+        if (!s.location) {
+            return undefined;
         }
 
         let node = this._search.find((x) => {
-            return x.hash - i.location.uriHash;
+            return x.hash - s.location.uriHash;
         });
 
         if (!node || !node.tables.length) {
-            return null;
+            return undefined;
         } else if (node.tables.length === 1) {
             return node.tables[0];
         } else {
             let table: SymbolTable;
             for (let n = 0; n < node.tables.length; ++n) {
                 table = node.tables[n];
-                if (table.contains(i)) {
+                if (table.contains(s)) {
                     return table;
                 }
             }
         }
 
-        return null;
+        return undefined;
     }
 
     private _createCompareFn(uri: string) {
-        let hash = util.hash32(uri);
+        let hash = Math.abs(util.hash32(uri));
         return (x: SymbolTableIndexNode) => {
             return x.hash - hash;
         };

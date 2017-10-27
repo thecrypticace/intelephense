@@ -4,7 +4,8 @@
 
 'use strict';
 
-import { PhpSymbol, SymbolKind, SymbolModifier, Reference } from './symbol';
+import { PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
+import { Reference, ReferenceTable } from './reference';
 import { SymbolStore, SymbolTable } from './symbolStore';
 import { NameResolver } from './nameResolver';
 import { TreeVisitor, TreeTraverser, Predicate, MultiVisitor } from './types';
@@ -17,12 +18,14 @@ import * as util from './util';
 export class ParseTreeTraverser extends TreeTraverser<Phrase | Token> {
 
     private _doc: ParsedDocument;
-    private _table: SymbolTable;
+    private _symbolTable: SymbolTable;
+    private _refTable:ReferenceTable;
 
-    constructor(document: ParsedDocument, symbolTable: SymbolTable) {
+    constructor(document: ParsedDocument, symbolTable: SymbolTable, refTable:ReferenceTable) {
         super([document.tree]);
         this._doc = document;
-        this._table = symbolTable;
+        this._symbolTable = symbolTable;
+        this._refTable = refTable;
     }
 
     get document() {
@@ -30,7 +33,11 @@ export class ParseTreeTraverser extends TreeTraverser<Phrase | Token> {
     }
 
     get symbolTable() {
-        return this._table;
+        return this._symbolTable;
+    }
+
+    get refTable() {
+        return this._refTable;
     }
 
     get text() {
@@ -42,22 +49,8 @@ export class ParseTreeTraverser extends TreeTraverser<Phrase | Token> {
     }
 
     get reference() {
-        let scope = this.scope;
         let range = this.range;
-
-        if (!scope || !range || !scope.references) {
-            return null;
-        }
-
-        let ref: Reference;
-        for (let n = 0; n < scope.references.length; ++n) {
-            ref = scope.references[n];
-            if (util.isInRange(range.start, ref.location.range) === 0) {
-                return ref;
-            }
-        }
-
-        return null;
+        return this._refTable.referenceAtPosition(range.start);
     }
 
     get scope() {
@@ -65,13 +58,13 @@ export class ParseTreeTraverser extends TreeTraverser<Phrase | Token> {
         if (!range) {
             return null;
         }
-        return this._table.scope(range.start);
+        return this._symbolTable.scope(range.start);
     }
 
     get nameResolver() {
         let firstToken = ParsedDocument.firstToken(this.node);
         let pos = this.document.positionAtOffset(firstToken.offset);
-        return this._table.nameResolver(pos);
+        return this._symbolTable.nameResolver(pos);
     }
 
     /**
@@ -91,7 +84,7 @@ export class ParseTreeTraverser extends TreeTraverser<Phrase | Token> {
 
     clone() {
         let spine = this.spine;
-        let traverser = new ParseTreeTraverser(this._doc, this._table);
+        let traverser = new ParseTreeTraverser(this._doc, this._symbolTable, this._refTable);
         traverser._spine = spine;
         return traverser;
     }

@@ -5,7 +5,8 @@
 'use strict';
 
 import { Token, TokenType, Phrase, PhraseType } from 'php7parser';
-import { PhpSymbol, SymbolKind, SymbolModifier, Reference } from './symbol';
+import { PhpSymbol, SymbolKind, SymbolModifier } from './symbol';
+import { Reference, ReferenceStore, Scope } from './reference';
 import { SymbolStore, SymbolTable } from './symbolStore';
 import { SymbolReader } from './symbolReader';
 import { TypeString } from './typeString';
@@ -162,6 +163,7 @@ export class CompletionProvider {
     constructor(
         public symbolStore: SymbolStore,
         public documentStore: ParsedDocumentStore,
+        public refStore: ReferenceStore,
         config?: CompletionOptions) {
 
         this._config = config ? config : CompletionProvider._defaultConfig;
@@ -194,12 +196,13 @@ export class CompletionProvider {
 
         let doc = this.documentStore.find(uri);
         let table = this.symbolStore.getSymbolTable(uri);
+        let refTable = this.refStore.getReferenceTable(uri);
 
-        if (!doc || !table) {
+        if (!doc || !table || !refTable) {
             return noCompletionResponse;
         }
 
-        let traverser = new ParseTreeTraverser(doc, table);
+        let traverser = new ParseTreeTraverser(doc, table, refTable);
         traverser.position(position);
         let offset = doc.offsetAtPosition(position);
         let word = doc.wordAtOffset(offset);
@@ -364,9 +367,9 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
     protected _setInsertText(item: lsp.CompletionItem, s: PhpSymbol, namespaceName: string, namePhraseType: PhraseType, useDeclarationHelper: UseDeclarationHelper) {
         const kindMask = SymbolKind.Constant | SymbolKind.Function;
         let notFqn = PhpSymbol.notFqn(s.name);
-        
+
         if (
-            (s.modifiers & SymbolModifier.Use) > 0 || 
+            (s.modifiers & SymbolModifier.Use) > 0 ||
             (s.kind === SymbolKind.Constant && this._isMagicConstant(s.name)) ||
             ((s.kind & kindMask) > 0 && notFqn === s.name && (!this.config.backslashPrefix || !namespaceName))
         ) {
@@ -391,8 +394,8 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         return item;
     }
 
-    private _isMagicConstant(text:string) {
-        switch(text){
+    private _isMagicConstant(text: string) {
+        switch (text) {
             case '__DIR__':
             case '__FILE__':
             case '__CLASS__':
@@ -519,7 +522,8 @@ class SimpleVariableCompletion implements CompletionStrategy {
         let isIncomplete = varSymbols.length > this.config.maxItems;
 
         let items: lsp.CompletionItem[] = [];
-        let varTable = this._varTypeMap(scope);
+        let refScope = traverser.refTable.scopeAtPosition(scope.location.range.start);
+        let varTable = this._varTypeMap(refScope);
 
         for (let n = 0; n < limit; ++n) {
             items.push(this._toVariableCompletionItem(varSymbols[n], varTable));
@@ -548,22 +552,18 @@ class SimpleVariableCompletion implements CompletionStrategy {
 
     }
 
-    private _varTypeMap(s: PhpSymbol) {
+    private _varTypeMap(s: Scope) {
 
         let map: { [index: string]: string } = {};
-        let params = PhpSymbol.filterChildren(s, (x) => { return x.kind === SymbolKind.Parameter });
-        for (let n = 0, l = params.length; n < l; ++n) {
-            map[params[n].name] = PhpSymbol.type(params[n]);
-        }
 
-        let ref: Reference;
-        if (!s.references) {
-            return map;
+        if(!s || !s.children) {
+            return {};
         }
-
-        for (let n = 0, l = s.references.length; n < l; ++n) {
-            ref = s.references[n];
-            if (ref.kind === SymbolKind.Variable) {
+        
+        let ref:Reference;
+        for (let n = 0, l = s.children.length; n < l; ++n) {
+            ref = s.children[n] as Reference;
+            if (ref.kind === SymbolKind.Variable || ref.kind === SymbolKind.Parameter) {
                 map[ref.name] = TypeString.merge(map[ref.name], ref.type);
             }
         }
@@ -713,7 +713,7 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
         let scopePhrase = traverser.nthChild(0) as Phrase;
         let type = this._resolveType(traverser);
         let typeNames = TypeString.atomicClassArray(type);
-        
+
         if (!typeNames.length) {
             return noCompletionResponse;
         }
@@ -760,7 +760,7 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
     private _resolveType(traverser: ParseTreeTraverser): string {
 
         //assumed that traverser is on the member scope node
-        let node:Phrase;
+        let node: Phrase;
         let arrayDereference = 0;
         let ref: Reference;
 
@@ -785,20 +785,20 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
                     break;
 
                 case PhraseType.EncapsulatedExpression:
-                    if(traverser.child(ParsedDocument.isPhrase)){
+                    if (traverser.child(ParsedDocument.isPhrase)) {
                         continue;
                     }
                     break;
 
                 case PhraseType.ObjectCreationExpression:
-                    if(traverser.child(this._isClassTypeDesignator) && traverser.child(ParsedDocument.isNamePhrase)) {
+                    if (traverser.child(this._isClassTypeDesignator) && traverser.child(ParsedDocument.isNamePhrase)) {
                         ref = traverser.reference;
                     }
                     break;
 
                 case PhraseType.SimpleAssignmentExpression:
                 case PhraseType.ByRefAssignmentExpression:
-                    if(traverser.nthChild(0)) {
+                    if (traverser.nthChild(0)) {
                         continue;
                     }
                     break;
@@ -871,7 +871,7 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
         return (<Phrase>node).phraseType === PhraseType.MemberName || (<Phrase>node).phraseType === PhraseType.ScopedMemberName;
     }
 
-    private _isClassTypeDesignator(node:Phrase |Token) {
+    private _isClassTypeDesignator(node: Phrase | Token) {
         return (<Phrase>node).phraseType === PhraseType.ClassTypeDesignator;
     }
 

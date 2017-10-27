@@ -8,7 +8,8 @@ import {Position, TextEdit} from 'vscode-languageserver-types';
 import { ParsedDocument, ParsedDocumentStore } from './parsedDocument';
 import { ParseTreeTraverser } from './parseTreeTraverser';
 import { SymbolStore, SymbolTable } from './symbolStore';
-import { SymbolKind, PhpSymbol, Reference } from './symbol';
+import { SymbolKind, PhpSymbol } from './symbol';
+import { Reference, ReferenceStore, ReferenceTable} from './reference';
 import { ReferenceReader } from './referenceReader';
 import { NameResolver } from './nameResolver';
 import { Phrase, PhraseType, Token } from 'php7parser';
@@ -17,7 +18,7 @@ import * as util from './util';
 
 export class NameTextEditProvider {
 
-    constructor(public symbolStore:SymbolStore, public docStore:ParsedDocumentStore) {
+    constructor(public symbolStore:SymbolStore, public docStore:ParsedDocumentStore, public refStore:ReferenceStore) {
 
     }
 
@@ -27,11 +28,12 @@ export class NameTextEditProvider {
         let edits:TextEdit[] = [];
         let doc = this.docStore.find(uri);
         let table = this.symbolStore.getSymbolTable(uri);
-        if(!doc || !this._fullyQualifiedNamePhrase(position, doc, table)) {
+        let refTable = this.refStore.getReferenceTable(uri);
+        if(!doc || !table || !refTable || !this._fullyQualifiedNamePhrase(position, doc, table, refTable)) {
             return edits;
         }
 
-        let ref = table.referenceAtPosition(position);
+        let ref = refTable.referenceAtPosition(position);
         
         if(!(ref.kind & kindMask)) {
             return edits;
@@ -62,7 +64,7 @@ export class NameTextEditProvider {
             return (r.kind & kindMask) > 0 && lcName === r.name.toLowerCase();
         };
 
-        let references = table.references(fn);
+        let references = refTable.references(fn);
 
         for (let n = 0, l = references.length; n < l; ++n) {
             edits.push(TextEdit.replace(references[n].location.range, name));
@@ -72,8 +74,8 @@ export class NameTextEditProvider {
 
     }
 
-    private _fullyQualifiedNamePhrase(position:Position, doc:ParsedDocument, table:SymbolTable) {
-        let traverser = new ParseTreeTraverser(doc, table);
+    private _fullyQualifiedNamePhrase(position:Position, doc:ParsedDocument, table:SymbolTable, refTable:ReferenceTable) {
+        let traverser = new ParseTreeTraverser(doc, table, refTable);
         traverser.position(position);
         return traverser.ancestor(this._isFullyQualifiedName);
     } 

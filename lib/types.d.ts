@@ -133,3 +133,15 @@ export declare class NameIndex<T> {
     private _insertNode(node);
     private _deleteNode(node);
 }
+export declare type Comparer<T> = (a: T, b: T) => number;
+export declare class SortedList<T> {
+    protected compareFn: Comparer<T>;
+    protected _items: T[];
+    protected _search: BinarySearch<T>;
+    constructor(compareFn: Comparer<T>);
+    readonly length: number;
+    add(item: T): void;
+    remove(compareFn: (t: T) => number): T;
+    find(compareFn: (t: T) => number): T;
+    private _createCompareClosure(item, cmpFn);
+}
