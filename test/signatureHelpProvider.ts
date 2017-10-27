@@ -5,6 +5,8 @@ import { ParsedDocumentStore, ParsedDocument } from '../src/parsedDocument';
 import * as lsp from 'vscode-languageserver-types';
 import { assert } from 'chai';
 import { ReferenceReader } from '../src/referenceReader';
+import {ReferenceStore} from '../src/reference';
+import {MemoryCache} from '../src/cache';
 import 'mocha';
 
 
@@ -64,13 +66,14 @@ function setup(src: string) {
     let docStore = new ParsedDocumentStore();
     let symbolStore = new SymbolStore();
     let doc = new ParsedDocument('test', src);
+    let refStore = new ReferenceStore(new MemoryCache());
     docStore.add(doc);
     let table = SymbolTable.create(doc);
     symbolStore.add(table);
-    ReferenceReader.discoverReferences(doc, table, symbolStore);
-    symbolStore.indexReferences(table);
+    let refTable = ReferenceReader.discoverReferences(doc, symbolStore);
+    refStore.add(refTable);
 
-    return new SignatureHelpProvider(symbolStore, docStore);
+    return new SignatureHelpProvider(symbolStore, docStore, refStore);
 }
 
 
