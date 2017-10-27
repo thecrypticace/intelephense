@@ -128,6 +128,34 @@ describe('PhpDocParser', function () {
         });
 
 
+        it('@method tag with param with no type', () => {
+
+            let text = '@method ActiveQuery hasOne($class, array $link) see [[BaseActiveRecord::hasOne()]] for more info';
+            let phpDoc = PhpDocParser.parse(text);
+            let expected = [
+                    {
+                        tagName: "@method",
+                        typeString: "ActiveQuery",
+                        name: "hasOne",
+                        parameters: [
+                            {
+                                typeString: "mixed",
+                                name: "$class"
+                            },
+                            {
+                                typeString: "array",
+                                name: "$link"
+                            }
+                        ],
+                        description: "see [[BaseActiveRecord::hasOne()]] for more info"
+                    }
+                ];
+            //console.log(JSON.stringify(phpDoc, null, 4));
+            assert.deepEqual(phpDoc.methodTags, expected);
+
+        });
+
+
     });
 
 

@@ -9,11 +9,11 @@ export namespace PhpDocParser {
     const stripPattern: RegExp = /^\/\*\*[ \t]*|\s*\*\/$|^[ \t]*\*[ \t]*/mg;
     const tagBoundaryPattern: RegExp = /(?:\r\n|\r|\n)(?=@)/;
     const summaryBoundaryPattern: RegExp = /\.(?:\r\n|\r|\n)|(?:\r\n|\r|\n){2}/;
-    const methodParamPartBoundaryPattern: RegExp = /\s*,\s*|\s+/;
+    const whitespacePattern: RegExp = /\s+/;
     const paramOrPropertyPattern = /^(@param|@property|@property-read|@property-write)\s+(\S+)\s+(\$\S+)\s*([^]*)$/;
     const varPattern = /^(@var)\s+(\S+)(?:\s+(\$\S+))?\s*([^]*)$/;
     const returnPattern = /^(@return)\s+(\S+)\s*([^]*)$/;
-    const methodPattern = /^(@method)\s+(?:(\S+)\s+)?(\S+)\(\s*([^]*)\s*\)\s*([^]*)$/;
+    const methodPattern = /^(@method)\s+(?:(\S+)\s+)?(\S+)\(\s*([^)]*)\s*\)\s*([^]*)$/;
 
     export function parse(input: string) {
 
@@ -114,15 +114,24 @@ export namespace PhpDocParser {
         }
 
         let params: MethodTagParam[] = [];
-        let paramSplit = input.split(methodParamPartBoundaryPattern);
+        let paramSplit = input.split(',');
         let typeString: string, name: string;
+        let param:string[];
 
         while (paramSplit.length) {
 
-            name = paramSplit.pop();
-            typeString = paramSplit.pop();
+            param = paramSplit.pop().trim().split(whitespacePattern);
+            if(param.length === 1) {
+                typeString = 'mixed';
+                name = param[0];
+            } else if(param.length === 2) {
+                typeString = param[0];
+                name = param[1];
+            } else {
+                name = '';
+            }
 
-            if (name && typeString) {
+            if (name) {
                 params.push({
                     typeString: typeString,
                     name: name
