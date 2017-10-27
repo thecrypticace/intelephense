@@ -43,7 +43,7 @@ export function isInRange(position: Position, range: Range) {
 }
 
 export function positionEquality(p1: Position, p2: Position) {
-    return p1 && p2 && p1.character === p2.character && p1.line === p2.character;
+    return p1 && p2 && p1.character === p2.character && p1.line === p2.line;
 }
 
 export function rangeEquality(r1: Range, r2: Range) {

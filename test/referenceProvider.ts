@@ -5,6 +5,8 @@ import { ParsedDocumentStore, ParsedDocument } from '../src/parsedDocument';
 import * as lsp from 'vscode-languageserver-types';
 import { assert } from 'chai';
 import { ReferenceReader } from '../src/referenceReader';
+import {ReferenceStore} from '../src/reference';
+import {MemoryCache} from '../src/cache';
 import 'mocha';
 
 let src =
@@ -38,13 +40,14 @@ function setup(src: string) {
     let docStore = new ParsedDocumentStore();
     let symbolStore = new SymbolStore();
     let doc = new ParsedDocument('test', src);
+    let refStore = new ReferenceStore(new MemoryCache());
     docStore.add(doc);
     let table = SymbolTable.create(doc);
     symbolStore.add(table);
-    ReferenceReader.discoverReferences(doc, table, symbolStore);
-    symbolStore.indexReferences(table);
+    let refTable = ReferenceReader.discoverReferences(doc, symbolStore);
+    refStore.add(refTable);
     //console.log(JSON.stringify(table.find((x)=>{return x.name === 'bar'}), null, 4));
-    return new ReferenceProvider(docStore, symbolStore);
+    return new ReferenceProvider(docStore, symbolStore, refStore);
 }
 
 describe('ReferencesProvider', () => {
@@ -94,9 +97,12 @@ describe('ReferencesProvider', () => {
         ];
 
             let provider = setup(src);
-            let locs = provider.provideReferenceLocations('test', <lsp.Position>{ line: 22, character: 7 }, <lsp.ReferenceContext>{ includeDeclaration: true });
+            let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 22, character: 7 }, <lsp.ReferenceContext>{ includeDeclaration: true });
             //console.log(JSON.stringify(locs, null, 4));
-            assert.deepEqual(locs, expected);
+            return promise.then((locs)=>{
+                assert.includeDeepMembers(locs, expected);
+                //assert.deepEqual(locs, expected);
+            });
 
     });
 
@@ -159,9 +165,11 @@ describe('ReferencesProvider', () => {
 
 
             let provider = setup(src);
-            let locs = provider.provideReferenceLocations('test', <lsp.Position>{ line: 18, character: 16 }, <lsp.ReferenceContext>{ includeDeclaration: true });
-            assert.deepEqual(locs, expected);
+            let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 18, character: 16 }, <lsp.ReferenceContext>{ includeDeclaration: true });
             //console.log(JSON.stringify(locs, null, 4));
+            return promise.then((locs)=>{
+                assert.includeDeepMembers(locs, expected);
+            });
 
     });
 
@@ -236,9 +244,11 @@ describe('ReferencesProvider', () => {
         ];
 
         let provider = setup(src);
-        let locs = provider.provideReferenceLocations('test', <lsp.Position>{ line: 18, character: 6 }, <lsp.ReferenceContext>{ includeDeclaration: true });
-        assert.deepEqual(locs, expected);
+        let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 18, character: 6 }, <lsp.ReferenceContext>{ includeDeclaration: true });
         //console.log(JSON.stringify(locs, null, 4));
+        return promise.then((locs)=>{
+            assert.includeDeepMembers(locs, expected);
+        });
 
     });
 
@@ -273,9 +283,11 @@ describe('ReferencesProvider', () => {
             }
         ];
         let provider = setup(src);
-        let locs = provider.provideReferenceLocations('test', <lsp.Position>{ line: 19, character: 9 }, <lsp.ReferenceContext>{ includeDeclaration: true });
-        assert.deepEqual(locs, expected);
+        let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 19, character: 9 }, <lsp.ReferenceContext>{ includeDeclaration: true });
         //console.log(JSON.stringify(locs, null, 4));
+        return promise.then((locs)=>{
+            assert.includeDeepMembers(locs, expected);
+        });
 
     });
 
@@ -336,9 +348,11 @@ describe('ReferencesProvider', () => {
             }
         ];
         let provider = setup(src);
-        let locs = provider.provideReferenceLocations('test', <lsp.Position>{ line: 13, character: 33 }, <lsp.ReferenceContext>{ includeDeclaration: true });
-        assert.deepEqual(locs, expected);
+        let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 13, character: 33 }, <lsp.ReferenceContext>{ includeDeclaration: true });
         //console.log(JSON.stringify(locs, null, 4));
+        return promise.then((locs)=>{
+            assert.includeDeepMembers(locs, expected);
+        });
 
     });
 
@@ -386,9 +400,11 @@ describe('ReferencesProvider', () => {
             }
         ];
         let provider = setup(src);
-        let locs = provider.provideReferenceLocations('test', <lsp.Position>{ line: 20, character: 9 }, <lsp.ReferenceContext>{ includeDeclaration: true });
-        assert.deepEqual(locs, expected);
+        let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 20, character: 9 }, <lsp.ReferenceContext>{ includeDeclaration: true });
         //console.log(JSON.stringify(locs, null, 4));
+        return promise.then((locs)=>{
+            assert.includeDeepMembers(locs, expected);
+        });
     });
 
     it('parameter refs, closure use', () => {
@@ -449,9 +465,12 @@ let expected = [
 ];
 
         let provider = setup(src);
-        let locs = provider.provideReferenceLocations('test', <lsp.Position>{ line: 1, character: 26 }, <lsp.ReferenceContext>{ includeDeclaration: true });
-        assert.deepEqual(locs, expected);
-        //console.log(JSON.stringify(locs, null, 4));
+        let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 1, character: 26 }, <lsp.ReferenceContext>{ includeDeclaration: true });
+        
+        return promise.then((locs)=>{
+            //console.log(JSON.stringify(locs, null, 4));
+            assert.includeDeepMembers(locs, expected);
+        });
     });
 
 }); 

@@ -224,26 +224,22 @@ export class ReferenceProvider {
         if(!scopePositions.length) {
             return [];
         }
-
+        
         let refTreeTraverser = refTable.createTraverser();
         let refs:Reference[] = [];
         let refFn = (r: Reference) => {
             return (r.kind === SymbolKind.Variable || r.kind === SymbolKind.Parameter) && r.name === symbol.name;
         };
         let isScope:Predicate<Scope|Reference> = (x:Scope|Reference) => {
-            return (<Reference>x).kind === undefined && x.location && util.positionEquality(x.location.range.start, scopePositions[0])
+            return (<Reference>x).kind === undefined && x.location && scopePositions.length && util.positionEquality(x.location.range.start, scopePositions[0])
         }
         if(!refTreeTraverser.find(isScope)) {
             return [];
         }
-
+        
         let refVisitor:TreeVisitor<Scope|Reference> = {
 
             preorder:(node:Scope|Reference, spine:(Scope|Reference)[]) => {
-
-                if(!scopePositions.length) {
-                    return false;
-                }
 
                 if(isScope(node)) {
                     scopePositions.shift();

@@ -325,6 +325,10 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                 this._transformStack.push(new MemberNameTransform(this.doc.nodeLocation(node)));
                 break;
 
+            case PhraseType.AnonymousFunctionUseVariable:
+                this._transformStack.push(new AnonymousFunctionUseVariableTransform());
+                break;
+
             case PhraseType.ObjectCreationExpression:
                 if (parentTransform) {
                     this._transformStack.push(new ObjectCreationExpressionTransform());
@@ -448,6 +452,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.MethodDeclarationHeader:
             case PhraseType.NamespaceDefinition:
             case PhraseType.ParameterDeclaration:
+            case PhraseType.AnonymousFunctionUseVariable:
                 if (scope) {
                     let ref = (<ReferenceNodeTransform>transform).reference;
 
@@ -773,6 +778,17 @@ class CatchNameListTransform implements TypeNodeTransform {
         }
     }
 
+}
+
+class AnonymousFunctionUseVariableTransform implements ReferenceNodeTransform {
+    phraseType = PhraseType.AnonymousFunctionUseVariable;
+    reference:Reference;
+
+    push(transform:NodeTransform) {
+        if(transform.tokenType === TokenType.VariableName) {
+            this.reference = Reference.create(SymbolKind.Variable, (<TokenTransform>transform).text, (<TokenTransform>transform).location);
+        }
+    }
 }
 
 class ForeachStatementTransform implements NodeTransform {
