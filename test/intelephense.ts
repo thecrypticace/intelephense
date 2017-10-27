@@ -8,7 +8,10 @@ describe('intelephense', function(){
 
         it('Built in symbols', function(){
 
-            Intelephense.initialise();
+            Intelephense.initialise({
+                storagePath:'/tmp/intelephense',
+                logWriter:undefined
+            });
             assert.isAbove(Intelephense.numberSymbolsKnown(), 1);
 
             let src = 
