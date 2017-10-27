@@ -20,6 +20,34 @@ export function createCache(path:string) {
     return new FileCache(path);
 }
 
+export class MemoryCache implements Cache {
+
+    private _map:{[index:string]:any};
+
+    constructor() {
+        this._map = {};
+    }
+
+    init() {
+        return Promise.resolve();
+    }
+
+    read(key:string) {
+        return Promise.resolve(this._map[key]);
+    }
+
+    write(key:string, data:any) {
+        this._map[key] = data;
+        return Promise.resolve();
+    }
+
+    delete(key:string) {
+        delete this._map[key];
+        return Promise.resolve();
+    }
+
+}
+
 type Bucket = Item[];
 type Item = [string, any];
 
