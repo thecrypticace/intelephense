@@ -5,6 +5,8 @@ import * as lsp from 'vscode-languageserver-types';
 import { assert } from 'chai';
 import 'mocha';
 import { ReferenceReader } from '../src/referenceReader';
+import {ReferenceStore} from '../src/reference';
+import {MemoryCache} from '../src/cache';
 
 var noCompletions: lsp.CompletionList = {
     items: [],
@@ -270,7 +272,8 @@ $array[0]->fn();
 function setup(src: string | string[]) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
-    let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore);
+    let refStore = new ReferenceStore(new MemoryCache());
+    let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore, refStore);
 
     if (!Array.isArray(src)) {
         src = [src];
@@ -281,8 +284,8 @@ function setup(src: string | string[]) {
         parsedDocumentStore.add(doc);
         let table = SymbolTable.create(doc);
         symbolStore.add(table);
-        ReferenceReader.discoverReferences(doc, table, symbolStore);
-        symbolStore.indexReferences(table);
+        let refTable = ReferenceReader.discoverReferences(doc, symbolStore);
+        refStore.add(refTable);
     }
     return completionProvider;
 }
@@ -591,13 +594,16 @@ describe('CompletionProvider', () => {
 
         let symbolStore = new SymbolStore();
         let parsedDocumentStore = new ParsedDocumentStore();
-        let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore);
+        let refStore = new ReferenceStore(new MemoryCache());
+        let completionProvider = new CompletionProvider(symbolStore, parsedDocumentStore, refStore);
         let doc = new ParsedDocument('doc1', importSrc1);
         let doc2 = new ParsedDocument('doc2', importSrc2);
         parsedDocumentStore.add(doc);
         symbolStore.add(SymbolTable.create(doc));
         parsedDocumentStore.add(doc2);
         symbolStore.add(SymbolTable.create(doc2));
+        refStore.add(ReferenceReader.discoverReferences(doc, symbolStore));
+        refStore.add(ReferenceReader.discoverReferences(doc2, symbolStore));
 
         let expected = <lsp.CompletionList>{
             "items": [
