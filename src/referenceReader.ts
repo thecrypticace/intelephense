@@ -63,6 +63,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
         this._transformStack = [];
         this._variableTable = new VariableTable();
         this._classStack = [];
+        this._symbolTable = this.symbolStore.getSymbolTable(this.doc.uri);
         this._symbols = this._symbolTable.filter(this._symbolFilter);
         this._scopeStack = [Scope.create(lsp.Location.create(this.doc.uri, util.cloneRange(this._symbols.shift().location.range)))]; //file/root node
     }

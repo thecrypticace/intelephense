@@ -115,7 +115,7 @@ namespace ReferenceTableSummary {
 
     export function create(uri: string, identifiers: string[]) {
         return {
-            uri: this.uri,
+            uri: uri,
             identifiers: identifiers
         };
     }
