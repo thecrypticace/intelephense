@@ -41,8 +41,8 @@ export declare class ReferenceStore {
     getReferenceTable(uri: string): ReferenceTable;
     add(table: ReferenceTable): void;
     remove(uri: string, purge?: boolean): void;
-    close(uri: string): void;
-    closeAll(): void;
+    close(uri: string): Promise<void>;
+    closeAll(): Promise<{}>;
     find(name: string, filter?: Predicate<Reference>): Promise<Reference[]>;
     private _findInTables(tables, name, filter?);
     private _fetchTable;

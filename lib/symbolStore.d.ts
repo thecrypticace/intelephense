@@ -15,6 +15,7 @@ export declare class SymbolTable implements Traversable<PhpSymbol> {
     readonly hash: number;
     readonly symbols: PhpSymbol[];
     readonly symbolCount: number;
+    pruneScopedVars(): void;
     parent(s: PhpSymbol): PhpSymbol;
     traverse(visitor: TreeVisitor<PhpSymbol>): TreeVisitor<PhpSymbol>;
     createTraverser(): TreeTraverser<PhpSymbol>;
@@ -30,6 +31,10 @@ export declare class SymbolTable implements Traversable<PhpSymbol> {
     static create(parsedDocument: ParsedDocument, externalOnly?: boolean): SymbolTable;
     static readBuiltInSymbols(): SymbolTable;
 }
+export interface SymbolStoreState {
+    symbolCount: number;
+    tables: SymbolTableIndexState;
+}
 export declare class SymbolStore {
     private _tableIndex;
     private _symbolIndex;
@@ -37,10 +42,13 @@ export declare class SymbolStore {
     constructor();
     onParsedDocumentChange: (args: ParsedDocumentChangeEventArgs) => void;
     getSymbolTable(uri: string): SymbolTable;
+    readonly tables: IterableIterator<SymbolTable>;
     readonly tableCount: number;
     readonly symbolCount: number;
     add(symbolTable: SymbolTable): void;
     remove(uri: string): void;
+    state(): SymbolStoreState;
+    restoreState(state: SymbolStoreState): void;
     /**
      * Finds all indexed symbols that match text exactly.
      * Case sensitive for constants and variables and insensitive for
@@ -69,4 +77,12 @@ export declare class SymbolStore {
      */
     private _indexFilter(s);
     private _symbolKeys(s);
+}
+export interface SymbolTableIndexNode {
+    hash: number;
+    tables: SymbolTable[];
+}
+export interface SymbolTableIndexState {
+    tables: SymbolTableIndexNode[];
+    count: number;
 }

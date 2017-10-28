@@ -1,9 +1,13 @@
+import { LanguageRange } from './parsedDocument';
 import { PublishDiagnosticsEventArgs } from './diagnosticsProvider';
 import * as lsp from 'vscode-languageserver-types';
 import { LogWriter } from './logger';
 export declare namespace Intelephense {
     function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void): void;
-    function initialise(options: InitialisationOptions): void;
+    function initialise(options: InitialisationOptions): Promise<void>;
+    function shutdown(): Promise<void>;
+    function cachedDocuments(): string[];
+    function documentLanguageRanges(textDocument: lsp.TextDocumentItem): LanguageRange[];
     function setConfig(config: IntelephenseConfig): void;
     function openDocument(textDocument: lsp.TextDocumentItem): void;
     function closeDocument(textDocument: lsp.TextDocumentIdentifier): void;
@@ -43,5 +47,6 @@ export interface IntelephenseConfig {
 }
 export interface InitialisationOptions {
     storagePath: string;
-    logWriter: LogWriter;
+    logWriter?: LogWriter;
+    clearCache?: boolean;
 }

@@ -1,24 +1,24 @@
 export interface Cache {
-    init(): Promise<void>;
     read(key: string): Promise<any>;
     write(key: string, data: any): Promise<void>;
     delete(key: string): Promise<void>;
+    flush(): Promise<void>;
 }
 export declare function createCache(path: string): FileCache;
 export declare class MemoryCache implements Cache {
     private _map;
     constructor();
-    init(): Promise<void>;
     read(key: string): Promise<any>;
     write(key: string, data: any): Promise<void>;
     delete(key: string): Promise<void>;
+    flush(): Promise<void>;
 }
 export declare class FileCache implements Cache {
     private path;
     constructor(path: string);
-    init(): Promise<void>;
     read(key: string): Promise<any>;
     write(key: string, data: any): Promise<void>;
     delete(key: string): Promise<void>;
+    flush(): Promise<void>;
     private _filePath(key);
 }

@@ -38,6 +38,7 @@ export declare class ParsedDocument implements Traversable<Phrase | Token> {
     createAnonymousName(node: Phrase): string;
     positionAtOffset(offset: number): lsp.Position;
     offsetAtPosition(position: lsp.Position): number;
+    documentLanguageRanges(): LanguageRange[];
 }
 export declare namespace ParsedDocument {
     function firstToken(node: Phrase | Token): Token;
@@ -62,4 +63,8 @@ export declare class ParsedDocumentStore {
     add(parsedDocument: ParsedDocument): void;
     remove(uri: string): void;
     find(uri: string): ParsedDocument;
+}
+export interface LanguageRange {
+    range: lsp.Range;
+    languageId?: string;
 }
