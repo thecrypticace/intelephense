@@ -212,6 +212,12 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         return this._textDocument.offsetAtPosition(position);
     }
 
+    documentLanguageRanges() {
+        let visitor = new DocumentLanguageRangesVisitor(this);
+        this.traverse(visitor);
+        return visitor.ranges;
+    }
+
 }
 
 export namespace ParsedDocument {
@@ -410,6 +416,70 @@ class ToStringVisitor implements TreeVisitor<Phrase | Token> {
         if (ParsedDocument.isToken(node) && (!this._ignore || this._ignore.indexOf((<Token>node).tokenType) < 0)) {
             this._text += this._doc.tokenText(<Token>node);
         }
+
+    }
+
+}
+
+export interface LanguageRange {
+    range: lsp.Range;
+    languageId?: string;
+}
+
+const phpLanguageId = 'php';
+
+class DocumentLanguageRangesVisitor implements TreeVisitor<Phrase | Token> {
+
+    private _ranges: LanguageRange[];
+    private _phpOpenPosition: lsp.Position;
+    private _lastToken:Token;
+
+    constructor(public doc: ParsedDocument) {
+        this._ranges = [];
+    }
+
+    get ranges() {
+        //handle no close tag
+        if(this._phpOpenPosition && this._lastToken) {
+            this._ranges.push({
+                range: lsp.Range.create(this._phpOpenPosition, this.doc.tokenRange(this._lastToken).end),
+                languageId:phpLanguageId
+            });
+            this._phpOpenPosition = undefined;
+        }
+        return this._ranges;
+    }
+
+    preorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
+
+        switch ((<Token>node).tokenType) {
+            case TokenType.Text:
+                this._ranges.push({ range: this.doc.tokenRange(<Token>node) });
+                break;
+            case TokenType.OpenTag:
+            case TokenType.OpenTagEcho:
+                this._phpOpenPosition = this.doc.tokenRange(<Token>node).start;
+                break;
+            case TokenType.CloseTag:
+                {
+                    let closeTagRange = this.doc.tokenRange(<Token>node);
+                    this._ranges.push({
+                        range: lsp.Range.create(this._phpOpenPosition || closeTagRange.start, closeTagRange.end),
+                        languageId: phpLanguageId
+                    });
+                    this._phpOpenPosition = undefined;
+                }
+                
+                break;
+            default:
+                break;
+        }
+
+        if((<Token>node).tokenType !== undefined) {
+            this._lastToken = <Token>node;
+        }
+
+        return true;
 
     }
 

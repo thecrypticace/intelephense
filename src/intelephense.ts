@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { ParsedDocument, ParsedDocumentStore, ParsedDocumentChangeEventArgs } from './parsedDocument';
+import { ParsedDocument, ParsedDocumentStore, ParsedDocumentChangeEventArgs, LanguageRange } from './parsedDocument';
 import { SymbolStore, SymbolTable } from './symbolStore';
 import { SymbolProvider } from './symbolProvider';
 import { CompletionProvider, CompletionOptions } from './completionProvider';
@@ -80,6 +80,11 @@ export namespace Intelephense {
 
         symbolStore.add(SymbolTable.readBuiltInSymbols());
 
+    }
+
+    export function documentLanguageRanges(textDocument: lsp.TextDocumentItem):LanguageRange[] {
+        let doc = documentStore.find(textDocument.uri);
+        return doc ? doc.documentLanguageRanges() : [];
     }
 
     export function setConfig(config: IntelephenseConfig) {
