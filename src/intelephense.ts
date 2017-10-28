@@ -5,7 +5,7 @@
 'use strict';
 
 import { ParsedDocument, ParsedDocumentStore, ParsedDocumentChangeEventArgs, LanguageRange } from './parsedDocument';
-import { SymbolStore, SymbolTable } from './symbolStore';
+import { SymbolStore, SymbolTable, SymbolStoreState } from './symbolStore';
 import { SymbolProvider } from './symbolProvider';
 import { CompletionProvider, CompletionOptions } from './completionProvider';
 import { DiagnosticsProvider, PublishDiagnosticsEventArgs } from './diagnosticsProvider';
@@ -20,7 +20,7 @@ import { ReferenceReader } from './referenceReader';
 import { NameResolver } from './nameResolver';
 import { ReferenceProvider } from './referenceProvider';
 import { ReferenceStore } from './reference';
-import { createCache } from './cache';
+import { createCache, Cache } from './cache';
 import { Log, LogWriter } from './logger';
 import * as path from 'path';
 
@@ -29,22 +29,25 @@ export namespace Intelephense {
     const phpLanguageId = 'php';
     const htmlLanguageId = 'html';
 
-    let documentStore:ParsedDocumentStore;
-    let symbolStore:SymbolStore;
-    let refStore:ReferenceStore;
-    let symbolProvider:SymbolProvider;
-    let completionProvider:CompletionProvider;
-    let diagnosticsProvider:DiagnosticsProvider;
-    let signatureHelpProvider:SignatureHelpProvider;
-    let definitionProvider:DefinitionProvider;
-    let formatProvider:FormatProvider;
-    let nameTextEditProvider:NameTextEditProvider;
-    let referenceProvider:ReferenceProvider;
+    let documentStore: ParsedDocumentStore;
+    let symbolStore: SymbolStore;
+    let refStore: ReferenceStore;
+    let symbolProvider: SymbolProvider;
+    let completionProvider: CompletionProvider;
+    let diagnosticsProvider: DiagnosticsProvider;
+    let signatureHelpProvider: SignatureHelpProvider;
+    let definitionProvider: DefinitionProvider;
+    let formatProvider: FormatProvider;
+    let nameTextEditProvider: NameTextEditProvider;
+    let referenceProvider: ReferenceProvider;
+    let cacheClear = false;
+    let symbolCache: Cache;
+    const symbolsCacheKey = 'symbols';
 
-    let diagnosticsUnsubscribe:Unsubscribe;
+    let diagnosticsUnsubscribe: Unsubscribe;
 
     export function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void) {
-        if(diagnosticsUnsubscribe) {
+        if (diagnosticsUnsubscribe) {
             diagnosticsUnsubscribe();
         }
 
@@ -53,11 +56,12 @@ export namespace Intelephense {
         }
     }
 
-    export function initialise(options:InitialisationOptions) {
+    export function initialise(options: InitialisationOptions) {
 
-        if(options.logWriter) {
+        if (options.logWriter) {
             Log.writer = options.logWriter;
         }
+        symbolCache = createCache(path.join(options.storagePath, 'intelephense', 'symbols'));
         documentStore = new ParsedDocumentStore();
         symbolStore = new SymbolStore();
         refStore = new ReferenceStore(createCache(path.join(options.storagePath, 'intelephense', 'references')));
@@ -77,12 +81,61 @@ export namespace Intelephense {
             refStore.add(refTable);
         });
 
+        return symbolCache.read(symbolsCacheKey).then((s: SymbolStoreState) => {
 
-        symbolStore.add(SymbolTable.readBuiltInSymbols());
+            if (s) {
+                symbolStore.restoreState(s);
+            } else {
+                symbolStore.add(SymbolTable.readBuiltInSymbols());
+            }
+
+            return Promise.resolve();
+
+        });
 
     }
 
-    export function documentLanguageRanges(textDocument: lsp.TextDocumentItem):LanguageRange[] {
+    export function shutdown() {
+
+        if (cacheClear) {
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+
+            let refs = false;
+            let symbols = false;
+            let onResolveOrRejectRefs = () => {
+                refs = true;
+                if (refs && symbols) {
+                    resolve();
+                }
+            }
+            let onResolveOrRejectSymbols = () => {
+                symbols = true;
+                if (refs && symbols) {
+                    resolve();
+                }
+            }
+
+            refStore.closeAll().then(() => {
+                onResolveOrRejectRefs();
+            }).catch((msg) => {
+                Log.warn(msg);
+                onResolveOrRejectRefs();
+            });
+            symbolCache.write(symbolsCacheKey, symbolStore.state()).then(() => {
+                onResolveOrRejectSymbols();
+            }).catch((msg) => {
+                Log.warn(msg);
+                onResolveOrRejectSymbols();
+            });
+
+        });
+
+    }
+
+    export function documentLanguageRanges(textDocument: lsp.TextDocumentItem): LanguageRange[] {
         let doc = documentStore.find(textDocument.uri);
         return doc ? doc.documentLanguageRanges() : [];
     }
@@ -114,7 +167,7 @@ export namespace Intelephense {
         refStore.close(textDocument.uri);
         diagnosticsProvider.remove(textDocument.uri);
         let symbolTable = symbolStore.getSymbolTable(textDocument.uri);
-        if(symbolTable) {
+        if (symbolTable) {
             symbolTable.pruneScopedVars();
         }
     }
@@ -262,7 +315,7 @@ export interface IntelephenseConfig {
 }
 
 export interface InitialisationOptions {
-    storagePath:string;
-    logWriter:LogWriter;
+    storagePath: string;
+    logWriter: LogWriter;
 }
 

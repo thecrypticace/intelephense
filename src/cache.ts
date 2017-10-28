@@ -10,7 +10,6 @@ import * as path from 'path';
 import * as util from './util';
 
 export interface Cache {
-    init(): Promise<void>;
     read(key: string): Promise<any>;
     write(key: string, data: any): Promise<void>;
     delete(key: string): Promise<void>;
@@ -26,10 +25,6 @@ export class MemoryCache implements Cache {
 
     constructor() {
         this._map = {};
-    }
-
-    init() {
-        return Promise.resolve();
     }
 
     read(key:string) {
@@ -103,19 +98,15 @@ function bucketRemove(bucket: Bucket, key: string) {
 
 export class FileCache implements Cache {
 
-    constructor(private path: string) { }
+    constructor(private path: string) {
 
-    init() {
-        let dir = this.path;
-        return new Promise<void>((resolve, reject) => {
-            mkdirp(dir, (err) => {
-                if (err && err.code !== 'EEXIST') {
-                    reject(err.message);
-                    return;
-                }
-                resolve();
-            });
-        });
+        try {
+            mkdirp.sync(this.path);
+        } catch (err) {
+            if (err && err.code !== 'EEXIST') {
+                throw err;
+            }
+        }
     }
 
     read(key: string) {

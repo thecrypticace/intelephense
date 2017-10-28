@@ -17,6 +17,8 @@ import * as util from './util';
 import { TypeAggregate, MemberMergeStrategy } from './typeAggregate';
 import { ReferenceReader } from './referenceReader';
 
+const builtInsymbolsUri = 'php';
+
 export class SymbolTable implements Traversable<PhpSymbol> {
 
     private _uri: string;
@@ -153,7 +155,7 @@ export class SymbolTable implements Traversable<PhpSymbol> {
 
     static readBuiltInSymbols() {
 
-        return new SymbolTable('php', {
+        return new SymbolTable(builtInsymbolsUri, {
             kind: SymbolKind.None,
             name: '',
             children: <any>builtInSymbols
@@ -179,6 +181,11 @@ class ScopedVariablePruneVisitor implements TreeVisitor<PhpSymbol> {
     }
 
 
+}
+
+export interface SymbolStoreState {
+    symbolCount:number;
+    tables:SymbolTableIndexState;
 }
 
 export class SymbolStore {
@@ -226,6 +233,21 @@ export class SymbolStore {
         }
         this._symbolIndex.removeMany(this._indexSymbols(symbolTable.root));
         this._symbolCount -= symbolTable.symbolCount;
+    }
+
+    state():SymbolStoreState {
+        return {
+            tables:this._tableIndex.state(),
+            symbolCount:this._symbolCount
+        }
+    }
+
+    restoreState(state:SymbolStoreState) {
+        this._symbolCount = state.symbolCount;
+        this._tableIndex.restoreState(state.tables);
+        for(let t of this._tableIndex.tables()) {
+            this._symbolIndex.addMany(this._indexSymbols(t.root));
+        }
     }
 
     /**
@@ -691,6 +713,16 @@ class SymbolTableIndex {
         return this._count;
     }
 
+    *tables() {
+        let node:SymbolTableIndexNode;
+        for(let n = 0, nl = this._tables.length; n < nl; ++n) {
+            node = this._tables[n];
+            for(let k = 0, tl = node.tables.length; k < tl; ++k) {
+                yield node.tables[k];
+            }
+        }
+    }
+
     add(table: SymbolTable) {
         let fn = this._createCompareFn(table.uri);
         let search = this._search.search(fn);
@@ -752,6 +784,22 @@ class SymbolTableIndex {
         return undefined;
     }
 
+    /**
+     * instance should not be used again after calling
+     */
+    state():SymbolTableIndexState {
+        return {
+            tables:this._tables,
+            count:this._count
+        }
+    }
+
+    restoreState(state:SymbolTableIndexState) {
+        this._count = state.count;
+        this._tables = state.tables;
+        this._search = new BinarySearch<SymbolTableIndexNode>(this._tables);
+    }
+
     private _createCompareFn(uri: string) {
         let hash = Math.abs(util.hash32(uri));
         return (x: SymbolTableIndexNode) => {
@@ -767,7 +815,12 @@ class SymbolTableIndex {
 
 }
 
-interface SymbolTableIndexNode {
+export interface SymbolTableIndexNode {
     hash: number;
     tables: SymbolTable[];
+}
+
+export interface SymbolTableIndexState {
+    tables:SymbolTableIndexNode[];
+    count:number;
 }

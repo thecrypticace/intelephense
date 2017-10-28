@@ -180,27 +180,45 @@ export class ReferenceStore {
     close(uri: string) {
         let table = this._tablesRemove(uri);
         if (table) {
-            this._cache.write(table.uri, table);
+            return this._cache.write(table.uri, table);
         }
+        return Promise.resolve();
     }
 
     closeAll() {
         let tables = this._tables;
         let cache = this._cache;
         this._tables = [];
+        let count = tables.length;
 
-        let writeTableFn = () => {
-            let table = tables.pop();
-            if (!table) {
-                return;
+        return new Promise((resolve, reject)=>{
+
+            let onReject = (msg:string) => {
+                --count;
+                Log.warn(msg);
+                writeTableFn();
             }
-            cache.write(table.uri, table).then(writeTableFn).catch(Log.warn);
-        }
 
-        let maxOpenFiles = Math.min(8, tables.length);
-        for (let n = 0; n < maxOpenFiles; ++n) {
-            writeTableFn();
-        }
+            let onResolve = () => {
+                --count;
+                writeTableFn();
+            }
+
+            let writeTableFn = () => {
+                let table = tables.pop();
+                if (table) {
+                    cache.write(table.uri, table).then(onResolve).catch(onReject);
+                } else if(count < 1) {
+                    resolve();
+                }
+            }
+    
+            let maxOpenFiles = Math.min(8, tables.length);
+            for (let n = 0; n < maxOpenFiles; ++n) {
+                writeTableFn();
+            }
+
+        });
 
     }
 
