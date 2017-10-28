@@ -108,6 +108,10 @@ export namespace Intelephense {
         documentStore.remove(textDocument.uri);
         refStore.close(textDocument.uri);
         diagnosticsProvider.remove(textDocument.uri);
+        let symbolTable = symbolStore.getSymbolTable(textDocument.uri);
+        if(symbolTable) {
+            symbolTable.pruneScopedVars();
+        }
     }
 
     export function editDocument(
@@ -159,6 +163,7 @@ export namespace Intelephense {
         let text = textDocument.text;
         let parsedDocument = new ParsedDocument(uri, text);
         let symbolTable = SymbolTable.create(parsedDocument, true);
+        symbolTable.pruneScopedVars();
         symbolStore.add(symbolTable);
         return symbolTable.symbolCount;
 
