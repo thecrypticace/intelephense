@@ -5,7 +5,6 @@
 'use strict';
 
 import * as fs from 'fs-extra';
-import * as mkdirp from 'mkdirp';
 import * as path from 'path';
 import * as util from './util';
 
@@ -107,7 +106,7 @@ export class FileCache implements Cache {
     constructor(private path: string) {
 
         try {
-            mkdirp.sync(this.path);
+            fs.mkdirpSync(this.path);
         } catch (err) {
             if (err && err.code !== 'EEXIST') {
                 throw err;
