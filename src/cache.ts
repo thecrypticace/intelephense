@@ -4,7 +4,7 @@
 
 'use strict';
 
-import * as fs from 'fs';
+import * as fs from 'fs-extra';
 import * as mkdirp from 'mkdirp';
 import * as path from 'path';
 import * as util from './util';
@@ -13,6 +13,7 @@ export interface Cache {
     read(key: string): Promise<any>;
     write(key: string, data: any): Promise<void>;
     delete(key: string): Promise<void>;
+    flush():Promise<void>;
 }
 
 export function createCache(path:string) {
@@ -38,6 +39,11 @@ export class MemoryCache implements Cache {
 
     delete(key:string) {
         delete this._map[key];
+        return Promise.resolve();
+    }
+
+    flush() {
+        this._map = {};
         return Promise.resolve();
     }
 
@@ -154,6 +160,18 @@ export class FileCache implements Cache {
             }
         });
 
+    }
+
+    flush() {
+        return new Promise<void>((resolve, reject) => {
+            fs.remove(this.path, (err) => {
+                if(err) {
+                    reject(err.message);
+                } else {
+                    resolve();
+                }
+            });
+        });
     }
 
     private _filePath(key: string) {

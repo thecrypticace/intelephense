@@ -42,6 +42,7 @@ export namespace Intelephense {
     let referenceProvider: ReferenceProvider;
     let cacheClear = false;
     let symbolCache: Cache;
+    let refCache:Cache;
     const symbolsCacheKey = 'symbols';
 
     let diagnosticsUnsubscribe: Unsubscribe;
@@ -62,9 +63,10 @@ export namespace Intelephense {
             Log.writer = options.logWriter;
         }
         symbolCache = createCache(path.join(options.storagePath, 'intelephense', 'symbols'));
+        refCache = createCache(path.join(options.storagePath, 'intelephense', 'references'));
         documentStore = new ParsedDocumentStore();
         symbolStore = new SymbolStore();
-        refStore = new ReferenceStore(createCache(path.join(options.storagePath, 'intelephense', 'references')));
+        refStore = new ReferenceStore(refCache);
         symbolProvider = new SymbolProvider(symbolStore);
         completionProvider = new CompletionProvider(symbolStore, documentStore, refStore);
         diagnosticsProvider = new DiagnosticsProvider();
@@ -133,6 +135,15 @@ export namespace Intelephense {
 
         });
 
+    }
+
+    export function clearCache() {
+        cacheClear = true;
+        return refCache.flush().then(()=>{ 
+            return symbolCache.flush(); 
+        }).catch((msg)=>{
+            Log.warn(msg);
+        });
     }
 
     export function documentLanguageRanges(textDocument: lsp.TextDocumentItem): LanguageRange[] {
