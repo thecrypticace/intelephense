@@ -55,6 +55,11 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         return traverser.count() - 1;
     }
 
+    pruneScopedVars(){
+        let visitor = new ScopedVariablePruneVisitor();
+        this.traverse(visitor);
+    }
+
     parent(s: PhpSymbol) {
         let traverser = new TreeTraverser([this.root]);
         let fn = (x: PhpSymbol) => {
@@ -155,6 +160,24 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         });
 
     }
+
+}
+
+class ScopedVariablePruneVisitor implements TreeVisitor<PhpSymbol> {
+
+    preorder(node:PhpSymbol, spine:PhpSymbol[]) {
+
+        if((node.kind === SymbolKind.Function || node.kind === SymbolKind.Method) && node.children) {
+            node.children = node.children.filter(this._isNotVar);
+        } 
+
+        return true;
+    }
+
+    private _isNotVar(s:PhpSymbol) {
+        return s.kind !== SymbolKind.Variable;
+    }
+
 
 }
 
