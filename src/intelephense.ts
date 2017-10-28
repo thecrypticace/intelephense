@@ -42,7 +42,7 @@ export namespace Intelephense {
     let referenceProvider: ReferenceProvider;
     let cacheClear = false;
     let symbolCache: Cache;
-    let refCache:Cache;
+    let refCache: Cache;
     const symbolsCacheKey = 'symbols';
 
     let diagnosticsUnsubscribe: Unsubscribe;
@@ -83,67 +83,52 @@ export namespace Intelephense {
             refStore.add(refTable);
         });
 
-        return symbolCache.read(symbolsCacheKey).then((s: SymbolStoreState) => {
-
-            if (s) {
-                symbolStore.restoreState(s);
-            } else {
+        if (options.clearCache) {
+            return clearCache().then(() => {
                 symbolStore.add(SymbolTable.readBuiltInSymbols());
-            }
+            });
+        } else {
 
-            return Promise.resolve();
+            return symbolCache.read(symbolsCacheKey).then((s: SymbolStoreState) => {
 
-        });
+                if (s) {
+                    symbolStore.restoreState(s);
+                } else {
+                    symbolStore.add(SymbolTable.readBuiltInSymbols());
+                }
+
+            });
+        }
 
     }
 
     export function shutdown() {
 
-        if (cacheClear) {
-            return Promise.resolve();
-        }
-
-        return new Promise((resolve, reject) => {
-
-            let refs = false;
-            let symbols = false;
-            let onResolveOrRejectRefs = () => {
-                refs = true;
-                if (refs && symbols) {
-                    resolve();
-                }
-            }
-            let onResolveOrRejectSymbols = () => {
-                symbols = true;
-                if (refs && symbols) {
-                    resolve();
-                }
-            }
-
-            refStore.closeAll().then(() => {
-                onResolveOrRejectRefs();
-            }).catch((msg) => {
-                Log.warn(msg);
-                onResolveOrRejectRefs();
-            });
-            symbolCache.write(symbolsCacheKey, symbolStore.state()).then(() => {
-                onResolveOrRejectSymbols();
-            }).catch((msg) => {
-                Log.warn(msg);
-                onResolveOrRejectSymbols();
-            });
-
+        return refStore.closeAll().then(() => {
+            return symbolCache.write(symbolsCacheKey, symbolStore.state());
+        }).catch((msg) => {
+            Log.warn(msg);
         });
 
     }
 
-    export function clearCache() {
-        cacheClear = true;
-        return refCache.flush().then(()=>{ 
-            return symbolCache.flush(); 
-        }).catch((msg)=>{
+    function clearCache() {
+        return refCache.flush().then(() => {
+            return symbolCache.flush();
+        }).catch((msg) => {
             Log.warn(msg);
         });
+    }
+
+    export function cachedDocuments() {
+
+        let uris:string[] = [];
+        for(let t of symbolStore.tables) {
+            if(t.uri !== 'php') {
+                uris.push(t.uri);
+            }
+        }
+        return uris;
     }
 
     export function documentLanguageRanges(textDocument: lsp.TextDocumentItem): LanguageRange[] {
@@ -327,6 +312,7 @@ export interface IntelephenseConfig {
 
 export interface InitialisationOptions {
     storagePath: string;
-    logWriter: LogWriter;
+    logWriter?: LogWriter;
+    clearCache?: boolean;
 }
 

@@ -164,7 +164,7 @@ export class FileCache implements Cache {
 
     flush() {
         return new Promise<void>((resolve, reject) => {
-            fs.remove(this.path, (err) => {
+            fs.emptyDir(this.path, (err) => {
                 if(err) {
                     reject(err.message);
                 } else {

@@ -210,6 +210,10 @@ export class SymbolStore {
         return this._tableIndex.find(uri);
     }
 
+    get tables() {
+        return this._tableIndex.tables();
+    }
+
     get tableCount() {
         return this._tableIndex.count();
     }
