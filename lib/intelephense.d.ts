@@ -5,7 +5,7 @@ import { LogWriter } from './logger';
 export declare namespace Intelephense {
     function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void): void;
     function initialise(options: InitialisationOptions): Promise<void>;
-    function shutdown(): Promise<void>;
+    function shutdown(): Promise<void | {}>;
     function cachedDocuments(): {
         timestamp: number;
         documents: string[];

@@ -698,8 +698,8 @@ export class SortedList<T> {
     protected _items: T[];
     protected _search: BinarySearch<T>;
 
-    constructor(protected compareFn: Comparer<T>) {
-        this._items = [];
+    constructor(protected compareFn: Comparer<T>, items?:T[]) {
+        this._items = items || [];
         this._search = new BinarySearch<T>(this._items);
     }
 
@@ -707,11 +707,15 @@ export class SortedList<T> {
         return this._items.length;
     }
 
+    get items() {
+        return this._items;
+    }
+
     add(item: T) {
         let cmpFn = this._createCompareClosure(item, this.compareFn);
         let result = this._search.search(cmpFn);
         if(result.isExactMatch) {
-            throw new Error('Duplicate key');
+            throw new Error(`Duplicate key ${JSON.stringify(item)}`);
         }
         this._items.splice(result.rank, 0, item);
     }

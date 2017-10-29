@@ -138,8 +138,9 @@ export declare class SortedList<T> {
     protected compareFn: Comparer<T>;
     protected _items: T[];
     protected _search: BinarySearch<T>;
-    constructor(compareFn: Comparer<T>);
+    constructor(compareFn: Comparer<T>, items?: T[]);
     readonly length: number;
+    readonly items: T[];
     add(item: T): void;
     remove(compareFn: (t: T) => number): T;
     find(compareFn: (t: T) => number): T;

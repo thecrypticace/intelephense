@@ -33,6 +33,10 @@ export declare class ReferenceTable implements Traversable<Scope | Reference> {
     traverse(visitor: TreeVisitor<Scope | Reference>): TreeVisitor<Reference | Scope>;
     static fromJSON(data: any): ReferenceTable;
 }
+export interface ReferenceTableSummary {
+    uri: string;
+    identifiers: string[];
+}
 export declare class ReferenceStore {
     private _tables;
     private _nameIndex;
@@ -45,6 +49,10 @@ export declare class ReferenceStore {
     close(uri: string): Promise<void>;
     closeAll(): Promise<{}>;
     find(name: string, filter?: Predicate<Reference>): Promise<Reference[]>;
+    fromJSON(data: any): void;
+    toJSON(): {
+        _summaryIndex: ReferenceTableSummary[];
+    };
     private _findInTables(tables, name, filter?);
     private _fetchTable;
     private _tablesRemove(uri);

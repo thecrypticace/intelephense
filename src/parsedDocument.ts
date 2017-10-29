@@ -365,6 +365,12 @@ export class ParsedDocumentStore {
         return Object.keys(this._parsedDocumentmap).length;
     }
 
+    get documents() {
+        return Object.keys(this._parsedDocumentmap).map((v)=>{
+            return this._parsedDocumentmap[v];
+        });
+    }
+
     has(uri: string) {
         return this._parsedDocumentmap[uri] !== undefined;
     }

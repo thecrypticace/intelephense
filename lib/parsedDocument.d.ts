@@ -59,6 +59,7 @@ export declare class ParsedDocumentStore {
     constructor();
     readonly parsedDocumentChangeEvent: Event<ParsedDocumentChangeEventArgs>;
     readonly count: number;
+    readonly documents: ParsedDocument[];
     has(uri: string): boolean;
     add(parsedDocument: ParsedDocument): void;
     remove(uri: string): void;

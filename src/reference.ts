@@ -111,7 +111,7 @@ export class ReferenceTable implements Traversable<Scope | Reference> {
     }
 }
 
-interface ReferenceTableSummary {
+export interface ReferenceTableSummary {
     uri: string;
     identifiers: string[];
 }
@@ -221,7 +221,7 @@ export class ReferenceStore {
                 }
             }
 
-            let maxOpenFiles = Math.min(8, tables.length);
+            let maxOpenFiles = Math.min(4, tables.length);
             for (let n = 0; n < maxOpenFiles; ++n) {
                 writeTableFn();
             }
@@ -270,13 +270,29 @@ export class ReferenceStore {
                 }
             }
 
-            let maxOpenFiles = Math.min(8, summaries.length);
+            let maxOpenFiles = Math.min(4, summaries.length);
             while (maxOpenFiles--) {
                 fetchTableFn(summaries.pop().uri).then(onSuccess).catch(onFail);
             }
 
         });
 
+    }
+
+    fromJSON(data:any) {
+        this._summaryIndex = new SortedList<ReferenceTableSummary>(ReferenceTableSummary.compare, data._summaryIndex);
+        let items = this._summaryIndex.items;
+        let item:ReferenceTableSummary;
+        for(let n = 0; n < items.length; ++n) {
+            item = items[n];
+            this._nameIndex.add(item);
+        }
+    }
+
+    toJSON() {
+        return {
+            _summaryIndex:this._summaryIndex.items
+        }
     }
 
     private _findInTables(tables: ReferenceTable[], name: string, filter?: Predicate<Reference>) {

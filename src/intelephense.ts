@@ -43,7 +43,9 @@ export namespace Intelephense {
     let cacheClear = false;
     let symbolCache: Cache;
     let refCache: Cache;
-    const symbolsCacheKey = 'symbols';
+    let stateCache: Cache;
+    const stateCacheKey = 'state';
+    const refStoreCacheKey = 'referenceStore';
 
     let diagnosticsUnsubscribe: Unsubscribe;
 
@@ -66,6 +68,7 @@ export namespace Intelephense {
         }
         symbolCache = createCache(path.join(options.storagePath, 'intelephense', 'symbols'));
         refCache = createCache(path.join(options.storagePath, 'intelephense', 'references'));
+        stateCache = createCache(path.join(options.storagePath, 'intelephense', 'state'));
         documentStore = new ParsedDocumentStore();
         symbolStore = new SymbolStore();
         refStore = new ReferenceStore(refCache);
@@ -85,23 +88,20 @@ export namespace Intelephense {
             refStore.add(refTable);
         });
 
+        symbolStore.add(SymbolTable.readBuiltInSymbols());
+
         if (options.clearCache) {
-            return clearCache().then(() => {
-                symbolStore.add(SymbolTable.readBuiltInSymbols());
-            }).catch((msg)=>{
+            return clearCache().catch((msg) => {
                 Log.warn(msg);
             });
         } else {
 
-            return symbolCache.read(symbolsCacheKey).then((data) => {
-
-                if (data) {
-                    symbolStore.fromJSON(data.symbolStore);
-                    cacheTimestamp = data.timestamp;
-                } else {
-                    symbolStore.add(SymbolTable.readBuiltInSymbols());
-                }
-
+            return stateCache.read(stateCacheKey).then((data)=>{
+                return readCachedSymbolTables(data.documents);
+            }).then(()=>{
+                return refCache.read(refStoreCacheKey);
+            }).then((data)=>{
+                refStore.fromJSON(data);
             }).catch((msg) => {
                 Log.warn(msg);
             });
@@ -110,17 +110,84 @@ export namespace Intelephense {
     }
 
     export function shutdown() {
-
-        return refStore.closeAll().then(() => {
-            return symbolCache.write(symbolsCacheKey, {symbolStore: symbolStore, timestamp: Date.now()});
+        let uris: string[] = [];
+        for (let t of symbolStore.tables) {
+            if (t.uri !== 'php') {
+                uris.push(t.uri);
+            }
+        }
+        return stateCache.write(stateCacheKey, { documents: uris, timestamp: Date.now() }).then(() => {
+            return refStore.closeAll();
+        }).then(() => {
+            return refCache.write(refStoreCacheKey, refStore);
+        }).then(() => {
+            return new Promise((resolve, reject) => {
+                let openDocs = documentStore.documents;
+                let cacheSymbolTableFn = () => {
+                    let doc = openDocs.pop();
+                    if (doc) {
+                        let symbolTable = symbolStore.getSymbolTable(doc.uri);
+                        symbolCache.write(doc.uri, symbolTable).then(cacheSymbolTableFn).catch((msg) => {
+                            Log.warn(msg);
+                            cacheSymbolTableFn();
+                        });
+                    } else {
+                        resolve();
+                    }
+                }
+                cacheSymbolTableFn();
+            });
         }).catch((msg) => {
             Log.warn(msg);
         });
 
     }
 
+    function readCachedSymbolTables(keys:string[]) {
+
+        if(!keys) {
+            return Promise.resolve();
+        }
+
+        return new Promise<void>((resolve, reject) => {
+
+            let count = keys.length;
+            if(count < 1) {
+                resolve();
+            }
+
+            let batch = Math.min(4, count);
+            let onCacheReadErr = (msg:string) => {
+                Log.warn(msg);
+                onCacheRead(undefined);
+            }
+            let onCacheRead = (data:any) => {
+                --count;
+                if(data) {
+                    symbolStore.add(new SymbolTable(data._uri, data._root, data._hash));
+                }
+
+                let uri = keys.pop();
+                if(uri) {
+                    symbolCache.read(uri).then(onCacheRead).catch(onCacheReadErr);
+                } else if(count < 1) {
+                    resolve();
+                }
+            }
+
+            let uri:string;
+            while(count-- > 0 && (uri = keys.pop())) {
+                symbolCache.read(uri).then(onCacheRead).catch(onCacheReadErr);
+            }
+
+        });
+
+    }
+
     function clearCache() {
-        return refCache.flush().then(() => {
+        return stateCache.flush().then(()=> {
+            return refCache.flush();
+        }).then(() => {
             return symbolCache.flush();
         }).catch((msg) => {
             Log.warn(msg);
@@ -129,13 +196,13 @@ export namespace Intelephense {
 
     export function cachedDocuments() {
 
-        let uris:string[] = [];
-        for(let t of symbolStore.tables) {
-            if(t.uri !== 'php') {
+        let uris: string[] = [];
+        for (let t of symbolStore.tables) {
+            if (t.uri !== 'php') {
                 uris.push(t.uri);
             }
         }
-        return {timestamp:cacheTimestamp, documents:uris};
+        return { timestamp: cacheTimestamp, documents: uris };
     }
 
     export function documentLanguageRanges(textDocument: lsp.TextDocumentItem): LanguageRange[] {
