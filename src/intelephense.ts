@@ -182,7 +182,7 @@ export namespace Intelephense {
             }
 
             let uri: string;
-            while (count-- > 0 && (uri = keys.pop())) {
+            while (batch-- > 0 && (uri = keys.pop())) {
                 symbolCache.read(uri).then(onCacheRead).catch(onCacheReadErr);
             }
 
