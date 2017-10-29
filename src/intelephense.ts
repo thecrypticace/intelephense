@@ -96,11 +96,15 @@ export namespace Intelephense {
             });
         } else {
 
-            return stateCache.read(stateCacheKey).then((data)=>{
+            return stateCache.read(stateCacheKey).then((data) => {
+                if (!data) {
+                    return;
+                }
+                cacheTimestamp = data.timestamp;
                 return readCachedSymbolTables(data.documents);
-            }).then(()=>{
+            }).then(() => {
                 return refCache.read(refStoreCacheKey);
-            }).then((data)=>{
+            }).then((data) => {
                 refStore.fromJSON(data);
             }).catch((msg) => {
                 Log.warn(msg);
@@ -143,40 +147,40 @@ export namespace Intelephense {
 
     }
 
-    function readCachedSymbolTables(keys:string[]) {
+    function readCachedSymbolTables(keys: string[]) {
 
-        if(!keys) {
+        if (!keys) {
             return Promise.resolve();
         }
 
         return new Promise<void>((resolve, reject) => {
 
             let count = keys.length;
-            if(count < 1) {
+            if (count < 1) {
                 resolve();
             }
 
             let batch = Math.min(4, count);
-            let onCacheReadErr = (msg:string) => {
+            let onCacheReadErr = (msg: string) => {
                 Log.warn(msg);
                 onCacheRead(undefined);
             }
-            let onCacheRead = (data:any) => {
+            let onCacheRead = (data: any) => {
                 --count;
-                if(data) {
+                if (data) {
                     symbolStore.add(new SymbolTable(data._uri, data._root, data._hash));
                 }
 
                 let uri = keys.pop();
-                if(uri) {
+                if (uri) {
                     symbolCache.read(uri).then(onCacheRead).catch(onCacheReadErr);
-                } else if(count < 1) {
+                } else if (count < 1) {
                     resolve();
                 }
             }
 
-            let uri:string;
-            while(count-- > 0 && (uri = keys.pop())) {
+            let uri: string;
+            while (count-- > 0 && (uri = keys.pop())) {
                 symbolCache.read(uri).then(onCacheRead).catch(onCacheReadErr);
             }
 
@@ -185,7 +189,7 @@ export namespace Intelephense {
     }
 
     function clearCache() {
-        return stateCache.flush().then(()=> {
+        return stateCache.flush().then(() => {
             return refCache.flush();
         }).then(() => {
             return symbolCache.flush();
@@ -239,6 +243,7 @@ export namespace Intelephense {
         let symbolTable = symbolStore.getSymbolTable(textDocument.uri);
         if (symbolTable) {
             symbolTable.pruneScopedVars();
+            return symbolCache.write(symbolTable.uri, symbolTable).catch((msg) => { Log.warn(msg) });
         }
     }
 
@@ -293,7 +298,12 @@ export namespace Intelephense {
         let symbolTable = SymbolTable.create(parsedDocument, true);
         symbolTable.pruneScopedVars();
         symbolStore.add(symbolTable);
-        return symbolTable.symbolCount;
+        return symbolCache.write(symbolTable.uri, symbolTable).then(() => {
+            return symbolTable.symbolCount;
+        }).catch((msg) => {
+            Log.warn(msg);
+            return symbolTable.symbolCount;
+        });
 
     }
 
