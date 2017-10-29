@@ -5,8 +5,8 @@ import { ParsedDocumentStore, ParsedDocument } from '../src/parsedDocument';
 import * as lsp from 'vscode-languageserver-types';
 import { assert } from 'chai';
 import { ReferenceReader } from '../src/referenceReader';
-import {ReferenceStore} from '../src/reference';
-import {MemoryCache} from '../src/cache';
+import { ReferenceStore } from '../src/reference';
+import { MemoryCache } from '../src/cache';
 import 'mocha';
 
 let src =
@@ -35,6 +35,17 @@ let src =
     bar($v);
     Foo::C;
     `;
+
+let privateMethodSrc =
+    `<?php
+class Foo {
+    private function fnA() {}
+    private function fnB()
+    {
+        $this->fnA();
+    }
+}
+`;
 
 function setup(src: string) {
     let docStore = new ParsedDocumentStore();
@@ -96,13 +107,13 @@ describe('ReferencesProvider', () => {
             }
         ];
 
-            let provider = setup(src);
-            let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 22, character: 7 }, <lsp.ReferenceContext>{ includeDeclaration: true });
-            //console.log(JSON.stringify(locs, null, 4));
-            return promise.then((locs)=>{
-                assert.includeDeepMembers(locs, expected);
-                //assert.deepEqual(locs, expected);
-            });
+        let provider = setup(src);
+        let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 22, character: 7 }, <lsp.ReferenceContext>{ includeDeclaration: true });
+        //console.log(JSON.stringify(locs, null, 4));
+        return promise.then((locs) => {
+            assert.includeDeepMembers(locs, expected);
+            //assert.deepEqual(locs, expected);
+        });
 
     });
 
@@ -164,12 +175,12 @@ describe('ReferencesProvider', () => {
         ];
 
 
-            let provider = setup(src);
-            let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 18, character: 16 }, <lsp.ReferenceContext>{ includeDeclaration: true });
-            //console.log(JSON.stringify(locs, null, 4));
-            return promise.then((locs)=>{
-                assert.includeDeepMembers(locs, expected);
-            });
+        let provider = setup(src);
+        let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 18, character: 16 }, <lsp.ReferenceContext>{ includeDeclaration: true });
+        //console.log(JSON.stringify(locs, null, 4));
+        return promise.then((locs) => {
+            assert.includeDeepMembers(locs, expected);
+        });
 
     });
 
@@ -246,13 +257,13 @@ describe('ReferencesProvider', () => {
         let provider = setup(src);
         let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 18, character: 6 }, <lsp.ReferenceContext>{ includeDeclaration: true });
         //console.log(JSON.stringify(locs, null, 4));
-        return promise.then((locs)=>{
+        return promise.then((locs) => {
             assert.includeDeepMembers(locs, expected);
         });
 
     });
 
-    it('method refs', ()=> {
+    it('method refs', () => {
 
         let expected = [
             {
@@ -285,13 +296,13 @@ describe('ReferencesProvider', () => {
         let provider = setup(src);
         let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 19, character: 9 }, <lsp.ReferenceContext>{ includeDeclaration: true });
         //console.log(JSON.stringify(locs, null, 4));
-        return promise.then((locs)=>{
+        return promise.then((locs) => {
             assert.includeDeepMembers(locs, expected);
         });
 
     });
 
-    it('class const', ()=>{
+    it('class const', () => {
 
         let expected = [
             {
@@ -350,7 +361,7 @@ describe('ReferencesProvider', () => {
         let provider = setup(src);
         let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 13, character: 33 }, <lsp.ReferenceContext>{ includeDeclaration: true });
         //console.log(JSON.stringify(locs, null, 4));
-        return promise.then((locs)=>{
+        return promise.then((locs) => {
             assert.includeDeepMembers(locs, expected);
         });
 
@@ -402,72 +413,111 @@ describe('ReferencesProvider', () => {
         let provider = setup(src);
         let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 20, character: 9 }, <lsp.ReferenceContext>{ includeDeclaration: true });
         //console.log(JSON.stringify(locs, null, 4));
-        return promise.then((locs)=>{
+        return promise.then((locs) => {
             assert.includeDeepMembers(locs, expected);
         });
     });
 
     it('parameter refs, closure use', () => {
 
-let expected = [
-    {
-        "uri": "test",
-        "range": {
-            "start": {
-                "line": 1,
-                "character": 24
+        let expected = [
+            {
+                "uri": "test",
+                "range": {
+                    "start": {
+                        "line": 1,
+                        "character": 24
+                    },
+                    "end": {
+                        "line": 1,
+                        "character": 26
+                    }
+                }
             },
-            "end": {
-                "line": 1,
-                "character": 26
-            }
-        }
-    },
-    {
-        "uri": "test",
-        "range": {
-            "start": {
-                "line": 2,
-                "character": 13
+            {
+                "uri": "test",
+                "range": {
+                    "start": {
+                        "line": 2,
+                        "character": 13
+                    },
+                    "end": {
+                        "line": 2,
+                        "character": 15
+                    }
+                }
             },
-            "end": {
-                "line": 2,
-                "character": 15
-            }
-        }
-    },
-    {
-        "uri": "test",
-        "range": {
-            "start": {
-                "line": 3,
-                "character": 33
+            {
+                "uri": "test",
+                "range": {
+                    "start": {
+                        "line": 3,
+                        "character": 33
+                    },
+                    "end": {
+                        "line": 3,
+                        "character": 35
+                    }
+                }
             },
-            "end": {
-                "line": 3,
-                "character": 35
+            {
+                "uri": "test",
+                "range": {
+                    "start": {
+                        "line": 4,
+                        "character": 17
+                    },
+                    "end": {
+                        "line": 4,
+                        "character": 19
+                    }
+                }
             }
-        }
-    },
-    {
-        "uri": "test",
-        "range": {
-            "start": {
-                "line": 4,
-                "character": 17
-            },
-            "end": {
-                "line": 4,
-                "character": 19
-            }
-        }
-    }
-];
+        ];
 
         let provider = setup(src);
         let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 1, character: 26 }, <lsp.ReferenceContext>{ includeDeclaration: true });
+
+        return promise.then((locs) => {
+            //console.log(JSON.stringify(locs, null, 4));
+            assert.includeDeepMembers(locs, expected);
+        });
+    });
+
+    it('properties', () => {
+
+        let expected = [
+            {
+                "uri": "test",
+                "range": {
+                    "start": {
+                        "line": 2,
+                        "character": 21
+                    },
+                    "end": {
+                        "line": 2,
+                        "character": 24
+                    }
+                }
+            },
+            {
+                "uri": "test",
+                "range": {
+                    "start": {
+                        "line": 5,
+                        "character": 15
+                    },
+                    "end": {
+                        "line": 5,
+                        "character": 18
+                    }
+                }
+            }
+        ];
+        let provider = setup(privateMethodSrc);
+        let promise = provider.provideReferenceLocations('test', <lsp.Position>{ line: 2, character: 23 }, <lsp.ReferenceContext>{ includeDeclaration: true });
         
-        return promise.then((locs)=>{
+        return promise.then((locs) => {
             //console.log(JSON.stringify(locs, null, 4));
             assert.includeDeepMembers(locs, expected);
         });

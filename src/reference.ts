@@ -96,7 +96,7 @@ export class ReferenceTable implements Traversable<Scope | Reference> {
         return node && (<Reference>node).kind === undefined ? <Scope>node : undefined;
     }
 
-    createTraverser() {
+    createTraverser():TreeTraverser<Scope|Reference> {
         return new TreeTraverser([this.root]);
     }
 

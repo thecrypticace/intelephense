@@ -29,7 +29,7 @@ export declare class ReferenceTable implements Traversable<Scope | Reference> {
     references(filter?: Predicate<Reference>): Reference[];
     referenceAtPosition(position: Position): Reference;
     scopeAtPosition(position: Position): Scope;
-    createTraverser(): TreeTraverser<Scope>;
+    createTraverser(): TreeTraverser<Scope | Reference>;
     traverse(visitor: TreeVisitor<Scope | Reference>): TreeVisitor<Reference | Scope>;
     static fromJSON(data: any): ReferenceTable;
 }

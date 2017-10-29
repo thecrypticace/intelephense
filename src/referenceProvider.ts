@@ -113,7 +113,7 @@ export class ReferenceProvider {
             let lcScope = symbol.scope ? symbol.scope.toLowerCase() : '';
             let name = symbol.name.toLowerCase();
             let fn = (x: Reference) => {
-                return x.kind === SymbolKind.Method && x.name === name && x.scope && x.scope.toLowerCase() === lcScope;
+                return x.kind === SymbolKind.Method && x.name.toLowerCase() === name && x.scope && x.scope.toLowerCase() === lcScope;
             };
             return Promise.resolve(this._symbolRefsInTableScope(symbol, table, fn));
         } else {
@@ -256,7 +256,7 @@ export class ReferenceProvider {
 
     }
 
-    private _symbolRefsInTableScope(symbol: PhpSymbol, refTable: ReferenceTable, filterFn: Predicate<Reference>): Reference[] {
+    private _symbolRefsInTableScope(symbol: PhpSymbol, refTable: ReferenceTable, filterFn: Predicate<Scope|Reference>): Reference[] {
 
         let traverser = refTable.createTraverser();
         let pos = symbol.location ? symbol.location.range.start : undefined;
@@ -269,8 +269,7 @@ export class ReferenceProvider {
                 x.location && x.location.range && util.positionEquality(x.location.range.start, pos);
         }
         if (traverser.find(findFn) && traverser.parent()) {
-            let scope = traverser.node as Scope;
-            return util.filter(scope.children, filterFn) as Reference[];
+            return traverser.filter(filterFn) as Reference[];
         }
 
         return [];
