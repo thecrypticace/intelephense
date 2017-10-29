@@ -47,7 +47,7 @@ export declare class ReferenceStore {
     add(table: ReferenceTable): void;
     remove(uri: string, purge?: boolean): void;
     close(uri: string): Promise<void>;
-    closeAll(): Promise<{}>;
+    closeAll(): Promise<void>;
     find(name: string, filter?: Predicate<Reference>): Promise<Reference[]>;
     fromJSON(data: any): void;
     toJSON(): {

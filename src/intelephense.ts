@@ -125,7 +125,7 @@ export namespace Intelephense {
         }).then(() => {
             return refCache.write(refStoreCacheKey, refStore);
         }).then(() => {
-            return new Promise((resolve, reject) => {
+            return new Promise<void>((resolve, reject) => {
                 let openDocs = documentStore.documents;
                 let cacheSymbolTableFn = () => {
                     let doc = openDocs.pop();

@@ -199,7 +199,7 @@ export class ReferenceStore {
         this._tables = [];
         let count = tables.length;
 
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
 
             let onReject = (msg: string) => {
                 --count;
