@@ -164,7 +164,7 @@ export class ReferenceStore {
     }
 
     add(table: ReferenceTable) {
-        if (this.getReferenceTable(table.uri)) {
+        if (this.getReferenceTable(table.uri) || this._summaryIndex.find(ReferenceTableSummary.uriCompareFn(table.uri))) {
             this.remove(table.uri);
         }
         this._tables.push(table);
