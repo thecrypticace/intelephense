@@ -191,11 +191,6 @@ class ScopedVariablePruneVisitor implements TreeVisitor<PhpSymbol> {
 
 }
 
-export interface SymbolStoreState {
-    symbolCount: number;
-    tables: SymbolTableIndexState;
-}
-
 export class SymbolStore {
 
     private _tableIndex: SymbolTableIndex;
@@ -840,9 +835,4 @@ export class SymbolTableIndex {
 export interface SymbolTableIndexNode {
     hash: number;
     tables: SymbolTable[];
-}
-
-export interface SymbolTableIndexState {
-    tables: SymbolTableIndexNode[];
-    count: number;
 }

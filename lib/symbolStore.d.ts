@@ -32,10 +32,6 @@ export declare class SymbolTable implements Traversable<PhpSymbol> {
     static create(parsedDocument: ParsedDocument, externalOnly?: boolean): SymbolTable;
     static readBuiltInSymbols(): SymbolTable;
 }
-export interface SymbolStoreState {
-    symbolCount: number;
-    tables: SymbolTableIndexState;
-}
 export declare class SymbolStore {
     private _tableIndex;
     private _symbolIndex;
@@ -104,8 +100,4 @@ export declare class SymbolTableIndex {
 export interface SymbolTableIndexNode {
     hash: number;
     tables: SymbolTable[];
-}
-export interface SymbolTableIndexState {
-    tables: SymbolTableIndexNode[];
-    count: number;
 }

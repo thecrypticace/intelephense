@@ -5,7 +5,7 @@
 'use strict';
 
 import { ParsedDocument, ParsedDocumentStore, ParsedDocumentChangeEventArgs, LanguageRange } from './parsedDocument';
-import { SymbolStore, SymbolTable, SymbolStoreState } from './symbolStore';
+import { SymbolStore, SymbolTable } from './symbolStore';
 import { SymbolProvider } from './symbolProvider';
 import { CompletionProvider, CompletionOptions } from './completionProvider';
 import { DiagnosticsProvider, PublishDiagnosticsEventArgs } from './diagnosticsProvider';
