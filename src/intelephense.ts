@@ -47,6 +47,8 @@ export namespace Intelephense {
 
     let diagnosticsUnsubscribe: Unsubscribe;
 
+    let cacheTimestamp = 0;
+
     export function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void) {
         if (diagnosticsUnsubscribe) {
             diagnosticsUnsubscribe();
@@ -94,7 +96,8 @@ export namespace Intelephense {
             return symbolCache.read(symbolsCacheKey).then((data) => {
 
                 if (data) {
-                    symbolStore.fromJSON(data);
+                    symbolStore.fromJSON(data.symbolStore);
+                    cacheTimestamp = data.timestamp;
                 } else {
                     symbolStore.add(SymbolTable.readBuiltInSymbols());
                 }
@@ -109,7 +112,7 @@ export namespace Intelephense {
     export function shutdown() {
 
         return refStore.closeAll().then(() => {
-            return symbolCache.write(symbolsCacheKey, symbolStore);
+            return symbolCache.write(symbolsCacheKey, {symbolStore: symbolStore, timestamp: Date.now()});
         }).catch((msg) => {
             Log.warn(msg);
         });
@@ -132,7 +135,7 @@ export namespace Intelephense {
                 uris.push(t.uri);
             }
         }
-        return uris;
+        return {timestamp:cacheTimestamp, documents:uris};
     }
 
     export function documentLanguageRanges(textDocument: lsp.TextDocumentItem): LanguageRange[] {

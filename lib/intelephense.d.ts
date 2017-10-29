@@ -6,7 +6,10 @@ export declare namespace Intelephense {
     function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void): void;
     function initialise(options: InitialisationOptions): Promise<void>;
     function shutdown(): Promise<void>;
-    function cachedDocuments(): string[];
+    function cachedDocuments(): {
+        timestamp: number;
+        documents: string[];
+    };
     function documentLanguageRanges(textDocument: lsp.TextDocumentItem): LanguageRange[];
     function setConfig(config: IntelephenseConfig): void;
     function openDocument(textDocument: lsp.TextDocumentItem): void;
