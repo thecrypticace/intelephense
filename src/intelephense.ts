@@ -88,14 +88,14 @@ export namespace Intelephense {
             refStore.add(refTable);
         });
 
-        symbolStore.add(SymbolTable.readBuiltInSymbols());
-
         if (options.clearCache) {
-            return clearCache().catch((msg) => {
+            return clearCache().then(() => {
+                symbolStore.add(SymbolTable.readBuiltInSymbols());
+            }).catch((msg) => {
                 Log.warn(msg);
             });
         } else {
-
+            symbolStore.add(SymbolTable.readBuiltInSymbols());
             return stateCache.read(stateCacheKey).then((data) => {
                 if (!data) {
                     return;
@@ -105,7 +105,9 @@ export namespace Intelephense {
             }).then(() => {
                 return refCache.read(refStoreCacheKey);
             }).then((data) => {
-                refStore.fromJSON(data);
+                if (data) {
+                    refStore.fromJSON(data);
+                }
             }).catch((msg) => {
                 Log.warn(msg);
             });
