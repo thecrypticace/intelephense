@@ -86,17 +86,21 @@ export namespace Intelephense {
         if (options.clearCache) {
             return clearCache().then(() => {
                 symbolStore.add(SymbolTable.readBuiltInSymbols());
+            }).catch((msg)=>{
+                Log.warn(msg);
             });
         } else {
 
-            return symbolCache.read(symbolsCacheKey).then((s: SymbolStoreState) => {
+            return symbolCache.read(symbolsCacheKey).then((data) => {
 
-                if (s) {
-                    symbolStore.restoreState(s);
+                if (data) {
+                    symbolStore.fromJSON(data);
                 } else {
                     symbolStore.add(SymbolTable.readBuiltInSymbols());
                 }
 
+            }).catch((msg) => {
+                Log.warn(msg);
             });
         }
 
@@ -105,7 +109,7 @@ export namespace Intelephense {
     export function shutdown() {
 
         return refStore.closeAll().then(() => {
-            return symbolCache.write(symbolsCacheKey, symbolStore.state());
+            return symbolCache.write(symbolsCacheKey, symbolStore);
         }).catch((msg) => {
             Log.warn(msg);
         });

@@ -21,7 +21,7 @@ export declare class ReferenceTable implements Traversable<Scope | Reference> {
     private _uri;
     private _root;
     private _hash;
-    constructor(uri: string, root: Scope);
+    constructor(uri: string, root: Scope, hash?: number);
     readonly uri: string;
     readonly root: Scope;
     readonly hash: number;
@@ -31,6 +31,7 @@ export declare class ReferenceTable implements Traversable<Scope | Reference> {
     scopeAtPosition(position: Position): Scope;
     createTraverser(): TreeTraverser<Scope>;
     traverse(visitor: TreeVisitor<Scope | Reference>): TreeVisitor<Reference | Scope>;
+    static fromJSON(data: any): ReferenceTable;
 }
 export declare class ReferenceStore {
     private _tables;

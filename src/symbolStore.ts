@@ -5,7 +5,7 @@
 'use strict';
 
 import { PhpSymbol, SymbolKind, SymbolModifier, SymbolIdentifier } from './symbol';
-import {Reference} from './reference';
+import { Reference } from './reference';
 import { TreeTraverser, Predicate, TreeVisitor, Traversable, BinarySearch, NameIndex } from './types';
 import { Position, Location, Range } from 'vscode-languageserver-types';
 import { TypeString } from './typeString';
@@ -25,10 +25,14 @@ export class SymbolTable implements Traversable<PhpSymbol> {
     private _root: PhpSymbol;
     private _hash: number;
 
-    constructor(uri: string, root: PhpSymbol) {
+    constructor(uri: string, root: PhpSymbol, hash?: number) {
         this._uri = uri;
         this._root = root;
-        this._hash = Math.abs(util.hash32(uri));
+        if (hash !== undefined) {
+            this._hash = hash;
+        } else {
+            this._hash = Math.abs(util.hash32(uri));
+        }
     }
 
     get uri() {
@@ -57,7 +61,7 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         return traverser.count() - 1;
     }
 
-    pruneScopedVars(){
+    pruneScopedVars() {
         let visitor = new ScopedVariablePruneVisitor();
         this.traverse(visitor);
     }
@@ -141,6 +145,10 @@ export class SymbolTable implements Traversable<PhpSymbol> {
         return (s.kind & mask) > 0;
     }
 
+    static fromJSON(data: any) {
+        return new SymbolTable(data._uri, data._root, data._hash);
+    }
+
     static create(parsedDocument: ParsedDocument, externalOnly?: boolean) {
 
         let symbolReader = new SymbolReader(parsedDocument, new NameResolver());
@@ -167,16 +175,16 @@ export class SymbolTable implements Traversable<PhpSymbol> {
 
 class ScopedVariablePruneVisitor implements TreeVisitor<PhpSymbol> {
 
-    preorder(node:PhpSymbol, spine:PhpSymbol[]) {
+    preorder(node: PhpSymbol, spine: PhpSymbol[]) {
 
-        if((node.kind === SymbolKind.Function || node.kind === SymbolKind.Method) && node.children) {
+        if ((node.kind === SymbolKind.Function || node.kind === SymbolKind.Method) && node.children) {
             node.children = node.children.filter(this._isNotVar);
-        } 
+        }
 
         return true;
     }
 
-    private _isNotVar(s:PhpSymbol) {
+    private _isNotVar(s: PhpSymbol) {
         return s.kind !== SymbolKind.Variable;
     }
 
@@ -184,8 +192,8 @@ class ScopedVariablePruneVisitor implements TreeVisitor<PhpSymbol> {
 }
 
 export interface SymbolStoreState {
-    symbolCount:number;
-    tables:SymbolTableIndexState;
+    symbolCount: number;
+    tables: SymbolTableIndexState;
 }
 
 export class SymbolStore {
@@ -239,17 +247,17 @@ export class SymbolStore {
         this._symbolCount -= symbolTable.symbolCount;
     }
 
-    state():SymbolStoreState {
+    toJSON() {
         return {
-            tables:this._tableIndex.state(),
-            symbolCount:this._symbolCount
+            _tableIndex: this._tableIndex,
+            _symbolCount: this._symbolCount
         }
     }
 
-    restoreState(state:SymbolStoreState) {
-        this._symbolCount = state.symbolCount;
-        this._tableIndex.restoreState(state.tables);
-        for(let t of this._tableIndex.tables()) {
+    fromJSON(data:any) {
+        this._symbolCount = data._symbolCount;
+        this._tableIndex.fromJSON(data._tableIndex);
+        for (let t of this._tableIndex.tables()) {
             this._symbolIndex.addMany(this._indexSymbols(t.root));
         }
     }
@@ -407,7 +415,7 @@ export class SymbolStore {
 
         let fqnArray = TypeString.atomicClassArray(scope);
         let type: TypeAggregate;
-        let members:PhpSymbol[] = [];
+        let members: PhpSymbol[] = [];
         for (let n = 0; n < fqnArray.length; ++n) {
             type = TypeAggregate.create(this, fqnArray[n]);
             if (type) {
@@ -702,7 +710,7 @@ class ContainsVisitor implements TreeVisitor<PhpSymbol> {
 
 }
 
-class SymbolTableIndex {
+export class SymbolTableIndex {
 
     private _tables: SymbolTableIndexNode[];
     private _search: BinarySearch<SymbolTableIndexNode>;
@@ -718,10 +726,10 @@ class SymbolTableIndex {
     }
 
     *tables() {
-        let node:SymbolTableIndexNode;
-        for(let n = 0, nl = this._tables.length; n < nl; ++n) {
+        let node: SymbolTableIndexNode;
+        for (let n = 0, nl = this._tables.length; n < nl; ++n) {
             node = this._tables[n];
-            for(let k = 0, tl = node.tables.length; k < tl; ++k) {
+            for (let k = 0, tl = node.tables.length; k < tl; ++k) {
                 yield node.tables[k];
             }
         }
@@ -788,19 +796,29 @@ class SymbolTableIndex {
         return undefined;
     }
 
-    /**
-     * instance should not be used again after calling
-     */
-    state():SymbolTableIndexState {
+    toJSON() {
         return {
-            tables:this._tables,
-            count:this._count
+            _tables: this._tables,
+            _count: this._count
         }
     }
 
-    restoreState(state:SymbolTableIndexState) {
-        this._count = state.count;
-        this._tables = state.tables;
+    fromJSON(data: any) {
+        this._count = data._count;
+        this._tables = [];
+        let node: any;
+        let newNode: SymbolTableIndexNode;
+        for (let n = 0; n < data._tables.length; ++n) {
+            node = data._tables[n];
+            newNode = {
+                hash: node.hash,
+                tables: []
+            }
+            for (let k = 0; k < node.tables.length; ++k) {
+                newNode.tables.push(SymbolTable.fromJSON(node.tables[k]));
+            }
+            this._tables.push(newNode);
+        }
         this._search = new BinarySearch<SymbolTableIndexNode>(this._tables);
     }
 
@@ -825,6 +843,6 @@ export interface SymbolTableIndexNode {
 }
 
 export interface SymbolTableIndexState {
-    tables:SymbolTableIndexNode[];
-    count:number;
+    tables: SymbolTableIndexNode[];
+    count: number;
 }

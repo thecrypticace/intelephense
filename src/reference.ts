@@ -33,10 +33,10 @@ export interface Scope {
 }
 
 export namespace Scope {
-    export function create(location:Location):Scope {
+    export function create(location: Location): Scope {
         return {
-            location:location,
-            children:[]
+            location: location,
+            children: []
         }
     }
 }
@@ -47,10 +47,14 @@ export class ReferenceTable implements Traversable<Scope | Reference> {
     private _root: Scope;
     private _hash: number;
 
-    constructor(uri: string, root: Scope) {
+    constructor(uri: string, root: Scope, hash?: number) {
         this._uri = uri;
         this._root = root;
-        this._hash = Math.abs(util.hash32(uri));
+        if (hash) {
+            this._hash = hash;
+        } else {
+            this._hash = Math.abs(util.hash32(uri));
+        }
     }
 
     get uri() {
@@ -85,7 +89,7 @@ export class ReferenceTable implements Traversable<Scope | Reference> {
 
     }
 
-    scopeAtPosition(position:Position) {
+    scopeAtPosition(position: Position) {
         let visitor = new LocateVisitor(position);
         this.traverse(visitor);
         let node = visitor.node;
@@ -100,6 +104,10 @@ export class ReferenceTable implements Traversable<Scope | Reference> {
         let traverser = new TreeTraverser([this.root]);
         traverser.traverse(visitor);
         return visitor;
+    }
+
+    static fromJSON(data: any) {
+        return new ReferenceTable(data._uri, data._root, data._hash);
     }
 }
 
@@ -180,7 +188,7 @@ export class ReferenceStore {
     close(uri: string) {
         let table = this._tablesRemove(uri);
         if (table) {
-            return this._cache.write(table.uri, table);
+            return this._cache.write(table.uri, table.root).catch((msg) => { Log.warn(msg) });
         }
         return Promise.resolve();
     }
@@ -191,9 +199,9 @@ export class ReferenceStore {
         this._tables = [];
         let count = tables.length;
 
-        return new Promise((resolve, reject)=>{
+        return new Promise((resolve, reject) => {
 
-            let onReject = (msg:string) => {
+            let onReject = (msg: string) => {
                 --count;
                 Log.warn(msg);
                 writeTableFn();
@@ -208,11 +216,11 @@ export class ReferenceStore {
                 let table = tables.pop();
                 if (table) {
                     cache.write(table.uri, table).then(onResolve).catch(onReject);
-                } else if(count < 1) {
+                } else if (count < 1) {
                     resolve();
                 }
             }
-    
+
             let maxOpenFiles = Math.min(8, tables.length);
             for (let n = 0; n < maxOpenFiles; ++n) {
                 writeTableFn();
@@ -231,7 +239,7 @@ export class ReferenceStore {
         //find uris that contain ref matching name
         let summaries = this._nameIndex.find(name);
         let count = summaries.length;
-        if(!count) {
+        if (!count) {
             return Promise.resolve<Reference[]>([]);
         }
         let tables: ReferenceTable[] = [];
@@ -240,30 +248,30 @@ export class ReferenceStore {
 
         return new Promise<Reference[]>((resolve, reject) => {
 
-            let onSuccess = (table:ReferenceTable) => {
+            let onSuccess = (table: ReferenceTable) => {
                 tables.push(table);
                 onAlways();
             }
 
-            let onFail = (msg:string) => {
+            let onFail = (msg: string) => {
                 Log.warn(msg);
                 onAlways();
             }
 
             let onAlways = () => {
                 count--;
-                if(count < 1) {
+                if (count < 1) {
                     resolve(findInTablesFn(tables, name, filter));
                 } else {
                     let summary = summaries.pop();
-                    if(summary) {
+                    if (summary) {
                         fetchTableFn(summary.uri).then(onSuccess).catch(onFail);
                     }
                 }
             }
 
             let maxOpenFiles = Math.min(8, summaries.length);
-            while(maxOpenFiles--) {
+            while (maxOpenFiles--) {
                 fetchTableFn(summaries.pop().uri).then(onSuccess).catch(onFail);
             }
 
@@ -271,24 +279,24 @@ export class ReferenceStore {
 
     }
 
-    private _findInTables(tables:ReferenceTable[], name:string, filter?:Predicate<Reference>) {
+    private _findInTables(tables: ReferenceTable[], name: string, filter?: Predicate<Reference>) {
 
         const caseSensitiveKindMask = SymbolKind.Property | SymbolKind.Variable | SymbolKind.Constant | SymbolKind.ClassConstant;
-        let refs:Reference[] = [];
+        let refs: Reference[] = [];
         let lcName = name.toLowerCase();
-        let table:ReferenceTable;
+        let table: ReferenceTable;
 
-        if(!name || !tables.length) {
+        if (!name || !tables.length) {
             return refs;
         }
 
-        let predicate = (r:Reference) => {
-            return (((r.kind & caseSensitiveKindMask) > 0 && name === r.name) || 
+        let predicate = (r: Reference) => {
+            return (((r.kind & caseSensitiveKindMask) > 0 && name === r.name) ||
                 (!(r.kind & caseSensitiveKindMask) && lcName === r.name.toLowerCase())) &&
                 (!filter || filter(r));
         }
 
-        for(let n = 0; n < tables.length; ++n) {
+        for (let n = 0; n < tables.length; ++n) {
             table = tables[n];
             Array.prototype.push.apply(refs, table.references(predicate));
         }
@@ -297,7 +305,7 @@ export class ReferenceStore {
 
     }
 
-    private _fetchTable = (uri:string) => {
+    private _fetchTable = (uri: string) => {
         let findOpenTableFn = (t) => { return t.uri === uri };
         let table = this.getReferenceTable(uri);
 
@@ -399,17 +407,17 @@ interface Locatable {
 
 class LocateVisitor implements TreeVisitor<Locatable> {
 
-    private _node:Locatable;
+    private _node: Locatable;
 
-    constructor(private position:Position) { }
+    constructor(private position: Position) { }
 
     get node() {
         return this._node;
     }
 
-    preorder(node:Locatable, spine:Locatable[]) {
+    preorder(node: Locatable, spine: Locatable[]) {
 
-        if(node.location && node.location.range && util.isInRange(this.position, node.location.range) === 0) {
+        if (node.location && node.location.range && util.isInRange(this.position, node.location.range) === 0) {
             this._node = node;
             return true;
         }

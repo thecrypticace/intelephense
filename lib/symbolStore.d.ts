@@ -9,7 +9,7 @@ export declare class SymbolTable implements Traversable<PhpSymbol> {
     private _uri;
     private _root;
     private _hash;
-    constructor(uri: string, root: PhpSymbol);
+    constructor(uri: string, root: PhpSymbol, hash?: number);
     readonly uri: string;
     readonly root: PhpSymbol;
     readonly hash: number;
@@ -28,6 +28,7 @@ export declare class SymbolTable implements Traversable<PhpSymbol> {
     symbolAtPosition(position: Position): PhpSymbol;
     contains(s: PhpSymbol): boolean;
     private _isScopeSymbol(s);
+    static fromJSON(data: any): SymbolTable;
     static create(parsedDocument: ParsedDocument, externalOnly?: boolean): SymbolTable;
     static readBuiltInSymbols(): SymbolTable;
 }
@@ -47,8 +48,11 @@ export declare class SymbolStore {
     readonly symbolCount: number;
     add(symbolTable: SymbolTable): void;
     remove(uri: string): void;
-    state(): SymbolStoreState;
-    restoreState(state: SymbolStoreState): void;
+    toJSON(): {
+        _tableIndex: SymbolTableIndex;
+        _symbolCount: number;
+    };
+    fromJSON(data: any): void;
     /**
      * Finds all indexed symbols that match text exactly.
      * Case sensitive for constants and variables and insensitive for
@@ -77,6 +81,25 @@ export declare class SymbolStore {
      */
     private _indexFilter(s);
     private _symbolKeys(s);
+}
+export declare class SymbolTableIndex {
+    private _tables;
+    private _search;
+    private _count;
+    constructor();
+    count(): number;
+    tables(): IterableIterator<SymbolTable>;
+    add(table: SymbolTable): void;
+    remove(uri: string): SymbolTable;
+    find(uri: string): SymbolTable;
+    findBySymbol(s: PhpSymbol): SymbolTable;
+    toJSON(): {
+        _tables: SymbolTableIndexNode[];
+        _count: number;
+    };
+    fromJSON(data: any): void;
+    private _createCompareFn(uri);
+    private _createUriFindFn(uri);
 }
 export interface SymbolTableIndexNode {
     hash: number;
