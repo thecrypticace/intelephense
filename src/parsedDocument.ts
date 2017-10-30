@@ -161,7 +161,7 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         let tLast = ParsedDocument.lastToken(node);
 
         if (!tFirst || !tLast) {
-            return null;
+            return lsp.Range.create(0, 0, 0, 0);
         }
 
         let range = <lsp.Range>{
@@ -366,7 +366,7 @@ export class ParsedDocumentStore {
     }
 
     get documents() {
-        return Object.keys(this._parsedDocumentmap).map((v)=>{
+        return Object.keys(this._parsedDocumentmap).map((v) => {
             return this._parsedDocumentmap[v];
         });
     }
@@ -438,7 +438,7 @@ class DocumentLanguageRangesVisitor implements TreeVisitor<Phrase | Token> {
 
     private _ranges: LanguageRange[];
     private _phpOpenPosition: lsp.Position;
-    private _lastToken:Token;
+    private _lastToken: Token;
 
     constructor(public doc: ParsedDocument) {
         this._ranges = [];
@@ -446,10 +446,10 @@ class DocumentLanguageRangesVisitor implements TreeVisitor<Phrase | Token> {
 
     get ranges() {
         //handle no close tag
-        if(this._phpOpenPosition && this._lastToken) {
+        if (this._phpOpenPosition && this._lastToken) {
             this._ranges.push({
                 range: lsp.Range.create(this._phpOpenPosition, this.doc.tokenRange(this._lastToken).end),
-                languageId:phpLanguageId
+                languageId: phpLanguageId
             });
             this._phpOpenPosition = undefined;
         }
@@ -475,13 +475,13 @@ class DocumentLanguageRangesVisitor implements TreeVisitor<Phrase | Token> {
                     });
                     this._phpOpenPosition = undefined;
                 }
-                
+
                 break;
             default:
                 break;
         }
 
-        if((<Token>node).tokenType !== undefined) {
+        if ((<Token>node).tokenType !== undefined) {
             this._lastToken = <Token>node;
         }
 
