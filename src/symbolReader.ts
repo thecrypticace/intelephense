@@ -465,8 +465,8 @@ class UniqueSymbolCollection {
         }
     }
 
-    pushMany(symbols:PhpSymbol[]) {
-        for(let n= 0, l = symbols.length; n < l; ++n) {
+    pushMany(symbols: PhpSymbol[]) {
+        for (let n = 0, l = symbols.length; n < l; ++n) {
             this.push(symbols[n]);
         }
     }
@@ -482,7 +482,7 @@ interface SymbolNodeTransform extends NodeTransform {
 
 interface NameNodeTransform extends NodeTransform {
     name: string;
-    unresolved:string;
+    unresolved: string;
 }
 
 interface TextNodeTransform extends NodeTransform {
@@ -490,15 +490,15 @@ interface TextNodeTransform extends NodeTransform {
 }
 
 interface SymbolsNodeTransform extends NodeTransform {
-    symbols:PhpSymbol[];
+    symbols: PhpSymbol[];
 }
 
 class FileTransform implements SymbolNodeTransform {
 
     private _children: UniqueSymbolCollection;
-    private _symbol:PhpSymbol;
+    private _symbol: PhpSymbol;
 
-    constructor(uri:string, location:HashedLocation) {
+    constructor(uri: string, location: HashedLocation) {
         this._symbol = PhpSymbol.create(SymbolKind.File, uri, location);
         this._children = new UniqueSymbolCollection();
     }
@@ -512,7 +512,7 @@ class FileTransform implements SymbolNodeTransform {
         }
 
         let symbols = (<SymbolsNodeTransform>transform).symbols;
-        if(symbols) {
+        if (symbols) {
             this._children.pushMany(symbols);
         }
 
@@ -529,7 +529,7 @@ class DelimiteredListTransform implements NodeTransform {
 
     transforms: NodeTransform[];
 
-    constructor(public phraseType:PhraseType) {
+    constructor(public phraseType: PhraseType) {
         this.transforms = [];
     }
 
@@ -541,7 +541,7 @@ class DelimiteredListTransform implements NodeTransform {
 
 class TokenTransform implements TextNodeTransform {
 
-    constructor(public token:Token, public doc: ParsedDocument) { }
+    constructor(public token: Token, public doc: ParsedDocument) { }
 
     push(transform: NodeTransform) { }
 
@@ -562,14 +562,14 @@ class TokenTransform implements TextNodeTransform {
 class NamespaceNameTransform implements TextNodeTransform {
 
     phraseType = PhraseType.NamespaceName;
-    private _parts:string[];
+    private _parts: string[];
 
     constructor() {
         this._parts = [];
     }
 
-    push(transform:NodeTransform) {
-        if(transform.tokenType === TokenType.Name) {
+    push(transform: NodeTransform) {
+        if (transform.tokenType === TokenType.Name) {
             this._parts.push((<TokenTransform>transform).text);
         }
     }
@@ -637,11 +637,11 @@ class ParameterDeclarationTransform implements SymbolNodeTransform {
 
     phraseType = PhraseType.ParameterDeclaration;
     symbol: PhpSymbol;
-    private _doc:PhpDoc;
-    private _nameResolver:NameResolver;
-    private _docLocation:HashedLocation;
+    private _doc: PhpDoc;
+    private _nameResolver: NameResolver;
+    private _docLocation: HashedLocation;
 
-    constructor(location: HashedLocation, doc: PhpDoc, docLocation: HashedLocation, nameResolver:NameResolver) {
+    constructor(location: HashedLocation, doc: PhpDoc, docLocation: HashedLocation, nameResolver: NameResolver) {
         this.symbol = PhpSymbol.create(SymbolKind.Parameter, '', location);
         this._doc = doc;
         this._docLocation = docLocation;
@@ -675,18 +675,21 @@ class DefineFunctionCallExpressionTransform implements SymbolNodeTransform {
 
     push(transform: NodeTransform) {
         if (transform.phraseType === PhraseType.ArgumentExpressionList) {
-            
+
             let arg1: TextNodeTransform, arg2: TextNodeTransform;
             [arg1, arg2] = (<DelimiteredListTransform>transform).transforms as TextNodeTransform[];
-            
-            if(arg1) {
+
+            if (arg1 && arg1.tokenType === TokenType.StringLiteral) {
                 this.symbol.name = arg1.text.slice(1, -1); //remove quotes
             }
 
-            if(arg2) {
+            //todo --this could be an array or constant too
+            if (arg2 && (arg2.tokenType === TokenType.FloatingLiteral ||
+                arg2.tokenType === TokenType.IntegerLiteral ||
+                arg2.tokenType === TokenType.StringLiteral)) {
                 this.symbol.value = arg2.text;
             }
-            
+
             if (this.symbol.name && this.symbol.name[0] === '\\') {
                 this.symbol.name = this.symbol.name.slice(1);
             }
@@ -742,7 +745,7 @@ class TypeDeclarationBodyTransform implements NodeTransform {
     declarations: PhpSymbol[];
     useTraits: PhpSymbol[];
 
-    constructor(public phraseType:PhraseType) {
+    constructor(public phraseType: PhraseType) {
         this.declarations = [];
         this.useTraits = [];
     }
@@ -779,7 +782,7 @@ class AnonymousClassDeclarationHeaderTransform implements NodeTransform {
 
     constructor() {
         this.interfaces = [];
-     }
+    }
 
     push(transform: NodeTransform) {
 
@@ -824,17 +827,17 @@ class AnonymousFunctionCreationExpressionTransform implements SymbolNodeTransfor
 }
 
 class AnonymousFunctionHeaderTransform implements NodeTransform {
-    
+
     phraseType = PhraseType.AnonymousFunctionHeader;
     modifier = SymbolModifier.None;
-    parameters:PhpSymbol[];
-    uses:PhpSymbol[];
+    parameters: PhpSymbol[];
+    uses: PhpSymbol[];
     returnType = '';
 
     constructor() {
         this.parameters = [];
         this.uses = [];
-     }
+    }
 
     push(transform: NodeTransform) {
         if (transform.tokenType === TokenType.Ampersand) {
@@ -843,12 +846,12 @@ class AnonymousFunctionHeaderTransform implements NodeTransform {
             this.modifier |= SymbolModifier.Static;
         } else if (transform.phraseType === PhraseType.ParameterDeclarationList) {
             let transforms = (<DelimiteredListTransform>transform).transforms as SymbolNodeTransform[];
-            for(let n = 0; n < transforms.length; ++n) {
+            for (let n = 0; n < transforms.length; ++n) {
                 this.parameters.push(transforms[n].symbol);
             }
         } else if (transform.phraseType === PhraseType.AnonymousFunctionUseClause) {
             let symbols = (<AnonymousFunctionUseClauseTransform>transform).symbols;
-            for(let n = 0; n < symbols.length; ++n) {
+            for (let n = 0; n < symbols.length; ++n) {
                 this.uses.push(symbols[n]);
             }
         } else if (transform.phraseType === PhraseType.ReturnType) {
@@ -862,7 +865,7 @@ class FunctionDeclarationBodyTransform implements SymbolsNodeTransform {
 
     private _value: UniqueSymbolCollection;
 
-    constructor(public phraseType:PhraseType) {
+    constructor(public phraseType: PhraseType) {
         this._value = new UniqueSymbolCollection();
     }
 
@@ -907,7 +910,7 @@ class AnonymousFunctionUseClauseTransform implements SymbolsNodeTransform {
     push(transform: NodeTransform) {
         if (transform.phraseType === PhraseType.ClosureUseList) {
             let transforms = (<DelimiteredListTransform>transform).transforms as SymbolNodeTransform[];
-            for(let n = 0; n < transforms.length; ++n) {
+            for (let n = 0; n < transforms.length; ++n) {
                 this.symbols.push(transforms[n].symbol);
             }
         }
@@ -1043,7 +1046,7 @@ class InterfaceBaseClauseTransform implements SymbolsNodeTransform {
 class InterfaceDeclarationHeaderTransform implements NodeTransform {
     phraseType = PhraseType.InterfaceDeclarationHeader;
     name = '';
-    extends:PhpSymbol[];
+    extends: PhpSymbol[];
 
     constructor() {
         this.extends = [];
@@ -1092,7 +1095,7 @@ class ClassInterfaceClauseTransform implements SymbolsNodeTransform {
             let transforms = (<DelimiteredListTransform>transform).transforms as NameNodeTransform[];
             for (let n = 0; n < transforms.length; ++n) {
                 this.symbols.push(PhpSymbol.create(SymbolKind.Interface, transforms[n].name));
-            }   
+            }
         }
     }
 }
@@ -1117,19 +1120,19 @@ class NamespaceDefinitionTransform implements SymbolNodeTransform {
                 this._children.push(s);
                 return;
             }
-    
+
             let symbols = (<SymbolsNodeTransform>transform).symbols;
-            if(symbols) {
+            if (symbols) {
                 this._children.pushMany(symbols);
             }
         }
     }
 
     get symbol() {
-        if(this._children.length > 0) {
+        if (this._children.length > 0) {
             this._symbol.children = this._children.toArray();
         }
-        
+
         return this._symbol;
     }
 }
@@ -1172,7 +1175,7 @@ class ClassDeclarationHeaderTransform implements NodeTransform {
     extends: PhpSymbol;
     implements: PhpSymbol[];
 
-    constructor() { 
+    constructor() {
         this.implements = [];
     }
 
@@ -1332,7 +1335,7 @@ class TypeDeclarationTransform implements NodeTransform {
             case PhraseType.FullyQualifiedName:
             case PhraseType.RelativeQualifiedName:
             case PhraseType.QualifiedName:
-                if(TypeDeclarationTransform._scalarTypes[(<NameNodeTransform>transform).unresolved.toLowerCase()] === 1){
+                if (TypeDeclarationTransform._scalarTypes[(<NameNodeTransform>transform).unresolved.toLowerCase()] === 1) {
                     this.type = (<NameNodeTransform>transform).unresolved;
                 } else {
                     this.type = (<NameNodeTransform>transform).name;
@@ -1447,7 +1450,7 @@ class FieldDeclarationTransform implements SymbolsNodeTransform {
     private _modifier = SymbolModifier.Public;
     symbols: PhpSymbol[];
 
-    constructor(public phraseType:PhraseType) {
+    constructor(public phraseType: PhraseType) {
         this.symbols = [];
     }
 
@@ -1505,7 +1508,7 @@ class FunctionDeclarationHeaderTransform implements NodeTransform {
 
     phraseType = PhraseType.FunctionDeclarationHeader;
     name = '';
-    parameters:PhpSymbol[];
+    parameters: PhpSymbol[];
     returnType = '';
 
     constructor() {
@@ -1518,7 +1521,7 @@ class FunctionDeclarationHeaderTransform implements NodeTransform {
             this.name = (<TokenTransform>transform).text;
         } else if (transform.phraseType === PhraseType.ParameterDeclarationList) {
             let transforms = (<DelimiteredListTransform>transform).transforms as SymbolNodeTransform[];
-            for(let n = 0; n < transforms.length; ++n) {
+            for (let n = 0; n < transforms.length; ++n) {
                 this.parameters.push(transforms[n].symbol);
             }
         } else if (transform.phraseType === PhraseType.ReturnType) {
@@ -1530,7 +1533,7 @@ class FunctionDeclarationHeaderTransform implements NodeTransform {
 class DefaultNodeTransform implements TextNodeTransform {
 
     constructor(public phraseType: PhraseType, public text: string) { }
-    push(transform:NodeTransform) { }
+    push(transform: NodeTransform) { }
 
 }
 
@@ -1651,7 +1654,7 @@ export namespace SymbolReader {
 
     export function modifierListToSymbolModifier(phrase: Phrase) {
 
-        if(!phrase) {
+        if (!phrase) {
             return 0;
         }
 
@@ -1689,15 +1692,15 @@ export namespace SymbolReader {
 
 class NamespaceUseClauseListTransform implements SymbolsNodeTransform {
 
-    symbols:PhpSymbol[];
+    symbols: PhpSymbol[];
 
-    constructor(public phraseType:PhraseType) {
+    constructor(public phraseType: PhraseType) {
         this.symbols = [];
-     }
+    }
 
-    push(transform:NodeTransform) {
-        if(
-            transform.phraseType === PhraseType.NamespaceUseClause || 
+    push(transform: NodeTransform) {
+        if (
+            transform.phraseType === PhraseType.NamespaceUseClause ||
             transform.phraseType === PhraseType.NamespaceUseGroupClause
         ) {
             this.symbols.push((<NamespaceUseClauseTransform>transform).symbol);
@@ -1726,19 +1729,19 @@ class NamespaceUseDeclarationTransform implements SymbolsNodeTransform {
             this._prefix = (<NamespaceNameTransform>transform).text;
         } else if (transform.phraseType === PhraseType.NamespaceUseGroupClauseList) {
             this.symbols = (<NamespaceUseClauseListTransform>transform).symbols;
-            let s:PhpSymbol;
+            let s: PhpSymbol;
             let prefix = this._prefix ? this._prefix + '\\' : '';
-            for(let n = 0; n < this.symbols.length; ++n) {
+            for (let n = 0; n < this.symbols.length; ++n) {
                 s = this.symbols[n];
                 s.associated[0].name = prefix + s.associated[0].name;
-                if(!s.kind) {
+                if (!s.kind) {
                     s.kind = s.associated[0].kind = this._kind;
                 }
             }
         } else if (transform.phraseType === PhraseType.NamespaceUseClauseList) {
             this.symbols = (<NamespaceUseClauseListTransform>transform).symbols;
-            let s:PhpSymbol;
-            for(let n = 0; n < this.symbols.length; ++n) {
+            let s: PhpSymbol;
+            for (let n = 0; n < this.symbols.length; ++n) {
                 s = this.symbols[n];
                 s.kind = s.associated[0].kind = this._kind;
             }
@@ -1751,22 +1754,22 @@ class NamespaceUseClauseTransform implements NodeTransform {
 
     symbol: PhpSymbol;
 
-    constructor(public phraseType:PhraseType, location:HashedLocation) {
+    constructor(public phraseType: PhraseType, location: HashedLocation) {
         this.symbol = PhpSymbol.create(0, '', location);
         this.symbol.modifiers = SymbolModifier.Use;
         this.symbol.associated = [];
     }
 
     push(transform: NodeTransform) {
-        if(transform.tokenType === TokenType.Function) {
+        if (transform.tokenType === TokenType.Function) {
             this.symbol.kind = SymbolKind.Function;
-        } else if(transform.tokenType === TokenType.Const) {
+        } else if (transform.tokenType === TokenType.Const) {
             this.symbol.kind = SymbolKind.Constant;
-        } else if(transform.phraseType === PhraseType.NamespaceName) {
+        } else if (transform.phraseType === PhraseType.NamespaceName) {
             let text = (<NamespaceNameTransform>transform).text;
             this.symbol.name = PhpSymbol.notFqn(text);
             this.symbol.associated.push(PhpSymbol.create(this.symbol.kind, text));
-        } else if(transform.phraseType === PhraseType.NamespaceAliasingClause) {
+        } else if (transform.phraseType === PhraseType.NamespaceAliasingClause) {
             this.symbol.name = (<NamespaceAliasingClause>transform).text;
             this.symbol.location = (<NamespaceAliasingClause>transform).location;
         }
@@ -1778,10 +1781,10 @@ class NamespaceAliasingClause implements TextNodeTransform {
 
     phraseType = PhraseType.NamespaceAliasingClause;
     text = '';
-    location:HashedLocation;
+    location: HashedLocation;
 
-    push(transform:NodeTransform) {
-        if(transform.tokenType === TokenType.Name) {
+    push(transform: NodeTransform) {
+        if (transform.tokenType === TokenType.Name) {
             this.text = (<TokenTransform>transform).text;
             this.location = (<TokenTransform>transform).location;
         }
