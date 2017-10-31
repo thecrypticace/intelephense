@@ -86,7 +86,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.NamespaceDefinition:
                 {
                     let s = this._symbols.shift();
-                    this._scopeStackPush(Scope.create(lsp.Location.create(this.doc.uri, util.cloneRange(s.location.range))));
+                    this._scopeStackPush(Scope.create(this.doc.nodeLocation(node)));
                     this.nameResolver.namespace = s;
                     this._transformStack.push(new NamespaceDefinitionTransform());
                 }
