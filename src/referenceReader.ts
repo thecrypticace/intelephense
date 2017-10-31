@@ -53,7 +53,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
         return (x.kind & mask) > 0 && !(x.modifiers & SymbolModifier.Magic);
     };
     private _lastVarTypehints: Tag[];
-    private _symbolTable:SymbolTable;
+    private _symbolTable: SymbolTable;
 
     constructor(
         public doc: ParsedDocument,
@@ -150,7 +150,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.MethodDeclaration:
                 this._transformStack.push(null);
-                this._methodDeclaration();
+                this._methodDeclaration(<Phrase>node);
                 break;
 
             case PhraseType.ClassDeclaration:
@@ -508,9 +508,9 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
 
     }
 
-    private _scopeStackPush(scope:Scope) {
-        if(this._scopeStack.length) {
-            this._scopeStack[this._scopeStack.length -1].children.push(scope);
+    private _scopeStackPush(scope: Scope) {
+        if (this._scopeStack.length) {
+            this._scopeStack[this._scopeStack.length - 1].children.push(scope);
         }
         this._scopeStack.push(scope);
     }
@@ -532,24 +532,28 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
         }
     }
 
-    private _methodDeclaration() {
-        let symbol = this._symbols.shift();
-        let scope = Scope.create(lsp.Location.create(this.doc.uri, util.cloneRange(symbol.location.range)));
+    private _methodDeclaration(node: Phrase) {
+
+        let scope = Scope.create(this.doc.nodeLocation(node));
         this._scopeStackPush(scope);
         this._variableTable.pushScope(['$this']);
-        let type = this._classStack[this._classStack.length - 1];
-        let lcName = symbol.name.toLowerCase();
-        let fn = (x: PhpSymbol) => {
-            return x.kind === SymbolKind.Method && lcName === x.name.toLowerCase();
-        };
-        //lookup method on aggregate to inherit doc
-        symbol = type.members(MemberMergeStrategy.Documented, fn).shift();
-        let children = symbol && symbol.children ? symbol.children : [];
-        let param: PhpSymbol;
-        for (let n = 0, l = children.length; n < l; ++n) {
-            param = children[n];
-            if (param.kind === SymbolKind.Parameter) {
-                this._variableTable.setVariable(Variable.create(param.name, PhpSymbol.type(param)));
+        let type = this._classStack.length ? this._classStack[this._classStack.length - 1] : null;
+        let symbol = this._symbols.shift();
+
+        if (type && symbol) {
+            let lcName = symbol.name.toLowerCase();
+            let fn = (x: PhpSymbol) => {
+                return x.kind === SymbolKind.Method && lcName === x.name.toLowerCase();
+            };
+            //lookup method on aggregate to inherit doc
+            symbol = type.members(MemberMergeStrategy.Documented, fn).shift();
+            let children = symbol && symbol.children ? symbol.children : [];
+            let param: PhpSymbol;
+            for (let n = 0, l = children.length; n < l; ++n) {
+                param = children[n];
+                if (param.kind === SymbolKind.Parameter) {
+                    this._variableTable.setVariable(Variable.create(param.name, PhpSymbol.type(param)));
+                }
             }
         }
     }
@@ -782,10 +786,10 @@ class CatchNameListTransform implements TypeNodeTransform {
 
 class AnonymousFunctionUseVariableTransform implements ReferenceNodeTransform {
     phraseType = PhraseType.AnonymousFunctionUseVariable;
-    reference:Reference;
+    reference: Reference;
 
-    push(transform:NodeTransform) {
-        if(transform.tokenType === TokenType.VariableName) {
+    push(transform: NodeTransform) {
+        if (transform.tokenType === TokenType.VariableName) {
             this.reference = Reference.create(SymbolKind.Variable, (<TokenTransform>transform).text, (<TokenTransform>transform).location);
         }
     }
