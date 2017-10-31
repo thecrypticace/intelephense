@@ -145,7 +145,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.FunctionDeclaration:
                 this._transformStack.push(null);
-                this._functionDeclaration();
+                this._functionDeclaration(<Phrase>node);
                 break;
 
             case PhraseType.MethodDeclaration:
@@ -169,7 +169,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                 break;
 
             case PhraseType.AnonymousFunctionCreationExpression:
-                this._anonymousFunctionCreationExpression();
+                this._anonymousFunctionCreationExpression(<Phrase>node);
                 this._transformStack.push(null);
                 break;
 
@@ -563,21 +563,19 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
         this._scopeStackPush(Scope.create(this.doc.nodeLocation(node)));
         this._variableTable.pushScope();
 
-        if (symbol) {
-            let children = symbol && symbol.children ? symbol.children : [];
-            let param: PhpSymbol;
-            for (let n = 0, l = children.length; n < l; ++n) {
-                param = children[n];
-                if (param.kind === SymbolKind.Parameter) {
-                    this._variableTable.setVariable(Variable.create(param.name, PhpSymbol.type(param)));
-                }
+        let children = symbol && symbol.children ? symbol.children : [];
+        let param: PhpSymbol;
+        for (let n = 0, l = children.length; n < l; ++n) {
+            param = children[n];
+            if (param.kind === SymbolKind.Parameter) {
+                this._variableTable.setVariable(Variable.create(param.name, PhpSymbol.type(param)));
             }
         }
     }
 
-    private _anonymousFunctionCreationExpression() {
+    private _anonymousFunctionCreationExpression(node: Phrase) {
         let symbol = this._symbols.shift();
-        this._scopeStackPush(Scope.create(lsp.Location.create(this.doc.uri, util.cloneRange(symbol.location.range))));
+        this._scopeStackPush(Scope.create(this.doc.nodeLocation(node)));
         let carry: string[] = ['$this'];
         let children = symbol && symbol.children ? symbol.children : [];
         let s: PhpSymbol;
