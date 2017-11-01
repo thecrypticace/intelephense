@@ -201,7 +201,7 @@ export namespace Intelephense {
         });
     }
 
-    export function cachedDocuments() {
+    export function knownDocuments() {
 
         let uris: string[] = [];
         for (let t of symbolStore.tables) {
