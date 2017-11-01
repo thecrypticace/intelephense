@@ -113,15 +113,15 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                 break;
 
             case PhraseType.ClassConstElement:
-                this._transformStack.push(new MemberDeclarationTransform(SymbolKind.ClassConstant, this._classStack[this._classStack.length - 1].name));
+                this._transformStack.push(new MemberDeclarationTransform(SymbolKind.ClassConstant, this._currentClassName()));
                 break;
 
             case PhraseType.MethodDeclarationHeader:
-                this._transformStack.push(new MemberDeclarationTransform(SymbolKind.Method, this._classStack[this._classStack.length - 1].name));
+                this._transformStack.push(new MemberDeclarationTransform(SymbolKind.Method, this._currentClassName()));
                 break;
 
             case PhraseType.PropertyElement:
-                this._transformStack.push(new PropertyElementTransform(this._classStack[this._classStack.length - 1].name));
+                this._transformStack.push(new PropertyElementTransform(this._currentClassName()));
                 break;
 
             case PhraseType.ParameterDeclaration:
@@ -158,8 +158,8 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.InterfaceDeclaration:
             case PhraseType.AnonymousClassDeclaration:
                 {
-                    let s = this._symbols.shift();
-                    this._scopeStackPush(Scope.create(lsp.Location.create(this.doc.uri, util.cloneRange(s.location.range))));
+                    let s = this._symbols.shift() || PhpSymbol.create(SymbolKind.Class, '', this.doc.nodeHashedLocation(<Phrase>node));
+                    this._scopeStackPush(Scope.create(this.doc.nodeLocation(<Phrase>node)));
                     this.nameResolver.pushClass(s);
                     this._classStack.push(TypeAggregate.create(this.symbolStore, s.name));
                     this._variableTable.pushScope();
@@ -506,6 +506,11 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                 break;
         }
 
+    }
+
+    private _currentClassName() {
+        let c = this._classStack.length ? this._classStack[this._classStack.length - 1] : undefined;
+        return c ? c.name : '';
     }
 
     private _scopeStackPush(scope: Scope) {
