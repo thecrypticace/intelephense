@@ -159,6 +159,13 @@ export class ReferenceStore {
         this._cache = cache;
     }
 
+    *knownDocuments() {
+        let items = this._summaryIndex.items;
+        for(let n = 0, l = items.length; n < l; ++n) {
+            yield items[n].uri;
+        }
+    }
+
     getReferenceTable(uri: string) {
         return util.find<ReferenceTable>(this._tables, (t) => { return t.uri === uri; });
     }
