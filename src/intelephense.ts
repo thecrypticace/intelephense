@@ -23,6 +23,7 @@ import { ReferenceStore } from './reference';
 import { createCache, Cache } from './cache';
 import { Log, LogWriter } from './logger';
 import * as path from 'path';
+export { LanguageRange } from './parsedDocument';
 
 export namespace Intelephense {
 

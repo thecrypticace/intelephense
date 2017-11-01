@@ -2,6 +2,7 @@ import { LanguageRange } from './parsedDocument';
 import { PublishDiagnosticsEventArgs } from './diagnosticsProvider';
 import * as lsp from 'vscode-languageserver-types';
 import { LogWriter } from './logger';
+export { LanguageRange } from './parsedDocument';
 export declare namespace Intelephense {
     function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void): void;
     function initialise(options: InitialisationOptions): Promise<void>;
