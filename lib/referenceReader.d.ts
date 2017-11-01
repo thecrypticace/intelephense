@@ -20,11 +20,12 @@ export declare class ReferenceReader implements TreeVisitor<Phrase | Token> {
     readonly refTable: ReferenceTable;
     preorder(node: Phrase | Token, spine: (Phrase | Token)[]): boolean;
     postorder(node: Phrase | Token, spine: (Phrase | Token)[]): void;
+    private _currentClassName();
     private _scopeStackPush(scope);
     private _nameSymbolType(parent);
-    private _methodDeclaration();
-    private _functionDeclaration();
-    private _anonymousFunctionCreationExpression();
+    private _methodDeclaration(node);
+    private _functionDeclaration(node);
+    private _anonymousFunctionCreationExpression(node);
     private _referenceSymbols;
 }
 export declare namespace ReferenceReader {
