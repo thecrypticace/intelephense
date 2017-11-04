@@ -63,7 +63,7 @@ describe('importSymbol', () => {
                     character: 22
                 }
             },
-            newText: "\n\n        use Foo\\Bar;"
+            newText: "\n\n        use Foo\\Bar;\n"
         }
     ];
 

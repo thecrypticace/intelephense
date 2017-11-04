@@ -724,7 +724,7 @@ describe('CompletionProvider', () => {
                         character: 14
                     }
                 },
-                newText: "\n\nuse Foo\\Bar;"
+                newText: "\n\nuse Foo\\Bar;\n"
             }
         ];
 

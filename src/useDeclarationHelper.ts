@@ -54,6 +54,10 @@ export class UseDeclarationHelper {
 
         text += ';';
 
+        if(afterNode.phraseType !== PhraseType.NamespaceUseDeclaration) {
+            text += '\n';
+        }
+
         return TextEdit.insert(this._insertPosition(), text);
 
     }
