@@ -1,5 +1,30 @@
 # Change Log
 
+## [0.8.0] - TBA
+#### Added
+* reference provider
+* hover provider
+* highlight provider
+* Auto add use declarations on completion and associated config option
+* Config to enable/disable formatting
+* Config to enable/disable backslash prefix of global functions and constants
+* Invoke param hints on method/function completion
+* phpdoc inheritance
+* server side caching
+
+#### Changed
+* Return multiple locations for go to defintion when applicable
+* Improved type resolution for phpdoc static and $this
+
+#### Fixed
+* Extra lines and spaces repeatedly added when formatting
+* Various PSR2 format fixes
+* Completions within closures
+* Go to defintion for defines
+
+#### Dependencies
+* php7parser 1.0.2
+
 ## [0.7.2] - 2017-07-03
 #### Fixed
 * Error on signature help for function with no params
