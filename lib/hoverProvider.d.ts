@@ -8,4 +8,5 @@ export declare class HoverProvider {
     refStore: ReferenceStore;
     constructor(docStore: ParsedDocumentStore, symbolStore: SymbolStore, refStore: ReferenceStore);
     provideHover(uri: string, pos: Position): Hover;
+    private modifiersToString(modifiers);
 }

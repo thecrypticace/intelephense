@@ -6,7 +6,7 @@
 
 import { ParsedDocumentStore } from './parsedDocument';
 import { SymbolStore } from './symbolStore';
-import { SymbolKind, PhpSymbol } from './symbol';
+import { SymbolKind, PhpSymbol, SymbolModifier } from './symbol';
 import { ReferenceStore } from './reference';
 import { Position, Hover } from 'vscode-languageserver-types';
 import { MemberMergeStrategy } from './typeAggregate';
@@ -45,14 +45,19 @@ export class HoverProvider {
             case SymbolKind.Function:
             case SymbolKind.Method:
                 return {
-                    contents: PhpSymbol.signatureString(symbol),
+                    contents: [this.modifiersToString(symbol.modifiers), symbol.name + PhpSymbol.signatureString(symbol)].join(' ').trim(),
                     range: ref.location.range
                 };
 
             case SymbolKind.Parameter:
+                return {
+                    contents: [PhpSymbol.type(symbol) || 'mixed', symbol.name].join(' ').trim(),
+                    range: ref.location.range
+                };
+
             case SymbolKind.Property:
                 return {
-                    contents: [PhpSymbol.type(symbol), symbol.name].join(' ').trim(),
+                    contents: [this.modifiersToString(symbol.modifiers), PhpSymbol.type(symbol) || 'mixed', symbol.name].join(' ').trim(),
                     range: ref.location.range
                 };
 
@@ -67,6 +72,34 @@ export class HoverProvider {
 
         }
 
+
+    }
+
+    private modifiersToString(modifiers: SymbolModifier) {
+
+        let modStrings: string[] = [];
+
+        if (modifiers & SymbolModifier.Public) {
+            modStrings.push('public');
+        }
+
+        if (modifiers & SymbolModifier.Protected) {
+            modStrings.push('protected');
+        }
+
+        if (modifiers & SymbolModifier.Private) {
+            modStrings.push('private');
+        }
+
+        if (modifiers & SymbolModifier.Final) {
+            modStrings.push('final');
+        }
+
+        if (modifiers & SymbolModifier.Abstract) {
+            modStrings.push('abstract');
+        }
+
+        return modStrings.join(' ');
 
     }
 
