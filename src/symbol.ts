@@ -129,6 +129,7 @@ export namespace PhpSymbol {
         let param: PhpSymbol;
         let parts: string[];
         let paramType: string;
+        let closeBrackets = '';
 
         for (let n = 0, l = params.length; n < l; ++n) {
             param = params[n];
@@ -146,14 +147,15 @@ export namespace PhpSymbol {
             parts.push(param.name);
 
             if (param.value) {
-                paramStrings.push(`[${parts.join(' ')}]`);
+                paramStrings.push(`[${parts.join(' ')}`);
+                closeBrackets += ']';
             } else {
                 paramStrings.push(parts.join(' '));
             }
 
         }
 
-        let sig = `(${paramStrings.join('')})`;
+        let sig = `(${paramStrings.join('')}${closeBrackets})`;
         let sType = PhpSymbol.type(s);
         if (sType) {
             sig += `: ${sType}`;
