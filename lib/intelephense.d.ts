@@ -7,7 +7,7 @@ export declare namespace Intelephense {
     function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void): void;
     function initialise(options: InitialisationOptions): Promise<void>;
     function shutdown(): Promise<void>;
-    function cachedDocuments(): {
+    function knownDocuments(): {
         timestamp: number;
         documents: string[];
     };

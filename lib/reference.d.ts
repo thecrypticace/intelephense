@@ -43,6 +43,7 @@ export declare class ReferenceStore {
     private _summaryIndex;
     private _cache;
     constructor(cache: Cache);
+    knownDocuments(): IterableIterator<string>;
     getReferenceTable(uri: string): ReferenceTable;
     add(table: ReferenceTable): void;
     remove(uri: string, purge?: boolean): void;

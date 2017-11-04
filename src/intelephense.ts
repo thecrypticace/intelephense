@@ -201,15 +201,23 @@ export namespace Intelephense {
         });
     }
 
-    export function cachedDocuments() {
+    export function knownDocuments() {
 
-        let uris: string[] = [];
+        let uris = new Set<string>();
         for (let t of symbolStore.tables) {
             if (t.uri !== 'php') {
-                uris.push(t.uri);
+                uris.add(t.uri);
             }
         }
-        return { timestamp: cacheTimestamp, documents: uris };
+
+        //check that refs available as well
+        for(let uri of refStore.knownDocuments()) {
+            if(!uris.has(uri)) {
+                uris.delete(uri);
+            }
+        }
+
+        return { timestamp: cacheTimestamp, documents: Array.from(uris) };
     }
 
     export function documentLanguageRanges(textDocument: lsp.TextDocumentIdentifier): LanguageRange[] {
