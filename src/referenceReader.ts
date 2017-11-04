@@ -108,6 +108,15 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                 this._transformStack.push(new HeaderTransform(this.nameResolver, SymbolKind.Function));
                 break;
 
+            case PhraseType.FunctionCallExpression:
+                //todo define
+                if (parentTransform) {
+                    this._transformStack.push(new FunctionCallExpressionTransform(this._referenceSymbols));
+                } else {
+                    this._transformStack.push(null);
+                }
+                break;
+
             case PhraseType.ConstElement:
                 this._transformStack.push(new HeaderTransform(this.nameResolver, SymbolKind.Constant));
                 break;
@@ -1206,8 +1215,12 @@ class FunctionCallExpressionTransform implements TypeNodeTransform {
             case PhraseType.FullyQualifiedName:
             case PhraseType.RelativeQualifiedName:
             case PhraseType.QualifiedName:
-                this.type = this.referenceSymbolDelegate((<ReferenceNodeTransform>transform).reference).reduce(symbolsToTypeReduceFn, '');
-                break;
+                {
+                    let ref = (<ReferenceNodeTransform>transform).reference;
+                    this.type = this.referenceSymbolDelegate(ref).reduce(symbolsToTypeReduceFn, '');
+                    break;
+                }
+
             default:
                 break;
         }
