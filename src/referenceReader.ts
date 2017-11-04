@@ -398,7 +398,8 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                         let varTag: Tag;
                         for (let n = 0, l = this._lastVarTypehints.length; n < l; ++n) {
                             varTag = this._lastVarTypehints[n];
-                            this._variableTable.setVariable(Variable.create(varTag.name, TypeString.nameResolve(varTag.typeString, this.nameResolver)));
+                            varTag.typeString = TypeString.nameResolve(varTag.typeString, this.nameResolver);
+                            this._variableTable.setVariable(Variable.create(varTag.name, varTag.typeString));
                         }
                     }
                 } else if ((<Token>node).tokenType === TokenType.OpenBrace || (<Token>node).tokenType === TokenType.CloseBrace || (<Token>node).tokenType === TokenType.Semicolon) {
