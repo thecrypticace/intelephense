@@ -11,7 +11,7 @@ export declare namespace Intelephense {
         timestamp: number;
         documents: string[];
     };
-    function documentLanguageRanges(textDocument: lsp.TextDocumentItem): LanguageRange[];
+    function documentLanguageRanges(textDocument: lsp.TextDocumentIdentifier): LanguageRange[];
     function setConfig(config: IntelephenseConfig): void;
     function openDocument(textDocument: lsp.TextDocumentItem): void;
     function closeDocument(textDocument: lsp.TextDocumentIdentifier): Promise<void>;
