@@ -211,8 +211,8 @@ export namespace Intelephense {
         }
 
         //check that refs available as well
-        for(let uri of refStore.knownDocuments()) {
-            if(!uris.has(uri)) {
+        for (let uri of refStore.knownDocuments()) {
+            if (!uris.has(uri)) {
                 uris.delete(uri);
             }
         }
@@ -220,9 +220,9 @@ export namespace Intelephense {
         return { timestamp: cacheTimestamp, documents: Array.from(uris) };
     }
 
-    export function documentLanguageRanges(textDocument: lsp.TextDocumentIdentifier): LanguageRange[] {
+    export function documentLanguageRanges(textDocument: lsp.TextDocumentIdentifier): LanguageRangeList {
         let doc = documentStore.find(textDocument.uri);
-        return doc ? doc.documentLanguageRanges() : [];
+        return doc ? { version: doc.version, ranges: doc.documentLanguageRanges() } : undefined;
     }
 
     export function setConfig(config: IntelephenseConfig) {
@@ -237,7 +237,7 @@ export namespace Intelephense {
             return;
         }
 
-        let parsedDocument = new ParsedDocument(textDocument.uri, textDocument.text);
+        let parsedDocument = new ParsedDocument(textDocument.uri, textDocument.text, textDocument.version);
         documentStore.add(parsedDocument);
         let symbolTable = SymbolTable.create(parsedDocument);
         symbolStore.add(symbolTable);
@@ -264,6 +264,7 @@ export namespace Intelephense {
 
         let parsedDocument = documentStore.find(textDocument.uri);
         if (parsedDocument) {
+            parsedDocument.version = textDocument.version;
             parsedDocument.applyChanges(contentChanges);
         }
 
@@ -305,7 +306,7 @@ export namespace Intelephense {
         }
 
         let text = textDocument.text;
-        let parsedDocument = new ParsedDocument(uri, text);
+        let parsedDocument = new ParsedDocument(uri, text, textDocument.version);
         let symbolTable = SymbolTable.create(parsedDocument, true);
         symbolTable.pruneScopedVars();
         symbolStore.add(symbolTable);
@@ -334,7 +335,7 @@ export namespace Intelephense {
         }
 
         let text = textDocument.text;
-        let parsedDocument = new ParsedDocument(uri, text);
+        let parsedDocument = new ParsedDocument(uri, text, textDocument.version);
         refTable = ReferenceReader.discoverReferences(parsedDocument, symbolStore);
         refStore.add(refTable);
         refStore.close(refTable.uri);
@@ -409,5 +410,10 @@ export interface InitialisationOptions {
     storagePath: string;
     logWriter?: LogWriter;
     clearCache?: boolean;
+}
+
+export interface LanguageRangeList {
+    version: number;
+    ranges: LanguageRange[]
 }
 

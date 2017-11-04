@@ -10,6 +10,7 @@ export interface ParsedDocumentChangeEventArgs {
     parsedDocument: ParsedDocument;
 }
 export declare class ParsedDocument implements Traversable<Phrase | Token> {
+    version: number;
     private static _wordRegex;
     private _textDocument;
     private _uriHash;
@@ -17,7 +18,7 @@ export declare class ParsedDocument implements Traversable<Phrase | Token> {
     private _changeEvent;
     private _debounce;
     private _reparse;
-    constructor(uri: string, text: string);
+    constructor(uri: string, text: string, version: number);
     readonly tree: Phrase;
     readonly uri: string;
     readonly text: string;
