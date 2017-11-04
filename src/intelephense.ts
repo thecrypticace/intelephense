@@ -212,7 +212,7 @@ export namespace Intelephense {
         return { timestamp: cacheTimestamp, documents: uris };
     }
 
-    export function documentLanguageRanges(textDocument: lsp.TextDocumentItem): LanguageRange[] {
+    export function documentLanguageRanges(textDocument: lsp.TextDocumentIdentifier): LanguageRange[] {
         let doc = documentStore.find(textDocument.uri);
         return doc ? doc.documentLanguageRanges() : [];
     }
