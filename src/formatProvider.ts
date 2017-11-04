@@ -242,12 +242,12 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
         this._nextFormatRule = null;
 
-        if (!previous) {
-            return false;
-        }
-
         if (!this._active && this._startOffset > -1 && ParsedDocument.isOffsetInToken(this._startOffset, <Token>node)) {
             this._active = true;
+        }
+
+        if (!previous) {
+            return false;
         }
 
         switch ((<Token>node).tokenType) {

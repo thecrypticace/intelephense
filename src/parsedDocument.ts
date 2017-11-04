@@ -38,7 +38,7 @@ export class ParsedDocument implements Traversable<Phrase | Token>{
         this._changeEvent.trigger({ parsedDocument: this });
     };
 
-    constructor(uri: string, text: string, public version:number) {
+    constructor(uri: string, text: string, public version = 0) {
         this._parseTree = Parser.parse(text);
         this._textDocument = new TextDocument(uri, text);
         this._debounce = new Debounce<null>(this._reparse, textDocumentChangeDebounceWait);

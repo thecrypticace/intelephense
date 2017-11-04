@@ -18,7 +18,7 @@ export declare class ParsedDocument implements Traversable<Phrase | Token> {
     private _changeEvent;
     private _debounce;
     private _reparse;
-    constructor(uri: string, text: string, version: number);
+    constructor(uri: string, text: string, version?: number);
     readonly tree: Phrase;
     readonly uri: string;
     readonly text: string;

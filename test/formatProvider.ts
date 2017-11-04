@@ -15,6 +15,14 @@ function setup(src:string){
     return new FormatProvider(docStore);
 }
 
+let rangeFormatFullDoc = 
+`<?php
+foreach ($a as $v) {
+echo 'HELLO WORLD';
+}
+
+`;
+
 let fixExtraLinesSrc = 
 `<?php
 function fn()
@@ -193,6 +201,13 @@ describe('provideDocumentFormattingEdits', ()=>{
         let edits = provider.provideDocumentFormattingEdits({uri: 'test'}, {tabSize:4, insertSpaces:true});
         //console.log(JSON.stringify(edits, null, 4));
         assert.isEmpty(edits);
+    });
+
+    it('range format entire doc', ()=>{
+        let provider = setup(rangeFormatFullDoc);
+        let edits = provider.provideDocumentRangeFormattingEdits({uri: 'test'}, lsp.Range.create(0,0,5,0), {tabSize:4, insertSpaces:true});
+        //console.log(JSON.stringify(edits, null, 4));
+        assert.isNotEmpty(edits);
     });
 
 });
