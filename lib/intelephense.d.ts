@@ -7,6 +7,7 @@ export declare namespace Intelephense {
     function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void): void;
     function initialise(options: InitialisationOptions): Promise<void>;
     function shutdown(): Promise<void>;
+    function provideHighlights(uri: string, position: lsp.Position): lsp.DocumentHighlight[];
     function provideHover(uri: string, position: lsp.Position): lsp.Hover;
     function knownDocuments(): {
         timestamp: number;
