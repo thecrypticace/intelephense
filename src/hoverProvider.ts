@@ -67,6 +67,13 @@ export class HoverProvider {
                     range: ref.location.range
                 };
 
+            case SymbolKind.Constant:
+            case SymbolKind.ClassConstant:
+                return {
+                    contents: [this.modifiersToString(symbol.modifiers), 'const', symbol.name, symbol.value ? `= ${symbol.value}` : ''].join(' ').trim(),
+                    range: ref.location.range
+                }
+
             default:
                 return undefined;
 
