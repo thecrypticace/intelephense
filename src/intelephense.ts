@@ -24,6 +24,7 @@ import { createCache, Cache } from './cache';
 import { Log, LogWriter } from './logger';
 import * as path from 'path';
 export { LanguageRange } from './parsedDocument';
+import {HoverProvider} from './hoverProvider';
 
 export namespace Intelephense {
 
@@ -41,6 +42,7 @@ export namespace Intelephense {
     let formatProvider: FormatProvider;
     let nameTextEditProvider: NameTextEditProvider;
     let referenceProvider: ReferenceProvider;
+    let hoverProvider:HoverProvider;
     let cacheClear = false;
     let symbolCache: Cache;
     let refCache: Cache;
@@ -81,6 +83,7 @@ export namespace Intelephense {
         formatProvider = new FormatProvider(documentStore);
         nameTextEditProvider = new NameTextEditProvider(symbolStore, documentStore, refStore);
         referenceProvider = new ReferenceProvider(documentStore, symbolStore, refStore);
+        hoverProvider = new HoverProvider(documentStore, symbolStore, refStore);
 
         //keep stores in sync
         documentStore.parsedDocumentChangeEvent.subscribe((args) => {
@@ -199,6 +202,10 @@ export namespace Intelephense {
         }).catch((msg) => {
             Log.warn(msg);
         });
+    }
+
+    export function provideHover(uri:string, position:lsp.Position) {
+        return hoverProvider.provideHover(uri, position);
     }
 
     export function knownDocuments() {
