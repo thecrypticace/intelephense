@@ -12,6 +12,7 @@ import { PhpSymbol, SymbolKind, SymbolModifier, PhpSymbolDoc } from './symbol';
 import { NameResolver } from './nameResolver';
 import { TypeString } from './typeString';
 import * as util from './util';
+import { Reference } from './reference';
 
 export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
@@ -478,6 +479,10 @@ class UniqueSymbolCollection {
 
 interface SymbolNodeTransform extends NodeTransform {
     symbol: PhpSymbol;
+}
+
+interface ReferenceNodeTransform extends NodeTransform {
+    reference: Reference;
 }
 
 interface NameNodeTransform extends NodeTransform {
@@ -1100,20 +1105,26 @@ class ClassInterfaceClauseTransform implements SymbolsNodeTransform {
     }
 }
 
-class NamespaceDefinitionTransform implements SymbolNodeTransform {
+class NamespaceDefinitionTransform implements SymbolNodeTransform, ReferenceNodeTransform {
 
     phraseType = PhraseType.NamespaceDefinition;
+    reference: Reference;
+
     private _symbol: PhpSymbol;
     private _children: UniqueSymbolCollection;
-
-    constructor(location: HashedLocation) {
+    
+    constructor(location: Location) {
         this._symbol = PhpSymbol.create(SymbolKind.Namespace, '', location);
         this._children = new UniqueSymbolCollection();
+
     }
 
     push(transform: NodeTransform) {
         if (transform.phraseType === PhraseType.NamespaceName) {
-            this._symbol.name = (<NamespaceNameTransform>transform).text;
+            let name = (<NamespaceNameTransform>transform).text;
+            let nameLocation = (<NamespaceNameTransform>transform).location;
+            this._symbol.name = name;
+            this.reference = Reference.create(SymbolKind.Namespace, name, nameLocation);
         } else {
             let s = (<SymbolNodeTransform>transform).symbol;
             if (s) {
@@ -1124,6 +1135,12 @@ class NamespaceDefinitionTransform implements SymbolNodeTransform {
             let symbols = (<SymbolsNodeTransform>transform).symbols;
             if (symbols) {
                 this._children.pushMany(symbols);
+                return;
+            }
+
+            let ref = (<ReferenceNodeTransform>transform).reference;
+            if(ref) {
+                this._children.push(ref);
             }
         }
     }
