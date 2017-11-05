@@ -13,6 +13,7 @@ import { NameResolver } from './nameResolver';
 import { TypeString } from './typeString';
 import * as util from './util';
 import { Reference } from './reference';
+import {Location} from 'vscode-languageserver-types';
 
 export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
@@ -48,7 +49,7 @@ export class SymbolReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.NamespaceDefinition:
                 {
-                    let t = new NamespaceDefinitionTransform(this.document.nodeHashedLocation(node));
+                    let t = new NamespaceDefinitionTransform(this.document.nodeLocation(node));
                     this._transformStack.push(t);
                     this.nameResolver.namespace = t.symbol;
                 }
