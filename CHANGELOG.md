@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.8.0] - TBA
+## [0.8.0] - 2017-11-05
 #### Added
 * reference provider
 * hover provider
