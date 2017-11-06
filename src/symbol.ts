@@ -63,15 +63,26 @@ export interface PhpSymbol extends SymbolIdentifier {
     doc?: PhpSymbolDoc;
     type?: string;
     associated?: PhpSymbol[];
-    children?: PhpSymbol[];
+    children?: SymbolIdentifier[];
     value?: string;
-    location?: HashedLocation;
+    scope?:string;
+}
+
+export const enum SymbolIdentifierType {
+    None, PhpSymbol, Reference
 }
 
 export interface SymbolIdentifier {
+    identifierType:SymbolIdentifierType
     kind: SymbolKind;
     name: string;
-    scope?: string;
+    location:Location;
+}
+
+export interface Reference extends SymbolIdentifier {
+    type?: string;
+    altName?: string;
+    scope?:string|Reference;
 }
 
 export namespace PhpSymbol {
@@ -216,8 +227,9 @@ export namespace PhpSymbol {
         return symbols;
     }
 
-    export function create(kind: SymbolKind, name: string, location?: HashedLocation): PhpSymbol {
+    export function create(kind: SymbolKind, name: string, location: Location): PhpSymbol {
         return {
+            identifierType:SymbolIdentifierType.PhpSymbol,
             kind: kind,
             name: name,
             location: location
