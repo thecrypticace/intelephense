@@ -61,7 +61,16 @@ type Item = [string, any];
 
 function writeFile(filePath: string, bucket: Bucket) {
     return new Promise<void>((resolve, reject) => {
-        fs.writeFile(filePath, JSON.stringify(bucket), (err) => {
+
+        let json: string
+        try {
+            json = JSON.stringify(bucket);
+        } catch (e) {
+            reject(e.message);
+            return;
+        }
+
+        fs.writeFile(filePath, json, (err) => {
             if (err) {
                 reject(err.message);
                 return;
@@ -96,7 +105,7 @@ function readFile(filePath: string): Promise<Bucket> {
                 return;
             }
 
-            let bucket:Bucket;
+            let bucket: Bucket;
             try {
                 bucket = JSON.parse(data.toString());
             } catch (e) {
