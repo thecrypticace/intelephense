@@ -24,7 +24,7 @@ import { createCache, Cache } from './cache';
 import { Log, LogWriter } from './logger';
 import * as path from 'path';
 export { LanguageRange } from './parsedDocument';
-import {HoverProvider} from './hoverProvider';
+import { HoverProvider } from './hoverProvider';
 import { HighlightProvider } from './highlightProvider';
 
 
@@ -44,8 +44,8 @@ export namespace Intelephense {
     let formatProvider: FormatProvider;
     let nameTextEditProvider: NameTextEditProvider;
     let referenceProvider: ReferenceProvider;
-    let hoverProvider:HoverProvider;
-    let highlightProvider:HighlightProvider;
+    let hoverProvider: HoverProvider;
+    let highlightProvider: HighlightProvider;
     let cacheClear = false;
     let symbolCache: Cache;
     let refCache: Cache;
@@ -100,7 +100,7 @@ export namespace Intelephense {
             return clearCache().then(() => {
                 symbolStore.add(SymbolTable.readBuiltInSymbols());
             }).catch((msg) => {
-                Log.warn(msg);
+                Log.error(msg);
             });
         } else {
             symbolStore.add(SymbolTable.readBuiltInSymbols());
@@ -111,13 +111,9 @@ export namespace Intelephense {
                 cacheTimestamp = data.timestamp;
                 return readCachedSymbolTables(data.documents);
             }).then(() => {
-                return refCache.read(refStoreCacheKey);
-            }).then((data) => {
-                if (data) {
-                    refStore.fromJSON(data);
-                }
+                return cacheReadReferenceStore();
             }).catch((msg) => {
-                Log.warn(msg);
+                Log.error(msg);
             });
         }
 
@@ -133,7 +129,7 @@ export namespace Intelephense {
         return stateCache.write(stateCacheKey, { documents: uris, timestamp: Date.now() }).then(() => {
             return refStore.closeAll();
         }).then(() => {
-            return refCache.write(refStoreCacheKey, refStore);
+            return cacheWriteReferenceStore();
         }).then(() => {
             return new Promise<void>((resolve, reject) => {
                 let openDocs = documentStore.documents;
@@ -142,7 +138,7 @@ export namespace Intelephense {
                     if (doc) {
                         let symbolTable = symbolStore.getSymbolTable(doc.uri);
                         symbolCache.write(doc.uri, symbolTable).then(cacheSymbolTableFn).catch((msg) => {
-                            Log.warn(msg);
+                            Log.error(msg);
                             cacheSymbolTableFn();
                         });
                     } else {
@@ -152,7 +148,95 @@ export namespace Intelephense {
                 cacheSymbolTableFn();
             });
         }).catch((msg) => {
-            Log.warn(msg);
+            Log.error(msg);
+        });
+
+    }
+
+    const refStoreMetaCacheKey = 'refStoreMeta';
+    const refStoreChunkCacheKey = 'refStoreChunk';
+
+    function cacheWriteReferenceStore() {
+        let data = refStore.toJSON();
+
+        if (data.length < 1) {
+            return Promise.resolve();
+        }
+
+        const size = 5000;
+        let chunk: any;
+        let chunks: any[];
+
+        //chunk this as it could be large
+        for (let n = 0, l = data.length; n < l; n += size) {
+            chunks.push(data.slice(n, n + size));
+        }
+
+        let chunkCount = chunks.length;
+        let counter = 0;
+
+        return new Promise<void>((resolve, reject) => {
+
+            let onFailure = (msg: string) => {
+                Log.error(msg);
+                cacheChunkFn();
+            }
+
+            let cacheChunkFn = () => {
+
+                let chunk = chunks.shift();
+                let chunkKey = refStoreChunkCacheKey + counter.toString();
+                counter++;
+
+                if (chunk) {
+                    refCache.write(chunkKey, chunk).then(cacheChunkFn).catch(onFailure);
+                } else {
+                    resolve();
+                }
+            }
+            refCache.write(refStoreMetaCacheKey, chunkCount).then(cacheChunkFn).catch(onFailure);
+
+        });
+
+    }
+
+    function cacheReadReferenceStore() {
+
+        return new Promise<void>((resolve, reject) => {
+
+            refCache.read(refStoreMetaCacheKey).then((v) => {
+                if (isNaN(v) || v < 1) {
+                    resolve();
+                }
+
+                let whole: any[] = [];
+                let counter = 0;
+
+                let onFailure = (msg: string) => {
+                    reject(msg);
+                }
+
+                let onReadFn = (data: any) => {
+                    counter++;
+                    if (data) {
+                        Array.prototype.push.apply(whole, data);
+                    } else {
+                        reject('Reference cache missing data');
+                        return;
+                    }
+
+                    if (counter >= v) {
+                        refStore.fromJSON(whole);
+                        resolve();
+                    } else {
+                        refCache.read(refStoreChunkCacheKey + counter.toString()).then(onReadFn).catch(onFailure);
+                    }
+
+                }
+
+                refCache.read(refStoreChunkCacheKey + counter.toString()).then(onReadFn).catch(onFailure);
+
+            });
         });
 
     }
@@ -172,7 +256,7 @@ export namespace Intelephense {
 
             let batch = Math.min(4, count);
             let onCacheReadErr = (msg: string) => {
-                Log.warn(msg);
+                Log.error(msg);
                 onCacheRead(undefined);
             }
             let onCacheRead = (data: any) => {
@@ -208,11 +292,11 @@ export namespace Intelephense {
         });
     }
 
-    export function provideHighlights(uri:string, position:lsp.Position) {
+    export function provideHighlights(uri: string, position: lsp.Position) {
         return highlightProvider.provideHightlights(uri, position);
     }
 
-    export function provideHover(uri:string, position:lsp.Position) {
+    export function provideHover(uri: string, position: lsp.Position) {
         return hoverProvider.provideHover(uri, position);
     }
 
@@ -269,7 +353,7 @@ export namespace Intelephense {
         let symbolTable = symbolStore.getSymbolTable(textDocument.uri);
         if (symbolTable) {
             symbolTable.pruneScopedVars();
-            return symbolCache.write(symbolTable.uri, symbolTable).catch((msg) => { Log.warn(msg) });
+            return symbolCache.write(symbolTable.uri, symbolTable).catch((msg) => { Log.error(msg) });
         }
     }
 
