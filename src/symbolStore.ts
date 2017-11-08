@@ -575,8 +575,9 @@ export class SymbolStore {
      * @param s 
      */
     private _indexFilter(s: PhpSymbol) {
-        return !(s.kind & (SymbolKind.Parameter | SymbolKind.Variable | SymbolKind.File)) &&
-            !(s.modifiers & (SymbolModifier.Use | SymbolModifier.Private)) &&
+        return !(s.kind & (SymbolKind.Parameter | SymbolKind.File)) && //no params or files
+            !(s.modifiers & (SymbolModifier.Use | SymbolModifier.Private)) && //no use or private
+            !(s.kind === SymbolKind.Variable && s.location) && //no variables that have a location (in built globals have no loc)
             s.name.length > 0;
     }
 
