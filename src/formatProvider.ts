@@ -334,7 +334,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case TokenType.OpenParenthesis:
-                if (this._shouldOpenParenthesisHaveNoSpaceBefore(parent)) {
+                if (this._shouldOpenParenthesisHaveNoSpaceBefore(parent, previousNonWsToken)) {
                     rule = FormatVisitor.noSpaceBefore;
                 } else {
                     rule = FormatVisitor.singleSpaceBefore;
@@ -674,7 +674,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
         }
     }
 
-    private _shouldOpenParenthesisHaveNoSpaceBefore(parent: Phrase) {
+    private _shouldOpenParenthesisHaveNoSpaceBefore(parent: Phrase, lastNonWsToken:Token) {
         switch (parent.phraseType) {
             case PhraseType.FunctionCallExpression:
             case PhraseType.MethodCallExpression:
@@ -697,8 +697,29 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case PhraseType.IncludeOnceExpression:
                 return true;
             default:
+                if(!lastNonWsToken) {
+                    return false;
+                }
+                break;
+        }
+
+        switch(lastNonWsToken.tokenType) {
+            case TokenType.Require:
+            case TokenType.RequireOnce:
+            case TokenType.Include:
+            case TokenType.IncludeOnce:
+            case TokenType.Isset:
+            case TokenType.List:
+            case TokenType.Print:
+            case TokenType.Unset:
+            case TokenType.Eval:
+            case TokenType.Exit:
+            case TokenType.Empty:
+                return true;
+            default:
                 return false;
         }
+        
     }
 
     private _hasColonChild(phrase: Phrase) {

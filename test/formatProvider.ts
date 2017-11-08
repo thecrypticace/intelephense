@@ -75,6 +75,12 @@ EOD;
 
 `;
 
+let noSpaceRequireSrc = 
+`<?php
+require_once('file');
+
+`;
+
 describe('provideDocumentFormattingEdits', ()=>{
 
 
@@ -208,6 +214,13 @@ describe('provideDocumentFormattingEdits', ()=>{
         let edits = provider.provideDocumentRangeFormattingEdits({uri: 'test'}, lsp.Range.create(0,0,5,0), {tabSize:4, insertSpaces:true});
         //console.log(JSON.stringify(edits, null, 4));
         assert.isNotEmpty(edits);
+    });
+
+    it('no space between require and (', ()=>{
+        let provider = setup(noSpaceRequireSrc);
+        let edits = provider.provideDocumentFormattingEdits({uri: 'test'}, {tabSize:4, insertSpaces:true});
+        //console.log(JSON.stringify(edits, null, 4));
+        assert.isEmpty(edits);
     });
 
 });
