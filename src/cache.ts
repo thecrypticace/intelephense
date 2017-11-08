@@ -7,36 +7,44 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as util from './util';
+import { Log } from './logger';
 
 export interface Cache {
     read(key: string): Promise<any>;
     write(key: string, data: any): Promise<void>;
     delete(key: string): Promise<void>;
-    flush():Promise<void>;
+    flush(): Promise<void>;
 }
 
-export function createCache(path:string) {
-    return new FileCache(path);
+export function createCache(path: string) {
+    let cache: Cache;
+    try {
+        cache = new FileCache(path);
+    } catch (e) {
+        Log.error('Cache error: ' + e.message);
+        cache = new MemoryCache();
+    }
+    return cache;
 }
 
 export class MemoryCache implements Cache {
 
-    private _map:{[index:string]:any};
+    private _map: { [index: string]: any };
 
     constructor() {
         this._map = {};
     }
 
-    read(key:string) {
+    read(key: string) {
         return Promise.resolve(this._map[key]);
     }
 
-    write(key:string, data:any) {
+    write(key: string, data: any) {
         this._map[key] = data;
         return Promise.resolve();
     }
 
-    delete(key:string) {
+    delete(key: string) {
         delete this._map[key];
         return Promise.resolve();
     }
@@ -164,7 +172,7 @@ export class FileCache implements Cache {
     flush() {
         return new Promise<void>((resolve, reject) => {
             fs.emptyDir(this.path, (err) => {
-                if(err) {
+                if (err) {
                     reject(err.message);
                 } else {
                     resolve();
