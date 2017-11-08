@@ -95,7 +95,15 @@ function readFile(filePath: string): Promise<Bucket> {
                 }
                 return;
             }
-            resolve(JSON.parse(data.toString()));
+
+            let bucket:Bucket;
+            try {
+                bucket = JSON.parse(data.toString());
+            } catch (e) {
+                reject(e.message);
+            }
+
+            resolve(bucket);
         });
     });
 
