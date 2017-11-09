@@ -290,6 +290,12 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 rule = FormatVisitor.noSpaceBefore;
                 break;
 
+            case TokenType.OpenBrace:
+                if(!rule) {
+                    rule = FormatVisitor.singleSpaceBefore;
+                }
+                break;
+
             case TokenType.Colon:
                 if(parent.phraseType === PhraseType.CaseStatement || parent.phraseType === PhraseType.DefaultStatement) {
                     rule = FormatVisitor.noSpaceBefore;

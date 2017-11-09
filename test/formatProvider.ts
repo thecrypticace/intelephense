@@ -34,9 +34,11 @@ function fn()
 
 let conditionalCurlySrc =
 `<?php
-if (true) {
+if (true) 
+{
 }
-else {
+else 
+{
 }
 
 `;
@@ -100,11 +102,37 @@ describe('provideDocumentFormattingEdits', ()=>{
             {
                 range: {
                     start: {
-                        line: 2,
+                        line: 4,
+                        character: 4
+                    },
+                    end: {
+                        line: 5,
+                        character: 0
+                    }
+                },
+                newText: " "
+            },
+            {
+                range: {
+                    start: {
+                        line: 3,
                         character: 1
                     },
                     end: {
-                        line: 3,
+                        line: 4,
+                        character: 0
+                    }
+                },
+                newText: " "
+            },
+            {
+                range: {
+                    start: {
+                        line: 1,
+                        character: 9
+                    },
+                    end: {
+                        line: 2,
                         character: 0
                     }
                 },
