@@ -50,10 +50,8 @@ export declare class ReferenceStore {
     close(uri: string): Promise<void>;
     closeAll(): Promise<void>;
     find(name: string, filter?: Predicate<Reference>): Promise<Reference[]>;
-    fromJSON(data: any): void;
-    toJSON(): {
-        _summaryIndex: ReferenceTableSummary[];
-    };
+    fromJSON(data: ReferenceTableSummary[]): void;
+    toJSON(): ReferenceTableSummary[];
     private _findInTables(tables, name, filter?);
     private _fetchTable;
     private _tablesRemove(uri);

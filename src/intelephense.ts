@@ -31,7 +31,6 @@ import { HighlightProvider } from './highlightProvider';
 export namespace Intelephense {
 
     const phpLanguageId = 'php';
-    const htmlLanguageId = 'html';
 
     let documentStore: ParsedDocumentStore;
     let symbolStore: SymbolStore;
@@ -332,7 +331,7 @@ export namespace Intelephense {
 
     export function openDocument(textDocument: lsp.TextDocumentItem) {
 
-        if ((textDocument.languageId !== phpLanguageId && textDocument.languageId !== htmlLanguageId) || documentStore.has(textDocument.uri)) {
+        if (textDocument.languageId !== phpLanguageId || documentStore.has(textDocument.uri)) {
             return;
         }
 
