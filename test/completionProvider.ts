@@ -851,16 +851,23 @@ describe('CompletionProvider', () => {
 
     });
 
-    describe('static member access', () => {
+    describe('static and self member access', () => {
 
         let completionProvider: CompletionProvider;
         before(function () {
             completionProvider = setup(staticAndSelfSrc);
         });
 
-        it('members', function () {
+        it('static', function () {
             var completions = completionProvider.provideCompletions('test', { line: 5, character: 18 });
-            console.log(JSON.stringify(completions, null, 4));
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, 'bar');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+        });
+
+        it('self', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 4, character: 17 });
+            //console.log(JSON.stringify(completions, null, 4));
             assert.equal(completions.items[0].label, 'bar');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
         });

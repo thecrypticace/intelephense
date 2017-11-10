@@ -712,7 +712,6 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
         let scopedAccessExpr = traverser.ancestor(this._isMemberAccessExpr);
         let scopePhrase = traverser.nthChild(0) as Phrase;
         let type = this._resolveType(traverser);
-        console.log(JSON.stringify(type, null ,4));
         let typeNames = TypeString.atomicClassArray(type);
 
         if (!typeNames.length) {
@@ -737,7 +736,6 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
             if (!typeAggregate) {
                 continue;
             }
-            console.log(JSON.stringify(typeAggregate.members(MemberMergeStrategy.Documented), null ,4));
 
             fn = this._createMemberPredicate(typeName, word, classAggregateType);
             Array.prototype.push.apply(symbols, typeAggregate.members(MemberMergeStrategy.Documented, fn));
@@ -775,7 +773,6 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
                 case PhraseType.SimpleVariable:
                 case PhraseType.RelativeScope:
                     ref = traverser.reference;
-                    console.log(JSON.stringify(ref, null, 4));
                     break;
 
                 case PhraseType.MethodCallExpression:
