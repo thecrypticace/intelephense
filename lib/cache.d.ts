@@ -4,7 +4,7 @@ export interface Cache {
     delete(key: string): Promise<void>;
     flush(): Promise<void>;
 }
-export declare function createCache(path: string): FileCache;
+export declare function createCache(path: string): Cache;
 export declare class MemoryCache implements Cache {
     private _map;
     constructor();

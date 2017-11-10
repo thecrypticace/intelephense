@@ -359,7 +359,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                 if (parentTransform) {
                     let context = this._classStack.length ? this._classStack[this._classStack.length - 1] : null;
                     let name = context ? context.name : '';
-                    this._transformStack.push(new RelativeScopeTransform(name));
+                    this._transformStack.push(new RelativeScopeTransform(name, this.doc.nodeLocation(node)));
                 } else {
                     this._transformStack.push(null);
                 }
@@ -463,6 +463,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.NamespaceDefinition:
             case PhraseType.ParameterDeclaration:
             case PhraseType.AnonymousFunctionUseVariable:
+            case PhraseType.RelativeScope:
                 if (scope) {
                     let ref = (<ReferenceNodeTransform>transform).reference;
 
@@ -1228,11 +1229,14 @@ class FunctionCallExpressionTransform implements TypeNodeTransform {
 
 }
 
-class RelativeScopeTransform implements TypeNodeTransform {
+class RelativeScopeTransform implements TypeNodeTransform, ReferenceNodeTransform {
 
     phraseType = PhraseType.RelativeScope;
-
-    constructor(public type: string) { }
+    reference:Reference;
+    constructor(public type: string, loc:lsp.Location) {
+        this.reference = Reference.create(SymbolKind.Class, type, loc);
+        this.reference.altName = 'static';
+     }
     push(transform: NodeTransform) { }
 }
 
@@ -1343,10 +1347,11 @@ class QualifiedNameTransform implements TypeNodeTransform, ReferenceNodeTransfor
 
         if (transform.phraseType === PhraseType.NamespaceName) {
             let name = (<NamespaceNameTransform>transform).text;
+            let lcName = name.toLowerCase();
             this.reference.name = this._nameResolver.resolveNotFullyQualified(name, this.reference.kind);
             if (
-                (this.reference.kind === SymbolKind.Function || this.reference.kind === SymbolKind.Constant) &&
-                name !== this.reference.name && name.indexOf('\\') < 0
+                ((this.reference.kind === SymbolKind.Function || this.reference.kind === SymbolKind.Constant) &&
+                name !== this.reference.name && name.indexOf('\\') < 0) || (lcName === 'parent' || lcName === 'self')
             ) {
                 this.reference.altName = name;
             }
@@ -1468,6 +1473,7 @@ class MemberAccessExpressionTransform implements TypeNodeTransform, ReferenceNod
             case PhraseType.QualifiedName:
             case PhraseType.RelativeQualifiedName:
             case PhraseType.EncapsulatedExpression:
+            case PhraseType.RelativeScope:
                 this._scope = (<TypeNodeTransform>transform).type;
                 break;
 

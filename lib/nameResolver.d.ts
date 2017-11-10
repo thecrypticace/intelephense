@@ -11,7 +11,7 @@ export declare class NameResolver {
     pushClass(symbol: PhpSymbol): void;
     popClass(): void;
     resolveRelative(relativeName: string): string;
-    resolveNotFullyQualified(notFqn: string, kind?: SymbolKind): string;
+    resolveNotFullyQualified(notFqn: string, kind?: SymbolKind, resolveStatic?: boolean): string;
     concatNamespaceName(prefix: string, suffix: string): string;
     /**
      *

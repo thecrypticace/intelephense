@@ -712,6 +712,7 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
         let scopedAccessExpr = traverser.ancestor(this._isMemberAccessExpr);
         let scopePhrase = traverser.nthChild(0) as Phrase;
         let type = this._resolveType(traverser);
+        console.log(JSON.stringify(type, null ,4));
         let typeNames = TypeString.atomicClassArray(type);
 
         if (!typeNames.length) {
@@ -736,6 +737,7 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
             if (!typeAggregate) {
                 continue;
             }
+            console.log(JSON.stringify(typeAggregate.members(MemberMergeStrategy.Documented), null ,4));
 
             fn = this._createMemberPredicate(typeName, word, classAggregateType);
             Array.prototype.push.apply(symbols, typeAggregate.members(MemberMergeStrategy.Documented, fn));
@@ -771,7 +773,9 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
                 case PhraseType.RelativeQualifiedName:
                 case PhraseType.QualifiedName:
                 case PhraseType.SimpleVariable:
+                case PhraseType.RelativeScope:
                     ref = traverser.reference;
+                    console.log(JSON.stringify(ref, null, 4));
                     break;
 
                 case PhraseType.MethodCallExpression:
@@ -906,7 +910,7 @@ class ScopedAccessCompletion extends MemberAccessCompletion {
     }
 
     protected _createMemberPredicate(scopeName: string, word: string, classContext: TypeAggregate): Predicate<PhpSymbol> {
-        if (classContext && scopeName === classContext.name.toLowerCase()) {
+        if (classContext && scopeName.toLowerCase() === classContext.name.toLowerCase()) {
             //public, protected, private
             return (x) => {
                 return (x.modifiers & SymbolModifier.Static) > 0 && util.ciStringContains(word, x.name);
@@ -918,7 +922,7 @@ class ScopedAccessCompletion extends MemberAccessCompletion {
                 return !(x.modifiers & SymbolModifier.Private) && util.ciStringContains(word, x.name);
             };
 
-        } else if (classContext && classContext!.isAssociated(scopeName)) {
+        } else if (classContext && classContext.isAssociated(scopeName)) {
             //public, protected
             return (x) => {
                 return (x.modifiers & SymbolModifier.Static) > 0 &&

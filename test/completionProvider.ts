@@ -269,6 +269,17 @@ class Foo {
 $array[0]->fn();
 `;
 
+var staticAndSelfSrc = 
+`<?php
+class Foo {
+    static function bar(){}
+    function baz() {
+        self::bar();
+        static::bar();
+    }
+}
+`;
+
 function setup(src: string | string[]) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -835,6 +846,22 @@ describe('CompletionProvider', () => {
             var completions = completionProvider.provideCompletions('test', { line: 5, character: 12 });
             //console.log(JSON.stringify(completions, null, 4));
             assert.equal(completions.items[0].label, 'fn');
+            assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
+        });
+
+    });
+
+    describe('static member access', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(staticAndSelfSrc);
+        });
+
+        it('members', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 5, character: 18 });
+            console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, 'bar');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Method);
         });
 
