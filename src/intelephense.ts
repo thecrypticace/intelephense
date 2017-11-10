@@ -301,21 +301,15 @@ export namespace Intelephense {
 
     export function knownDocuments() {
 
-        let uris = new Set<string>();
-        for (let t of symbolStore.tables) {
-            if (t.uri !== 'php') {
-                uris.add(t.uri);
-            }
-        }
-
-        //check that refs available as well
+        //use ref uris because refs are determined last and may have been interrupted
+        let known:string[] = [];
         for (let uri of refStore.knownDocuments()) {
-            if (!uris.has(uri)) {
-                uris.delete(uri);
+            if (uri !== 'php') {
+                known.push(uri);
             }
         }
 
-        return { timestamp: cacheTimestamp, documents: Array.from(uris) };
+        return { timestamp: cacheTimestamp, documents: known };
     }
 
     export function documentLanguageRanges(textDocument: lsp.TextDocumentIdentifier): LanguageRangeList {
