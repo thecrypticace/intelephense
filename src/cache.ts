@@ -238,6 +238,15 @@ export function readArrayFromDisk(filePath: string) {
         let readStream = fs.createReadStream(filePath);
         let items: any[] = [];
 
+        readStream.on('error', (err)=>{
+            if (err && err.code !== 'ENOENT') {
+                Log.error(err.message);
+                reject(err.message);
+            } else {
+                resolve(items);
+            }
+        });
+
         readStream.pipe(transformStream).on('data', (item) => {
             items.push(item);
         }).on('end', () => {
