@@ -49,7 +49,8 @@ export namespace Intelephense {
     let symbolCache: Cache;
     let refCache: Cache;
     let stateCache: Cache;
-    const stateCacheKey = 'state';
+    const stateTimestampKey = 'timestamp';
+    const knowDocsFilename = 'known_uris.json';
     const refStoreCacheKey = 'referenceStore';
 
     let diagnosticsUnsubscribe: Unsubscribe;
@@ -105,12 +106,16 @@ export namespace Intelephense {
             });
         } else {
             symbolStore.add(SymbolTable.readBuiltInSymbols());
-            return stateCache.read(stateCacheKey).then((data) => {
+            return stateCache.read(stateTimestampKey).then((data) => {
                 if (!data) {
                     return;
                 }
-                cacheTimestamp = data.timestamp;
-                return readCachedSymbolTables(data.documents);
+                cacheTimestamp = data;
+                
+            }).then(()=>{
+                return readArrayFromDisk(path.join(storagePath, 'state', knowDocsFilename));
+            }).then((uris)=>{
+                return readCachedSymbolTables(uris);
             }).then(() => {
                 return cacheReadReferenceStore();
             }).catch((msg) => {
@@ -127,7 +132,9 @@ export namespace Intelephense {
                 uris.push(t.uri);
             }
         }
-        return stateCache.write(stateCacheKey, { documents: uris, timestamp: Date.now() }).then(() => {
+        return stateCache.write(stateTimestampKey, Date.now()).then(() => {
+            return writeArrayToDisk(uris, path.join(storagePath, 'state', knowDocsFilename)).catch(()=>{});
+        }).then(()=>{
             return refStore.closeAll();
         }).then(() => {
             return cacheWriteReferenceStore();

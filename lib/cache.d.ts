@@ -22,3 +22,5 @@ export declare class FileCache implements Cache {
     flush(): Promise<void>;
     private _filePath(key);
 }
+export declare function writeArrayToDisk(items: any[], filePath: string): Promise<void>;
+export declare function readArrayFromDisk(filePath: string): Promise<any[]>;
