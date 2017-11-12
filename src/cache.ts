@@ -8,7 +8,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as util from './util';
 import { Log } from './logger';
-import * as jsonstream from 'jsonstream';
+import * as jsonstream from 'JSONStream';
 
 export interface Cache {
     read(key: string): Promise<any>;
