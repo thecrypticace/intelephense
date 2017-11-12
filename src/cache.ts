@@ -8,6 +8,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as util from './util';
 import { Log } from './logger';
+import * as jsonstream from 'jsonstream';
 
 export interface Cache {
     read(key: string): Promise<any>;
@@ -201,5 +202,50 @@ export class FileCache implements Cache {
     private _filePath(key: string) {
         return path.join(this.path, Math.abs(util.hash32(key)).toString(16));
     }
+
+}
+
+
+export function writeArrayToDisk(items:any[], filePath:string) {
+
+    return new Promise<void>((resolve, reject) => {
+
+        let transformStream = jsonstream.stringify();
+        let writeStream = fs.createWriteStream(filePath);
+    
+        transformStream.pipe(writeStream);
+
+        writeStream.on('finish', () => {
+            resolve();
+        }).on('error', (err) => {
+            Log.error(err.message);
+            reject(err.message);
+        });
+
+        for(let n = 0, l = items.length; n < l; ++n) {
+            transformStream.write(items[n]);
+        }
+    
+        transformStream.end();
+    });
+
+}
+
+export function readArrayFromDisk(filePath: string) {
+
+    return new Promise<any[]>((resolve, reject) => {
+        let transformStream = jsonstream.parse('*');
+        let readStream = fs.createReadStream(filePath);
+        let items: any[] = [];
+
+        readStream.pipe(transformStream).on('data', (item) => {
+            items.push(item);
+        }).on('end', () => {
+            resolve(items);
+        }).on('error', (err) => {
+            Log.error(err.message);
+            reject(err.message);
+        });
+    });
 
 }

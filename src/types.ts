@@ -534,7 +534,7 @@ export interface BinarySearchResult {
     isExactMatch: boolean
 }
 
-interface NameIndexNode<T> {
+export interface NameIndexNode<T> {
     key: string;
     items: T[];
 }
@@ -638,6 +638,15 @@ export class NameIndex<T> {
     find(text: string) {
         let node = this._nodeFind(text.toLowerCase());
         return node ? node.items : [];
+    }
+
+    toJSON() {
+        return this._nodeArray;
+    }
+
+    fromJSON(data:NameIndexNode<T>[]) {
+        this._nodeArray = data;
+        this._binarySearch = new BinarySearch<NameIndexNode<T>>(this._nodeArray);
     }
 
     private _nodeMatch(lcText: string) {

@@ -20,7 +20,7 @@ import { ReferenceReader } from './referenceReader';
 import { NameResolver } from './nameResolver';
 import { ReferenceProvider } from './referenceProvider';
 import { ReferenceStore } from './reference';
-import { createCache, Cache } from './cache';
+import { createCache, Cache, writeArrayToDisk, readArrayFromDisk } from './cache';
 import { Log, LogWriter } from './logger';
 import * as path from 'path';
 export { LanguageRange } from './parsedDocument';
@@ -55,6 +55,7 @@ export namespace Intelephense {
     let diagnosticsUnsubscribe: Unsubscribe;
 
     let cacheTimestamp = 0;
+    let storagePath = '';
 
     export function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void) {
         if (diagnosticsUnsubscribe) {
@@ -71,9 +72,10 @@ export namespace Intelephense {
         if (options.logWriter) {
             Log.writer = options.logWriter;
         }
-        symbolCache = createCache(path.join(options.storagePath, 'intelephense', 'symbols'));
-        refCache = createCache(path.join(options.storagePath, 'intelephense', 'references'));
-        stateCache = createCache(path.join(options.storagePath, 'intelephense', 'state'));
+        storagePath = options.storagePath;
+        symbolCache = createCache(path.join(storagePath, 'intelephense', 'symbols'));
+        refCache = createCache(path.join(storagePath, 'intelephense', 'references'));
+        stateCache = createCache(path.join(storagePath, 'intelephense', 'state'));
         documentStore = new ParsedDocumentStore();
         symbolStore = new SymbolStore();
         refStore = new ReferenceStore(refCache);
@@ -152,90 +154,32 @@ export namespace Intelephense {
 
     }
 
-    const refStoreMetaCacheKey = 'refStoreMeta';
-    const refStoreChunkCacheKey = 'refStoreChunk';
+    const refStoreTableSummariesFileName = 'ref_store_table_summaries.json';
+    const refStoreNameIndexFileName = 'ref_store_name_index.json';
 
     function cacheWriteReferenceStore() {
         let data = refStore.toJSON();
 
-        if (data.length < 1) {
+        let promise:Promise<void>;
+
+        if (data && data.length > 0) {
+            return writeArrayToDisk(data, path.join(storagePath, 'intelephense', refStoreTableSummariesFileName)).catch((e)=>{});
+        } else {
             return Promise.resolve();
         }
-
-        const size = 5000;
-        let chunk: any;
-        let chunks: any[];
-
-        //chunk this as it could be large
-        for (let n = 0, l = data.length; n < l; n += size) {
-            chunks.push(data.slice(n, n + size));
-        }
-
-        let chunkCount = chunks.length;
-        let counter = 0;
-
-        return new Promise<void>((resolve, reject) => {
-
-            let onFailure = (msg: string) => {
-                Log.error(msg);
-                cacheChunkFn();
-            }
-
-            let cacheChunkFn = () => {
-
-                let chunk = chunks.shift();
-                let chunkKey = refStoreChunkCacheKey + counter.toString();
-                counter++;
-
-                if (chunk) {
-                    refCache.write(chunkKey, chunk).then(cacheChunkFn).catch(onFailure);
-                } else {
-                    resolve();
-                }
-            }
-            refCache.write(refStoreMetaCacheKey, chunkCount).then(cacheChunkFn).catch(onFailure);
-
-        });
 
     }
 
     function cacheReadReferenceStore() {
 
-        return new Promise<void>((resolve, reject) => {
+        let refStoreTables:any[];
 
-            refCache.read(refStoreMetaCacheKey).then((v) => {
-                if (isNaN(v) || v < 1) {
-                    resolve();
-                }
+        return readArrayFromDisk(refStoreTableSummariesFileName).then((items) => {
+            if(items && items.length > 0) {
+                refStore.fromJSON(items);
+            }
+        }).catch((err)=>{
 
-                let whole: any[] = [];
-                let counter = 0;
-
-                let onFailure = (msg: string) => {
-                    reject(msg);
-                }
-
-                let onReadFn = (data: any) => {
-                    counter++;
-                    if (data) {
-                        Array.prototype.push.apply(whole, data);
-                    } else {
-                        reject('Reference cache missing data');
-                        return;
-                    }
-
-                    if (counter >= v) {
-                        refStore.fromJSON(whole);
-                        resolve();
-                    } else {
-                        refCache.read(refStoreChunkCacheKey + counter.toString()).then(onReadFn).catch(onFailure);
-                    }
-
-                }
-
-                refCache.read(refStoreChunkCacheKey + counter.toString()).then(onReadFn).catch(onFailure);
-
-            });
         });
 
     }

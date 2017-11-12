@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Predicate, TreeVisitor, TreeTraverser, NameIndex, Traversable, SortedList } from './types';
+import { Predicate, TreeVisitor, TreeTraverser, NameIndex, Traversable, SortedList, NameIndexNode } from './types';
 import { SymbolIdentifier, SymbolKind } from './symbol';
 import { Range, Location, Position } from 'vscode-languageserver-types';
 import * as util from './util';
