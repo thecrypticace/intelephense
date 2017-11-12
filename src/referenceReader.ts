@@ -356,13 +356,9 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                 break;
 
             case PhraseType.RelativeScope:
-                if (parentTransform) {
-                    let context = this._classStack.length ? this._classStack[this._classStack.length - 1] : null;
-                    let name = context ? context.name : '';
-                    this._transformStack.push(new RelativeScopeTransform(name, this.doc.nodeLocation(node)));
-                } else {
-                    this._transformStack.push(null);
-                }
+                let context = this._classStack.length ? this._classStack[this._classStack.length - 1] : null;
+                let name = context ? context.name : '';
+                this._transformStack.push(new RelativeScopeTransform(name, this.doc.nodeLocation(node)));
                 break;
 
             case PhraseType.InstanceOfExpression:
@@ -464,7 +460,7 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
             case PhraseType.ParameterDeclaration:
             case PhraseType.AnonymousFunctionUseVariable:
             case PhraseType.RelativeScope:
-                if (scope) {
+                if (scope && transform) {
                     let ref = (<ReferenceNodeTransform>transform).reference;
 
                     if (ref) {
