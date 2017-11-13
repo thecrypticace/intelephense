@@ -50,7 +50,7 @@ export namespace Intelephense {
     let refCache: Cache;
     let stateCache: Cache;
     const stateTimestampKey = 'timestamp';
-    const knowDocsFilename = 'known_uris.json';
+    const knownDocsFilename = 'known_uris.json';
     const refStoreCacheKey = 'referenceStore';
 
     let diagnosticsUnsubscribe: Unsubscribe;
@@ -113,7 +113,7 @@ export namespace Intelephense {
                 cacheTimestamp = data;
                 
             }).then(()=>{
-                return readArrayFromDisk(path.join(storagePath, 'state', knowDocsFilename));
+                return readArrayFromDisk(path.join(storagePath, 'state', knownDocsFilename));
             }).then((uris)=>{
                 return readCachedSymbolTables(uris);
             }).then(() => {
@@ -133,7 +133,7 @@ export namespace Intelephense {
             }
         }
         return stateCache.write(stateTimestampKey, Date.now()).then(() => {
-            return writeArrayToDisk(uris, path.join(storagePath, 'state', knowDocsFilename)).catch(()=>{});
+            return writeArrayToDisk(uris, path.join(storagePath, 'state', knownDocsFilename)).catch(()=>{});
         }).then(()=>{
             return refStore.closeAll();
         }).then(() => {

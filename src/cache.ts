@@ -219,6 +219,7 @@ export function writeArrayToDisk(items:any[], filePath:string) {
             resolve();
         }).on('error', (err) => {
             Log.error(err.message);
+            fs.writeFileSync(filePath, err.message);
             reject(err.message);
         });
 
