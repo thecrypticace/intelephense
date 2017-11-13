@@ -113,7 +113,7 @@ export namespace Intelephense {
                 cacheTimestamp = data;
                 
             }).then(()=>{
-                return readArrayFromDisk(path.join(storagePath, 'state', knownDocsFilename));
+                return readArrayFromDisk(path.join(storagePath, 'intelephense', 'state', knownDocsFilename));
             }).then((uris)=>{
                 return readCachedSymbolTables(uris);
             }).then(() => {
@@ -133,7 +133,7 @@ export namespace Intelephense {
             }
         }
         return stateCache.write(stateTimestampKey, Date.now()).then(() => {
-            return writeArrayToDisk(uris, path.join(storagePath, 'state', knownDocsFilename)).catch(()=>{});
+            return writeArrayToDisk(uris, path.join(storagePath, 'intelephense','state', knownDocsFilename)).catch(()=>{});
         }).then(()=>{
             return refStore.closeAll();
         }).then(() => {
@@ -166,8 +166,6 @@ export namespace Intelephense {
 
     function cacheWriteReferenceStore() {
         let data = refStore.toJSON();
-
-        let promise:Promise<void>;
 
         if (data && data.length > 0) {
             return writeArrayToDisk(data, path.join(storagePath, 'intelephense', refStoreTableSummariesFileName)).catch((e)=>{});
