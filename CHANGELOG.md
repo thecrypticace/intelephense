@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.8.1] - 2017-11-12
+## [0.8.1] - 2017-11-13
 #### Fixed
 * Improved error handling when reading and writing to cache
 * use JSONStream for reading/writing large arrays
