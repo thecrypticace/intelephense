@@ -54,7 +54,7 @@ export class NameResolver {
         return this.concatNamespaceName(this.namespaceName, relativeName);
     }
 
-    resolveNotFullyQualified(notFqn: string, kind?: SymbolKind) {
+    resolveNotFullyQualified(notFqn: string, kind?: SymbolKind, resolveStatic?:boolean) {
 
         if (!notFqn) {
             return '';
@@ -67,7 +67,7 @@ export class NameResolver {
                 return this.className;
             case 'static':
             case '$this':
-                return lcNotFqn;
+                return resolveStatic ? this.className : lcNotFqn;
             case 'parent':
                 return this.classBaseName;
             default:

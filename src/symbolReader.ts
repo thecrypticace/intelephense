@@ -1399,6 +1399,9 @@ class MethodDeclarationHeaderTransform implements NodeTransform {
         switch (transform.phraseType) {
             case PhraseType.MemberModifierList:
                 this.modifiers = (<MemberModifierListTransform>transform).modifiers;
+                if(!(this.modifiers & (SymbolModifier.Public | SymbolModifier.Protected | SymbolModifier.Private))) {
+                    this.modifiers |= SymbolModifier.Public;
+                }
                 break;
 
             case PhraseType.Identifier:

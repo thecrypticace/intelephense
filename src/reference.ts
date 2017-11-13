@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Predicate, TreeVisitor, TreeTraverser, NameIndex, Traversable, SortedList } from './types';
+import { Predicate, TreeVisitor, TreeTraverser, NameIndex, Traversable, SortedList, NameIndexNode } from './types';
 import { SymbolIdentifier, SymbolKind } from './symbol';
 import { Range, Location, Position } from 'vscode-languageserver-types';
 import * as util from './util';
@@ -195,7 +195,7 @@ export class ReferenceStore {
     close(uri: string) {
         let table = this._tablesRemove(uri);
         if (table) {
-            return this._cache.write(table.uri, table.root).catch((msg) => { Log.warn(msg) });
+            return this._cache.write(table.uri, table.root).catch((msg) => { Log.error(msg) });
         }
         return Promise.resolve();
     }
@@ -210,7 +210,7 @@ export class ReferenceStore {
 
             let onReject = (msg: string) => {
                 --count;
-                Log.warn(msg);
+                Log.error(msg);
                 writeTableFn();
             }
 
@@ -286,8 +286,8 @@ export class ReferenceStore {
 
     }
 
-    fromJSON(data:any) {
-        this._summaryIndex = new SortedList<ReferenceTableSummary>(ReferenceTableSummary.compare, data._summaryIndex);
+    fromJSON(data:ReferenceTableSummary[]) {
+        this._summaryIndex = new SortedList<ReferenceTableSummary>(ReferenceTableSummary.compare, data);
         let items = this._summaryIndex.items;
         let item:ReferenceTableSummary;
         for(let n = 0; n < items.length; ++n) {
@@ -297,9 +297,7 @@ export class ReferenceStore {
     }
 
     toJSON() {
-        return {
-            _summaryIndex:this._summaryIndex.items
-        }
+        return this._summaryIndex.items;
     }
 
     private _findInTables(tables: ReferenceTable[], name: string, filter?: Predicate<Reference>) {

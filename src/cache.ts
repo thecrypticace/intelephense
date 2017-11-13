@@ -7,36 +7,45 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as util from './util';
+import { Log } from './logger';
+import * as jsonstream from 'JSONStream';
 
 export interface Cache {
     read(key: string): Promise<any>;
     write(key: string, data: any): Promise<void>;
     delete(key: string): Promise<void>;
-    flush():Promise<void>;
+    flush(): Promise<void>;
 }
 
-export function createCache(path:string) {
-    return new FileCache(path);
+export function createCache(path: string) {
+    let cache: Cache;
+    try {
+        cache = new FileCache(path);
+    } catch (e) {
+        Log.error('Cache error: ' + e.message);
+        cache = new MemoryCache();
+    }
+    return cache;
 }
 
 export class MemoryCache implements Cache {
 
-    private _map:{[index:string]:any};
+    private _map: { [index: string]: any };
 
     constructor() {
         this._map = {};
     }
 
-    read(key:string) {
+    read(key: string) {
         return Promise.resolve(this._map[key]);
     }
 
-    write(key:string, data:any) {
+    write(key: string, data: any) {
         this._map[key] = data;
         return Promise.resolve();
     }
 
-    delete(key:string) {
+    delete(key: string) {
         delete this._map[key];
         return Promise.resolve();
     }
@@ -53,7 +62,16 @@ type Item = [string, any];
 
 function writeFile(filePath: string, bucket: Bucket) {
     return new Promise<void>((resolve, reject) => {
-        fs.writeFile(filePath, JSON.stringify(bucket), (err) => {
+
+        let json: string
+        try {
+            json = JSON.stringify(bucket);
+        } catch (e) {
+            reject(e.message);
+            return;
+        }
+
+        fs.writeFile(filePath, json, (err) => {
             if (err) {
                 reject(err.message);
                 return;
@@ -87,7 +105,15 @@ function readFile(filePath: string): Promise<Bucket> {
                 }
                 return;
             }
-            resolve(JSON.parse(data.toString()));
+
+            let bucket: Bucket;
+            try {
+                bucket = JSON.parse(data.toString());
+            } catch (e) {
+                reject(e.message);
+            }
+
+            resolve(bucket);
         });
     });
 
@@ -164,7 +190,7 @@ export class FileCache implements Cache {
     flush() {
         return new Promise<void>((resolve, reject) => {
             fs.emptyDir(this.path, (err) => {
-                if(err) {
+                if (err) {
                     reject(err.message);
                 } else {
                     resolve();
@@ -176,5 +202,64 @@ export class FileCache implements Cache {
     private _filePath(key: string) {
         return path.join(this.path, Math.abs(util.hash32(key)).toString(16));
     }
+
+}
+
+
+export function writeArrayToDisk(items:any[], filePath:string) {
+
+    return new Promise<void>((resolve, reject) => {
+
+        let transformStream = jsonstream.stringify();
+        let writeStream = fs.createWriteStream(filePath);
+
+        transformStream.on('error', (err) => {
+            Log.error(err.message);
+            reject(err.message);
+        });
+    
+        transformStream.pipe(writeStream);
+
+        writeStream.on('finish', () => {
+            resolve();
+        }).on('error', (err) => {
+            Log.error(err.message);
+            reject(err.message);
+        });
+
+        for(let n = 0, l = items.length; n < l; ++n) {
+            transformStream.write(items[n]);
+        }
+    
+        transformStream.end();
+    });
+
+}
+
+export function readArrayFromDisk(filePath: string) {
+
+    return new Promise<any[]>((resolve, reject) => {
+        let transformStream = jsonstream.parse('*');
+        let readStream = fs.createReadStream(filePath);
+        let items: any[] = [];
+
+        readStream.on('error', (err)=>{
+            if (err && err.code !== 'ENOENT') {
+                Log.error(err.message);
+                reject(err.message);
+            } else {
+                resolve(items);
+            }
+        });
+
+        readStream.pipe(transformStream).on('data', (item) => {
+            items.push(item);
+        }).on('end', () => {
+            resolve(items);
+        }).on('error', (err) => {
+            Log.error(err.message);
+            reject(err.message);
+        });
+    });
 
 }

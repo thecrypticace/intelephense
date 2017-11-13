@@ -34,9 +34,11 @@ function fn()
 
 let conditionalCurlySrc =
 `<?php
-if (true) {
+if (true) 
+{
 }
-else {
+else 
+{
 }
 
 `;
@@ -75,6 +77,12 @@ EOD;
 
 `;
 
+let noSpaceRequireSrc = 
+`<?php
+require_once('file');
+
+`;
+
 describe('provideDocumentFormattingEdits', ()=>{
 
 
@@ -94,11 +102,37 @@ describe('provideDocumentFormattingEdits', ()=>{
             {
                 range: {
                     start: {
-                        line: 2,
+                        line: 4,
+                        character: 4
+                    },
+                    end: {
+                        line: 5,
+                        character: 0
+                    }
+                },
+                newText: " "
+            },
+            {
+                range: {
+                    start: {
+                        line: 3,
                         character: 1
                     },
                     end: {
-                        line: 3,
+                        line: 4,
+                        character: 0
+                    }
+                },
+                newText: " "
+            },
+            {
+                range: {
+                    start: {
+                        line: 1,
+                        character: 9
+                    },
+                    end: {
+                        line: 2,
                         character: 0
                     }
                 },
@@ -208,6 +242,13 @@ describe('provideDocumentFormattingEdits', ()=>{
         let edits = provider.provideDocumentRangeFormattingEdits({uri: 'test'}, lsp.Range.create(0,0,5,0), {tabSize:4, insertSpaces:true});
         //console.log(JSON.stringify(edits, null, 4));
         assert.isNotEmpty(edits);
+    });
+
+    it('no space between require and (', ()=>{
+        let provider = setup(noSpaceRequireSrc);
+        let edits = provider.provideDocumentFormattingEdits({uri: 'test'}, {tabSize:4, insertSpaces:true});
+        //console.log(JSON.stringify(edits, null, 4));
+        assert.isEmpty(edits);
     });
 
 });

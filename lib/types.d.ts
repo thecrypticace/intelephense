@@ -107,6 +107,10 @@ export interface BinarySearchResult {
     rank: number;
     isExactMatch: boolean;
 }
+export interface NameIndexNode<T> {
+    key: string;
+    items: T[];
+}
 export declare type KeysDelegate<T> = (t: T) => string[];
 export declare class NameIndex<T> {
     private _keysDelegate;
@@ -128,6 +132,8 @@ export declare class NameIndex<T> {
      * @param text
      */
     find(text: string): T[];
+    toJSON(): NameIndexNode<T>[];
+    fromJSON(data: NameIndexNode<T>[]): void;
     private _nodeMatch(lcText);
     private _nodeFind(lcText);
     private _insertNode(node);

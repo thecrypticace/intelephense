@@ -20,18 +20,17 @@ import { ReferenceReader } from './referenceReader';
 import { NameResolver } from './nameResolver';
 import { ReferenceProvider } from './referenceProvider';
 import { ReferenceStore } from './reference';
-import { createCache, Cache } from './cache';
+import { createCache, Cache, writeArrayToDisk, readArrayFromDisk } from './cache';
 import { Log, LogWriter } from './logger';
 import * as path from 'path';
 export { LanguageRange } from './parsedDocument';
-import {HoverProvider} from './hoverProvider';
+import { HoverProvider } from './hoverProvider';
 import { HighlightProvider } from './highlightProvider';
 
 
 export namespace Intelephense {
 
     const phpLanguageId = 'php';
-    const htmlLanguageId = 'html';
 
     let documentStore: ParsedDocumentStore;
     let symbolStore: SymbolStore;
@@ -44,18 +43,20 @@ export namespace Intelephense {
     let formatProvider: FormatProvider;
     let nameTextEditProvider: NameTextEditProvider;
     let referenceProvider: ReferenceProvider;
-    let hoverProvider:HoverProvider;
-    let highlightProvider:HighlightProvider;
+    let hoverProvider: HoverProvider;
+    let highlightProvider: HighlightProvider;
     let cacheClear = false;
     let symbolCache: Cache;
     let refCache: Cache;
     let stateCache: Cache;
-    const stateCacheKey = 'state';
+    const stateTimestampKey = 'timestamp';
+    const knownDocsFilename = 'known_uris.json';
     const refStoreCacheKey = 'referenceStore';
 
     let diagnosticsUnsubscribe: Unsubscribe;
 
     let cacheTimestamp = 0;
+    let storagePath = '';
 
     export function onPublishDiagnostics(fn: (args: PublishDiagnosticsEventArgs) => void) {
         if (diagnosticsUnsubscribe) {
@@ -72,9 +73,10 @@ export namespace Intelephense {
         if (options.logWriter) {
             Log.writer = options.logWriter;
         }
-        symbolCache = createCache(path.join(options.storagePath, 'intelephense', 'symbols'));
-        refCache = createCache(path.join(options.storagePath, 'intelephense', 'references'));
-        stateCache = createCache(path.join(options.storagePath, 'intelephense', 'state'));
+        storagePath = options.storagePath;
+        symbolCache = createCache(path.join(storagePath, 'symbols'));
+        refCache = createCache(path.join(storagePath, 'references'));
+        stateCache = createCache(path.join(storagePath, 'state'));
         documentStore = new ParsedDocumentStore();
         symbolStore = new SymbolStore();
         refStore = new ReferenceStore(refCache);
@@ -100,24 +102,24 @@ export namespace Intelephense {
             return clearCache().then(() => {
                 symbolStore.add(SymbolTable.readBuiltInSymbols());
             }).catch((msg) => {
-                Log.warn(msg);
+                Log.error(msg);
             });
         } else {
             symbolStore.add(SymbolTable.readBuiltInSymbols());
-            return stateCache.read(stateCacheKey).then((data) => {
+            return stateCache.read(stateTimestampKey).then((data) => {
                 if (!data) {
                     return;
                 }
-                cacheTimestamp = data.timestamp;
-                return readCachedSymbolTables(data.documents);
+                cacheTimestamp = data;
+                
+            }).then(()=>{
+                return readArrayFromDisk(path.join(storagePath, 'state', knownDocsFilename));
+            }).then((uris)=>{
+                return readCachedSymbolTables(uris);
             }).then(() => {
-                return refCache.read(refStoreCacheKey);
-            }).then((data) => {
-                if (data) {
-                    refStore.fromJSON(data);
-                }
+                return cacheReadReferenceStore();
             }).catch((msg) => {
-                Log.warn(msg);
+                Log.error(msg);
             });
         }
 
@@ -130,10 +132,12 @@ export namespace Intelephense {
                 uris.push(t.uri);
             }
         }
-        return stateCache.write(stateCacheKey, { documents: uris, timestamp: Date.now() }).then(() => {
+        return stateCache.write(stateTimestampKey, Date.now()).then(() => {
+            return writeArrayToDisk(uris, path.join(storagePath, 'state', knownDocsFilename)).catch(()=>{});
+        }).then(()=>{
             return refStore.closeAll();
         }).then(() => {
-            return refCache.write(refStoreCacheKey, refStore);
+            return cacheWriteReferenceStore();
         }).then(() => {
             return new Promise<void>((resolve, reject) => {
                 let openDocs = documentStore.documents;
@@ -142,7 +146,7 @@ export namespace Intelephense {
                     if (doc) {
                         let symbolTable = symbolStore.getSymbolTable(doc.uri);
                         symbolCache.write(doc.uri, symbolTable).then(cacheSymbolTableFn).catch((msg) => {
-                            Log.warn(msg);
+                            Log.error(msg);
                             cacheSymbolTableFn();
                         });
                     } else {
@@ -152,7 +156,35 @@ export namespace Intelephense {
                 cacheSymbolTableFn();
             });
         }).catch((msg) => {
-            Log.warn(msg);
+            Log.error(msg);
+        });
+
+    }
+
+    const refStoreTableSummariesFileName = 'ref_store_table_summaries.json';
+    const refStoreNameIndexFileName = 'ref_store_name_index.json';
+
+    function cacheWriteReferenceStore() {
+        let data = refStore.toJSON();
+
+        if (data && data.length > 0) {
+            return writeArrayToDisk(data, path.join(storagePath, 'state', refStoreTableSummariesFileName)).catch((e)=>{});
+        } else {
+            return Promise.resolve();
+        }
+
+    }
+
+    function cacheReadReferenceStore() {
+
+        let refStoreTables:any[];
+
+        return readArrayFromDisk(path.join(storagePath, 'state', refStoreTableSummariesFileName)).then((items) => {
+            if(items && items.length > 0) {
+                refStore.fromJSON(items);
+            }
+        }).catch((err)=>{
+
         });
 
     }
@@ -172,7 +204,7 @@ export namespace Intelephense {
 
             let batch = Math.min(4, count);
             let onCacheReadErr = (msg: string) => {
-                Log.warn(msg);
+                Log.error(msg);
                 onCacheRead(undefined);
             }
             let onCacheRead = (data: any) => {
@@ -208,31 +240,25 @@ export namespace Intelephense {
         });
     }
 
-    export function provideHighlights(uri:string, position:lsp.Position) {
+    export function provideHighlights(uri: string, position: lsp.Position) {
         return highlightProvider.provideHightlights(uri, position);
     }
 
-    export function provideHover(uri:string, position:lsp.Position) {
+    export function provideHover(uri: string, position: lsp.Position) {
         return hoverProvider.provideHover(uri, position);
     }
 
     export function knownDocuments() {
 
-        let uris = new Set<string>();
-        for (let t of symbolStore.tables) {
-            if (t.uri !== 'php') {
-                uris.add(t.uri);
-            }
-        }
-
-        //check that refs available as well
+        //use ref uris because refs are determined last and may have been interrupted
+        let known:string[] = [];
         for (let uri of refStore.knownDocuments()) {
-            if (!uris.has(uri)) {
-                uris.delete(uri);
+            if (uri !== 'php') {
+                known.push(uri);
             }
         }
 
-        return { timestamp: cacheTimestamp, documents: Array.from(uris) };
+        return { timestamp: cacheTimestamp, documents: known };
     }
 
     export function documentLanguageRanges(textDocument: lsp.TextDocumentIdentifier): LanguageRangeList {
@@ -248,7 +274,7 @@ export namespace Intelephense {
 
     export function openDocument(textDocument: lsp.TextDocumentItem) {
 
-        if ((textDocument.languageId !== phpLanguageId && textDocument.languageId !== htmlLanguageId) || documentStore.has(textDocument.uri)) {
+        if (textDocument.languageId !== phpLanguageId || documentStore.has(textDocument.uri)) {
             return;
         }
 
@@ -269,7 +295,7 @@ export namespace Intelephense {
         let symbolTable = symbolStore.getSymbolTable(textDocument.uri);
         if (symbolTable) {
             symbolTable.pruneScopedVars();
-            return symbolCache.write(symbolTable.uri, symbolTable).catch((msg) => { Log.warn(msg) });
+            return symbolCache.write(symbolTable.uri, symbolTable).catch((msg) => { Log.error(msg) });
         }
     }
 

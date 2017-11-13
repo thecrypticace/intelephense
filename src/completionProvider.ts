@@ -771,6 +771,7 @@ abstract class MemberAccessCompletion implements CompletionStrategy {
                 case PhraseType.RelativeQualifiedName:
                 case PhraseType.QualifiedName:
                 case PhraseType.SimpleVariable:
+                case PhraseType.RelativeScope:
                     ref = traverser.reference;
                     break;
 
@@ -906,7 +907,7 @@ class ScopedAccessCompletion extends MemberAccessCompletion {
     }
 
     protected _createMemberPredicate(scopeName: string, word: string, classContext: TypeAggregate): Predicate<PhpSymbol> {
-        if (classContext && scopeName === classContext.name.toLowerCase()) {
+        if (classContext && scopeName.toLowerCase() === classContext.name.toLowerCase()) {
             //public, protected, private
             return (x) => {
                 return (x.modifiers & SymbolModifier.Static) > 0 && util.ciStringContains(word, x.name);
@@ -918,7 +919,7 @@ class ScopedAccessCompletion extends MemberAccessCompletion {
                 return !(x.modifiers & SymbolModifier.Private) && util.ciStringContains(word, x.name);
             };
 
-        } else if (classContext && classContext!.isAssociated(scopeName)) {
+        } else if (classContext && classContext.isAssociated(scopeName)) {
             //public, protected
             return (x) => {
                 return (x.modifiers & SymbolModifier.Static) > 0 &&
