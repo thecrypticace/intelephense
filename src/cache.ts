@@ -212,6 +212,12 @@ export function writeArrayToDisk(items:any[], filePath:string) {
 
         let transformStream = jsonstream.stringify();
         let writeStream = fs.createWriteStream(filePath);
+
+        transformStream.on('error', (err) => {
+            Log.error(err.message);
+            fs.writeFileSync(filePath, err.message);
+            reject(err.message);
+        });
     
         transformStream.pipe(writeStream);
 
