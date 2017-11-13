@@ -74,9 +74,9 @@ export namespace Intelephense {
             Log.writer = options.logWriter;
         }
         storagePath = options.storagePath;
-        symbolCache = createCache(path.join(storagePath, 'intelephense', 'symbols'));
-        refCache = createCache(path.join(storagePath, 'intelephense', 'references'));
-        stateCache = createCache(path.join(storagePath, 'intelephense', 'state'));
+        symbolCache = createCache(path.join(storagePath, 'symbols'));
+        refCache = createCache(path.join(storagePath, 'references'));
+        stateCache = createCache(path.join(storagePath, 'state'));
         documentStore = new ParsedDocumentStore();
         symbolStore = new SymbolStore();
         refStore = new ReferenceStore(refCache);
@@ -113,7 +113,7 @@ export namespace Intelephense {
                 cacheTimestamp = data;
                 
             }).then(()=>{
-                return readArrayFromDisk(path.join(storagePath, 'intelephense', 'state', knownDocsFilename));
+                return readArrayFromDisk(path.join(storagePath, 'state', knownDocsFilename));
             }).then((uris)=>{
                 return readCachedSymbolTables(uris);
             }).then(() => {
@@ -133,7 +133,7 @@ export namespace Intelephense {
             }
         }
         return stateCache.write(stateTimestampKey, Date.now()).then(() => {
-            return writeArrayToDisk(uris, path.join(storagePath, 'intelephense','state', knownDocsFilename)).catch(()=>{});
+            return writeArrayToDisk(uris, path.join(storagePath, 'state', knownDocsFilename)).catch(()=>{});
         }).then(()=>{
             return refStore.closeAll();
         }).then(() => {
@@ -168,7 +168,7 @@ export namespace Intelephense {
         let data = refStore.toJSON();
 
         if (data && data.length > 0) {
-            return writeArrayToDisk(data, path.join(storagePath, 'intelephense', refStoreTableSummariesFileName)).catch((e)=>{});
+            return writeArrayToDisk(data, path.join(storagePath, 'state', refStoreTableSummariesFileName)).catch((e)=>{});
         } else {
             return Promise.resolve();
         }
@@ -179,7 +179,7 @@ export namespace Intelephense {
 
         let refStoreTables:any[];
 
-        return readArrayFromDisk(refStoreTableSummariesFileName).then((items) => {
+        return readArrayFromDisk(path.join(storagePath, 'state', refStoreTableSummariesFileName)).then((items) => {
             if(items && items.length > 0) {
                 refStore.fromJSON(items);
             }
