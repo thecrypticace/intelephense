@@ -624,7 +624,8 @@ class NameResolverVisitor implements TreeVisitor<PhpSymbol> {
 
     postorder(node: PhpSymbol, spine: PhpSymbol[]) {
 
-        if (this.haltTraverse) {
+        if (this.haltTraverse || (node.location && node.location.range.end.line > this.pos.line)) {
+            this.haltTraverse = true;
             return;
         }
 

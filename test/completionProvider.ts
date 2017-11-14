@@ -280,6 +280,17 @@ class Foo {
 }
 `;
 
+var memberVisibilitySrc = 
+`<?php
+class Foo {
+    private function privateFn(){}
+    protected function protectedFn(){}
+    function publicFn() {
+        $this->
+    }
+}
+`;
+
 function setup(src: string | string[]) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -874,6 +885,21 @@ describe('CompletionProvider', () => {
 
     });
 
+
+    describe('member visibility', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(memberVisibilitySrc);
+        });
+
+        it('this private and protected', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 5, character: 15 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.lengthOf(completions.items, 3);
+        });
+
+    });
 
 });
 

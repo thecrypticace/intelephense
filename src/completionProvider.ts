@@ -952,7 +952,8 @@ class ObjectAccessCompletion extends MemberAccessCompletion {
     }
 
     protected _createMemberPredicate(scopeName: string, word: string, classContext: TypeAggregate): Predicate<PhpSymbol> {
-        if (classContext && scopeName === classContext.name.toLowerCase()) {
+
+        if (classContext && scopeName.toLowerCase() === classContext.name.toLowerCase()) {
             //public, protected, private
             return (x) => {
                 return !(x.modifiers & SymbolModifier.Static) && util.ciStringContains(word, x.name);
