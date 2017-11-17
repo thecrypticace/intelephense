@@ -637,7 +637,7 @@ export class NameIndex<T> {
      */
     find(text: string) {
         let node = this._nodeFind(text.toLowerCase());
-        return node ? node.items : [];
+        return node ? node.items.slice(0) : [];
     }
 
     toJSON() {
