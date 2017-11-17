@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.8.2] - TBA
+#### Fixed
+* Case where private and protected members not suggested inside last function in class
+* Crash when no storagePath available 
+
 ## [0.8.1] - 2017-11-13
 #### Fixed
 * Improved error handling when reading and writing to cache
