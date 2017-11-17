@@ -19,6 +19,11 @@ export interface Cache {
 
 export function createCache(path: string) {
     let cache: Cache;
+
+    if(!path) {
+        return new MemoryCache();
+    }
+
     try {
         cache = new FileCache(path);
     } catch (e) {

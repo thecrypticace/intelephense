@@ -74,9 +74,9 @@ export namespace Intelephense {
             Log.writer = options.logWriter;
         }
         storagePath = options.storagePath;
-        symbolCache = createCache(path.join(storagePath, 'symbols'));
-        refCache = createCache(path.join(storagePath, 'references'));
-        stateCache = createCache(path.join(storagePath, 'state'));
+        symbolCache = createCache(storagePath ? path.join(storagePath, 'symbols') : undefined);
+        refCache = createCache(storagePath ? path.join(storagePath, 'references'): undefined);
+        stateCache = createCache(storagePath ? path.join(storagePath, 'state'): undefined);
         documentStore = new ParsedDocumentStore();
         symbolStore = new SymbolStore();
         refStore = new ReferenceStore(refCache);
@@ -104,7 +104,7 @@ export namespace Intelephense {
             }).catch((msg) => {
                 Log.error(msg);
             });
-        } else {
+        } else if(storagePath) {
             symbolStore.add(SymbolTable.readBuiltInSymbols());
             return stateCache.read(stateTimestampKey).then((data) => {
                 if (!data) {
@@ -121,11 +121,18 @@ export namespace Intelephense {
             }).catch((msg) => {
                 Log.error(msg);
             });
+        } else {
+            symbolStore.add(SymbolTable.readBuiltInSymbols());
         }
 
     }
 
     export function shutdown() {
+
+        if(!storagePath) {
+            return;
+        }
+
         let uris: string[] = [];
         for (let t of symbolStore.tables) {
             if (t.uri !== 'php') {
