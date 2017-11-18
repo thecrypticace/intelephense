@@ -291,6 +291,16 @@ class Foo {
 }
 `;
 
+var useTraitClauseSrc = 
+`<?php
+namespace Foo;
+trait Bar {}
+namespace Bar;
+class Foo {
+    use Bar;
+}
+`;
+
 function setup(src: string | string[]) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -897,6 +907,21 @@ describe('CompletionProvider', () => {
             var completions = completionProvider.provideCompletions('test', { line: 5, character: 15 });
             //console.log(JSON.stringify(completions, null, 4));
             assert.lengthOf(completions.items, 3);
+        });
+
+    });
+
+    describe('use trait clause', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(useTraitClauseSrc);
+        });
+
+        it('traits', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 5, character: 9 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, 'Bar');
         });
 
     });

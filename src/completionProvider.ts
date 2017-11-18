@@ -175,6 +175,7 @@ export class CompletionProvider {
             new TypeDeclarationCompletion(this._config, this.symbolStore),
             new ClassBaseClauseCompletion(this._config, this.symbolStore),
             new InterfaceClauseCompletion(this._config, this.symbolStore),
+            new TraitUseClauseCompletion(this._config, this.symbolStore), 
             new NamespaceDefinitionCompletion(this._config, this.symbolStore),
             new NamespaceUseClauseCompletion(this._config, this.symbolStore),
             new NamespaceUseGroupClauseCompletion(this._config, this.symbolStore),
@@ -327,6 +328,7 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
                 item.kind = lsp.CompletionItemKind.Interface;
             //fall though
             case SymbolKind.Class:
+            case SymbolKind.Trait:
                 if ((s.modifiers & SymbolModifier.Use) > 0 && s.associated && s.associated.length) {
                     item.detail = s.associated[0].name;
                 } else {
@@ -1039,6 +1041,24 @@ class InterfaceClauseCompletion extends AbstractNameCompletion {
     private _isInterfaceClause(node: Phrase | Token) {
         return (<Phrase>node).phraseType === PhraseType.ClassInterfaceClause ||
             (<Phrase>node).phraseType === PhraseType.InterfaceBaseClause;
+    }
+
+}
+
+class TraitUseClauseCompletion extends AbstractNameCompletion {
+
+    canSuggest(traverser: ParseTreeTraverser) {
+        return traverser.ancestor(this._isNamePhrase) &&
+            ParsedDocument.isPhrase(traverser.parent(), [PhraseType.QualifiedNameList]) &&
+            ParsedDocument.isPhrase(traverser.parent(), [PhraseType.TraitUseClause]);
+    }
+
+    protected _getKeywords(traverser: ParseTreeTraverser) {
+        return [];
+    }
+
+    protected _symbolFilter(s: PhpSymbol) {
+        return s.kind === SymbolKind.Trait;
     }
 
 }

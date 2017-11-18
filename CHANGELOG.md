@@ -1,12 +1,14 @@
 # Change Log
 
 ## [0.8.2] - TBA
+#### Added
+* Completions for trait names in use trait clauses.
+
 #### Fixed
 * Case where private and protected members not suggested inside last function in class
 * Crash when no storagePath available
 * References not found after first call to reference provider.
 * Incorrect symbol kind for built in class constants causing completion crash.
-
 
 ## [0.8.1] - 2017-11-13
 #### Fixed
