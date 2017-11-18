@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.8.2] - TBA
+## [0.8.2] - 2017-11-18
 #### Added
 * Completions for trait names in use trait clauses.
 
