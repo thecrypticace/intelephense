@@ -36,5 +36,16 @@ describe('intelephense', function(){
 
     });
 
+    it('undefined storagePath', () =>{
+
+        return Intelephense.initialise({
+            storagePath:undefined,
+            logWriter:undefined
+        }).then(()=>{
+
+        });
+
+
+    });
 
 });

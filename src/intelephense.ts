@@ -123,6 +123,7 @@ export namespace Intelephense {
             });
         } else {
             symbolStore.add(SymbolTable.readBuiltInSymbols());
+            return Promise.resolve();
         }
 
     }
