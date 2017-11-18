@@ -3282,7 +3282,7 @@
     "associated": [],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FORWARD",
         "modifiers": 1,
         "description": "",
@@ -3291,7 +3291,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "REVERSE",
         "modifiers": 1,
         "description": "",
@@ -3462,7 +3462,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LEAVES_ONLY",
         "modifiers": 1,
         "description": "",
@@ -3471,7 +3471,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SELF_FIRST",
         "modifiers": 1,
         "description": "",
@@ -3480,7 +3480,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHILD_FIRST",
         "modifiers": 1,
         "description": "",
@@ -3489,7 +3489,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CATCH_GET_CHILD",
         "modifiers": 1,
         "description": "",
@@ -3797,7 +3797,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "MATCH",
         "modifiers": 1,
         "description": "",
@@ -3806,7 +3806,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GET_MATCH",
         "modifiers": 1,
         "description": "",
@@ -3815,7 +3815,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ALL_MATCHES",
         "modifiers": 1,
         "description": "",
@@ -3824,7 +3824,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SPLIT",
         "modifiers": 1,
         "description": "",
@@ -3833,7 +3833,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "REPLACE",
         "modifiers": 1,
         "description": "",
@@ -3842,7 +3842,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "USE_KEY",
         "modifiers": 1,
         "description": "",
@@ -5567,7 +5567,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_IMPLICIT_ABSTRACT",
         "modifiers": 1,
         "description": "",
@@ -5576,7 +5576,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_EXPLICIT_ABSTRACT",
         "modifiers": 1,
         "description": "",
@@ -5585,7 +5585,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_FINAL",
         "modifiers": 1,
         "description": "",
@@ -8114,7 +8114,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DROP_NEW_LINE",
         "modifiers": 1,
         "description": "",
@@ -8123,7 +8123,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "READ_AHEAD",
         "modifiers": 1,
         "description": "",
@@ -8132,7 +8132,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SKIP_EMPTY",
         "modifiers": 1,
         "description": "",
@@ -8141,7 +8141,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "READ_CSV",
         "modifiers": 1,
         "description": "",
@@ -12163,7 +12163,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ERRNO_NOERROR",
         "modifiers": 1,
         "description": "",
@@ -12172,7 +12172,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ERRNO_GENERIC",
         "modifiers": 1,
         "description": "",
@@ -12181,7 +12181,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ERRNO_TIMEOUT",
         "modifiers": 1,
         "description": "",
@@ -12190,7 +12190,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ERRNO_ERROR_IN_REPLY",
         "modifiers": 1,
         "description": "",
@@ -12199,7 +12199,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ERRNO_OID_NOT_INCREASING",
         "modifiers": 1,
         "description": "",
@@ -12208,7 +12208,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ERRNO_OID_PARSING_ERROR",
         "modifiers": 1,
         "description": "",
@@ -12217,7 +12217,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ERRNO_MULTIPLE_SET_QUERIES",
         "modifiers": 1,
         "description": "",
@@ -12226,7 +12226,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ERRNO_ANY",
         "modifiers": 1,
         "description": "",
@@ -12235,7 +12235,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "VERSION_1",
         "modifiers": 1,
         "description": "",
@@ -12244,7 +12244,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "VERSION_2C",
         "modifiers": 1,
         "description": "",
@@ -12253,7 +12253,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "VERSION_2c",
         "modifiers": 1,
         "description": "",
@@ -12262,7 +12262,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "VERSION_3",
         "modifiers": 1,
         "description": "",
@@ -13371,7 +13371,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "MIT_NEED_ANY",
         "modifiers": 1,
         "description": "",
@@ -13380,7 +13380,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "MIT_NEED_ALL",
         "modifiers": 1,
         "description": "",
@@ -13389,7 +13389,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "MIT_KEYS_NUMERIC",
         "modifiers": 1,
         "description": "",
@@ -13398,7 +13398,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "MIT_KEYS_ASSOC",
         "modifiers": 1,
         "description": "",
@@ -13909,7 +13909,7 @@
     "associated": [],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "UNICODE_VERSION",
         "modifiers": 1,
         "description": "",
@@ -13918,7 +13918,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CODEPOINT_MIN",
         "modifiers": 1,
         "description": "",
@@ -13927,7 +13927,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CODEPOINT_MAX",
         "modifiers": 1,
         "description": "",
@@ -13936,7 +13936,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "NO_NUMERIC_VALUE",
         "modifiers": 1,
         "description": "",
@@ -13945,7 +13945,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_ALPHABETIC",
         "modifiers": 1,
         "description": "",
@@ -13954,7 +13954,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_BINARY_START",
         "modifiers": 1,
         "description": "",
@@ -13963,7 +13963,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_ASCII_HEX_DIGIT",
         "modifiers": 1,
         "description": "",
@@ -13972,7 +13972,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_BIDI_CONTROL",
         "modifiers": 1,
         "description": "",
@@ -13981,7 +13981,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_BIDI_MIRRORED",
         "modifiers": 1,
         "description": "",
@@ -13990,7 +13990,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_DASH",
         "modifiers": 1,
         "description": "",
@@ -13999,7 +13999,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_DEFAULT_IGNORABLE_CODE_POINT",
         "modifiers": 1,
         "description": "",
@@ -14008,7 +14008,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_DEPRECATED",
         "modifiers": 1,
         "description": "",
@@ -14017,7 +14017,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_DIACRITIC",
         "modifiers": 1,
         "description": "",
@@ -14026,7 +14026,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_EXTENDER",
         "modifiers": 1,
         "description": "",
@@ -14035,7 +14035,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_FULL_COMPOSITION_EXCLUSION",
         "modifiers": 1,
         "description": "",
@@ -14044,7 +14044,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_GRAPHEME_BASE",
         "modifiers": 1,
         "description": "",
@@ -14053,7 +14053,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_GRAPHEME_EXTEND",
         "modifiers": 1,
         "description": "",
@@ -14062,7 +14062,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_GRAPHEME_LINK",
         "modifiers": 1,
         "description": "",
@@ -14071,7 +14071,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_HEX_DIGIT",
         "modifiers": 1,
         "description": "",
@@ -14080,7 +14080,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_HYPHEN",
         "modifiers": 1,
         "description": "",
@@ -14089,7 +14089,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_ID_CONTINUE",
         "modifiers": 1,
         "description": "",
@@ -14098,7 +14098,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_ID_START",
         "modifiers": 1,
         "description": "",
@@ -14107,7 +14107,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_IDEOGRAPHIC",
         "modifiers": 1,
         "description": "",
@@ -14116,7 +14116,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_IDS_BINARY_OPERATOR",
         "modifiers": 1,
         "description": "",
@@ -14125,7 +14125,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_IDS_TRINARY_OPERATOR",
         "modifiers": 1,
         "description": "",
@@ -14134,7 +14134,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_JOIN_CONTROL",
         "modifiers": 1,
         "description": "",
@@ -14143,7 +14143,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_LOGICAL_ORDER_EXCEPTION",
         "modifiers": 1,
         "description": "",
@@ -14152,7 +14152,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_LOWERCASE",
         "modifiers": 1,
         "description": "",
@@ -14161,7 +14161,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_MATH",
         "modifiers": 1,
         "description": "",
@@ -14170,7 +14170,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_NONCHARACTER_CODE_POINT",
         "modifiers": 1,
         "description": "",
@@ -14179,7 +14179,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_QUOTATION_MARK",
         "modifiers": 1,
         "description": "",
@@ -14188,7 +14188,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_RADICAL",
         "modifiers": 1,
         "description": "",
@@ -14197,7 +14197,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_SOFT_DOTTED",
         "modifiers": 1,
         "description": "",
@@ -14206,7 +14206,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_TERMINAL_PUNCTUATION",
         "modifiers": 1,
         "description": "",
@@ -14215,7 +14215,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_UNIFIED_IDEOGRAPH",
         "modifiers": 1,
         "description": "",
@@ -14224,7 +14224,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_UPPERCASE",
         "modifiers": 1,
         "description": "",
@@ -14233,7 +14233,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_WHITE_SPACE",
         "modifiers": 1,
         "description": "",
@@ -14242,7 +14242,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_XID_CONTINUE",
         "modifiers": 1,
         "description": "",
@@ -14251,7 +14251,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_XID_START",
         "modifiers": 1,
         "description": "",
@@ -14260,7 +14260,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_CASE_SENSITIVE",
         "modifiers": 1,
         "description": "",
@@ -14269,7 +14269,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_S_TERM",
         "modifiers": 1,
         "description": "",
@@ -14278,7 +14278,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_VARIATION_SELECTOR",
         "modifiers": 1,
         "description": "",
@@ -14287,7 +14287,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_NFD_INERT",
         "modifiers": 1,
         "description": "",
@@ -14296,7 +14296,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_NFKD_INERT",
         "modifiers": 1,
         "description": "",
@@ -14305,7 +14305,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_NFC_INERT",
         "modifiers": 1,
         "description": "",
@@ -14314,7 +14314,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_NFKC_INERT",
         "modifiers": 1,
         "description": "",
@@ -14323,7 +14323,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_SEGMENT_STARTER",
         "modifiers": 1,
         "description": "",
@@ -14332,7 +14332,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_PATTERN_SYNTAX",
         "modifiers": 1,
         "description": "",
@@ -14341,7 +14341,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_PATTERN_WHITE_SPACE",
         "modifiers": 1,
         "description": "",
@@ -14350,7 +14350,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_POSIX_ALNUM",
         "modifiers": 1,
         "description": "",
@@ -14359,7 +14359,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_POSIX_BLANK",
         "modifiers": 1,
         "description": "",
@@ -14368,7 +14368,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_POSIX_GRAPH",
         "modifiers": 1,
         "description": "",
@@ -14377,7 +14377,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_POSIX_PRINT",
         "modifiers": 1,
         "description": "",
@@ -14386,7 +14386,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_POSIX_XDIGIT",
         "modifiers": 1,
         "description": "",
@@ -14395,7 +14395,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_CASED",
         "modifiers": 1,
         "description": "",
@@ -14404,7 +14404,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_CASE_IGNORABLE",
         "modifiers": 1,
         "description": "",
@@ -14413,7 +14413,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_CHANGES_WHEN_LOWERCASED",
         "modifiers": 1,
         "description": "",
@@ -14422,7 +14422,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_CHANGES_WHEN_UPPERCASED",
         "modifiers": 1,
         "description": "",
@@ -14431,7 +14431,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_CHANGES_WHEN_TITLECASED",
         "modifiers": 1,
         "description": "",
@@ -14440,7 +14440,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_CHANGES_WHEN_CASEFOLDED",
         "modifiers": 1,
         "description": "",
@@ -14449,7 +14449,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_CHANGES_WHEN_CASEMAPPED",
         "modifiers": 1,
         "description": "",
@@ -14458,7 +14458,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_CHANGES_WHEN_NFKC_CASEFOLDED",
         "modifiers": 1,
         "description": "",
@@ -14467,7 +14467,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_BINARY_LIMIT",
         "modifiers": 1,
         "description": "",
@@ -14476,7 +14476,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_BIDI_CLASS",
         "modifiers": 1,
         "description": "",
@@ -14485,7 +14485,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_INT_START",
         "modifiers": 1,
         "description": "",
@@ -14494,7 +14494,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_BLOCK",
         "modifiers": 1,
         "description": "",
@@ -14503,7 +14503,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_CANONICAL_COMBINING_CLASS",
         "modifiers": 1,
         "description": "",
@@ -14512,7 +14512,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_DECOMPOSITION_TYPE",
         "modifiers": 1,
         "description": "",
@@ -14521,7 +14521,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_EAST_ASIAN_WIDTH",
         "modifiers": 1,
         "description": "",
@@ -14530,7 +14530,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_GENERAL_CATEGORY",
         "modifiers": 1,
         "description": "",
@@ -14539,7 +14539,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_JOINING_GROUP",
         "modifiers": 1,
         "description": "",
@@ -14548,7 +14548,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_JOINING_TYPE",
         "modifiers": 1,
         "description": "",
@@ -14557,7 +14557,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_LINE_BREAK",
         "modifiers": 1,
         "description": "",
@@ -14566,7 +14566,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_NUMERIC_TYPE",
         "modifiers": 1,
         "description": "",
@@ -14575,7 +14575,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_SCRIPT",
         "modifiers": 1,
         "description": "",
@@ -14584,7 +14584,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_HANGUL_SYLLABLE_TYPE",
         "modifiers": 1,
         "description": "",
@@ -14593,7 +14593,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_NFD_QUICK_CHECK",
         "modifiers": 1,
         "description": "",
@@ -14602,7 +14602,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_NFKD_QUICK_CHECK",
         "modifiers": 1,
         "description": "",
@@ -14611,7 +14611,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_NFC_QUICK_CHECK",
         "modifiers": 1,
         "description": "",
@@ -14620,7 +14620,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_NFKC_QUICK_CHECK",
         "modifiers": 1,
         "description": "",
@@ -14629,7 +14629,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_LEAD_CANONICAL_COMBINING_CLASS",
         "modifiers": 1,
         "description": "",
@@ -14638,7 +14638,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_TRAIL_CANONICAL_COMBINING_CLASS",
         "modifiers": 1,
         "description": "",
@@ -14647,7 +14647,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_GRAPHEME_CLUSTER_BREAK",
         "modifiers": 1,
         "description": "",
@@ -14656,7 +14656,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_SENTENCE_BREAK",
         "modifiers": 1,
         "description": "",
@@ -14665,7 +14665,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_WORD_BREAK",
         "modifiers": 1,
         "description": "",
@@ -14674,7 +14674,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_BIDI_PAIRED_BRACKET_TYPE",
         "modifiers": 1,
         "description": "",
@@ -14683,7 +14683,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_INT_LIMIT",
         "modifiers": 1,
         "description": "",
@@ -14692,7 +14692,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_GENERAL_CATEGORY_MASK",
         "modifiers": 1,
         "description": "",
@@ -14701,7 +14701,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_MASK_START",
         "modifiers": 1,
         "description": "",
@@ -14710,7 +14710,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_MASK_LIMIT",
         "modifiers": 1,
         "description": "",
@@ -14719,7 +14719,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_NUMERIC_VALUE",
         "modifiers": 1,
         "description": "",
@@ -14728,7 +14728,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_DOUBLE_START",
         "modifiers": 1,
         "description": "",
@@ -14737,7 +14737,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_DOUBLE_LIMIT",
         "modifiers": 1,
         "description": "",
@@ -14746,7 +14746,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_AGE",
         "modifiers": 1,
         "description": "",
@@ -14755,7 +14755,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_STRING_START",
         "modifiers": 1,
         "description": "",
@@ -14764,7 +14764,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_BIDI_MIRRORING_GLYPH",
         "modifiers": 1,
         "description": "",
@@ -14773,7 +14773,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_CASE_FOLDING",
         "modifiers": 1,
         "description": "",
@@ -14782,7 +14782,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_ISO_COMMENT",
         "modifiers": 1,
         "description": "",
@@ -14791,7 +14791,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_LOWERCASE_MAPPING",
         "modifiers": 1,
         "description": "",
@@ -14800,7 +14800,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_NAME",
         "modifiers": 1,
         "description": "",
@@ -14809,7 +14809,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_SIMPLE_CASE_FOLDING",
         "modifiers": 1,
         "description": "",
@@ -14818,7 +14818,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_SIMPLE_LOWERCASE_MAPPING",
         "modifiers": 1,
         "description": "",
@@ -14827,7 +14827,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_SIMPLE_TITLECASE_MAPPING",
         "modifiers": 1,
         "description": "",
@@ -14836,7 +14836,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_SIMPLE_UPPERCASE_MAPPING",
         "modifiers": 1,
         "description": "",
@@ -14845,7 +14845,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_TITLECASE_MAPPING",
         "modifiers": 1,
         "description": "",
@@ -14854,7 +14854,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_UNICODE_1_NAME",
         "modifiers": 1,
         "description": "",
@@ -14863,7 +14863,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_UPPERCASE_MAPPING",
         "modifiers": 1,
         "description": "",
@@ -14872,7 +14872,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_BIDI_PAIRED_BRACKET",
         "modifiers": 1,
         "description": "",
@@ -14881,7 +14881,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_STRING_LIMIT",
         "modifiers": 1,
         "description": "",
@@ -14890,7 +14890,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_SCRIPT_EXTENSIONS",
         "modifiers": 1,
         "description": "",
@@ -14899,7 +14899,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_OTHER_PROPERTY_START",
         "modifiers": 1,
         "description": "",
@@ -14908,7 +14908,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_OTHER_PROPERTY_LIMIT",
         "modifiers": 1,
         "description": "",
@@ -14917,7 +14917,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_INVALID_CODE",
         "modifiers": 1,
         "description": "",
@@ -14926,7 +14926,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_UNASSIGNED",
         "modifiers": 1,
         "description": "",
@@ -14935,7 +14935,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_GENERAL_OTHER_TYPES",
         "modifiers": 1,
         "description": "",
@@ -14944,7 +14944,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_UPPERCASE_LETTER",
         "modifiers": 1,
         "description": "",
@@ -14953,7 +14953,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_LOWERCASE_LETTER",
         "modifiers": 1,
         "description": "",
@@ -14962,7 +14962,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_TITLECASE_LETTER",
         "modifiers": 1,
         "description": "",
@@ -14971,7 +14971,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_MODIFIER_LETTER",
         "modifiers": 1,
         "description": "",
@@ -14980,7 +14980,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_OTHER_LETTER",
         "modifiers": 1,
         "description": "",
@@ -14989,7 +14989,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_NON_SPACING_MARK",
         "modifiers": 1,
         "description": "",
@@ -14998,7 +14998,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_ENCLOSING_MARK",
         "modifiers": 1,
         "description": "",
@@ -15007,7 +15007,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_COMBINING_SPACING_MARK",
         "modifiers": 1,
         "description": "",
@@ -15016,7 +15016,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_DECIMAL_DIGIT_NUMBER",
         "modifiers": 1,
         "description": "",
@@ -15025,7 +15025,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_LETTER_NUMBER",
         "modifiers": 1,
         "description": "",
@@ -15034,7 +15034,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_OTHER_NUMBER",
         "modifiers": 1,
         "description": "",
@@ -15043,7 +15043,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_SPACE_SEPARATOR",
         "modifiers": 1,
         "description": "",
@@ -15052,7 +15052,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_LINE_SEPARATOR",
         "modifiers": 1,
         "description": "",
@@ -15061,7 +15061,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_PARAGRAPH_SEPARATOR",
         "modifiers": 1,
         "description": "",
@@ -15070,7 +15070,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_CONTROL_CHAR",
         "modifiers": 1,
         "description": "",
@@ -15079,7 +15079,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_FORMAT_CHAR",
         "modifiers": 1,
         "description": "",
@@ -15088,7 +15088,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_PRIVATE_USE_CHAR",
         "modifiers": 1,
         "description": "",
@@ -15097,7 +15097,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_SURROGATE",
         "modifiers": 1,
         "description": "",
@@ -15106,7 +15106,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_DASH_PUNCTUATION",
         "modifiers": 1,
         "description": "",
@@ -15115,7 +15115,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_START_PUNCTUATION",
         "modifiers": 1,
         "description": "",
@@ -15124,7 +15124,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_END_PUNCTUATION",
         "modifiers": 1,
         "description": "",
@@ -15133,7 +15133,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_CONNECTOR_PUNCTUATION",
         "modifiers": 1,
         "description": "",
@@ -15142,7 +15142,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_OTHER_PUNCTUATION",
         "modifiers": 1,
         "description": "",
@@ -15151,7 +15151,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_MATH_SYMBOL",
         "modifiers": 1,
         "description": "",
@@ -15160,7 +15160,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_CURRENCY_SYMBOL",
         "modifiers": 1,
         "description": "",
@@ -15169,7 +15169,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_MODIFIER_SYMBOL",
         "modifiers": 1,
         "description": "",
@@ -15178,7 +15178,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_OTHER_SYMBOL",
         "modifiers": 1,
         "description": "",
@@ -15187,7 +15187,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_INITIAL_PUNCTUATION",
         "modifiers": 1,
         "description": "",
@@ -15196,7 +15196,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_FINAL_PUNCTUATION",
         "modifiers": 1,
         "description": "",
@@ -15205,7 +15205,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_CATEGORY_CHAR_CATEGORY_COUNT",
         "modifiers": 1,
         "description": "",
@@ -15214,7 +15214,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_LEFT_TO_RIGHT",
         "modifiers": 1,
         "description": "",
@@ -15223,7 +15223,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_RIGHT_TO_LEFT",
         "modifiers": 1,
         "description": "",
@@ -15232,7 +15232,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_EUROPEAN_NUMBER",
         "modifiers": 1,
         "description": "",
@@ -15241,7 +15241,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_EUROPEAN_NUMBER_SEPARATOR",
         "modifiers": 1,
         "description": "",
@@ -15250,7 +15250,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_EUROPEAN_NUMBER_TERMINATOR",
         "modifiers": 1,
         "description": "",
@@ -15259,7 +15259,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_ARABIC_NUMBER",
         "modifiers": 1,
         "description": "",
@@ -15268,7 +15268,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_COMMON_NUMBER_SEPARATOR",
         "modifiers": 1,
         "description": "",
@@ -15277,7 +15277,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_BLOCK_SEPARATOR",
         "modifiers": 1,
         "description": "",
@@ -15286,7 +15286,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_SEGMENT_SEPARATOR",
         "modifiers": 1,
         "description": "",
@@ -15295,7 +15295,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_WHITE_SPACE_NEUTRAL",
         "modifiers": 1,
         "description": "",
@@ -15304,7 +15304,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_OTHER_NEUTRAL",
         "modifiers": 1,
         "description": "",
@@ -15313,7 +15313,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_LEFT_TO_RIGHT_EMBEDDING",
         "modifiers": 1,
         "description": "",
@@ -15322,7 +15322,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_LEFT_TO_RIGHT_OVERRIDE",
         "modifiers": 1,
         "description": "",
@@ -15331,7 +15331,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_RIGHT_TO_LEFT_ARABIC",
         "modifiers": 1,
         "description": "",
@@ -15340,7 +15340,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_RIGHT_TO_LEFT_EMBEDDING",
         "modifiers": 1,
         "description": "",
@@ -15349,7 +15349,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_RIGHT_TO_LEFT_OVERRIDE",
         "modifiers": 1,
         "description": "",
@@ -15358,7 +15358,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_POP_DIRECTIONAL_FORMAT",
         "modifiers": 1,
         "description": "",
@@ -15367,7 +15367,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_DIR_NON_SPACING_MARK",
         "modifiers": 1,
         "description": "",
@@ -15376,7 +15376,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_BOUNDARY_NEUTRAL",
         "modifiers": 1,
         "description": "",
@@ -15385,7 +15385,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_FIRST_STRONG_ISOLATE",
         "modifiers": 1,
         "description": "",
@@ -15394,7 +15394,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_LEFT_TO_RIGHT_ISOLATE",
         "modifiers": 1,
         "description": "",
@@ -15403,7 +15403,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_RIGHT_TO_LEFT_ISOLATE",
         "modifiers": 1,
         "description": "",
@@ -15412,7 +15412,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_POP_DIRECTIONAL_ISOLATE",
         "modifiers": 1,
         "description": "",
@@ -15421,7 +15421,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_DIRECTION_CHAR_DIRECTION_COUNT",
         "modifiers": 1,
         "description": "",
@@ -15430,7 +15430,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_NO_BLOCK",
         "modifiers": 1,
         "description": "",
@@ -15439,7 +15439,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BASIC_LATIN",
         "modifiers": 1,
         "description": "",
@@ -15448,7 +15448,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LATIN_1_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -15457,7 +15457,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LATIN_EXTENDED_A",
         "modifiers": 1,
         "description": "",
@@ -15466,7 +15466,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LATIN_EXTENDED_B",
         "modifiers": 1,
         "description": "",
@@ -15475,7 +15475,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_IPA_EXTENSIONS",
         "modifiers": 1,
         "description": "",
@@ -15484,7 +15484,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SPACING_MODIFIER_LETTERS",
         "modifiers": 1,
         "description": "",
@@ -15493,7 +15493,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_COMBINING_DIACRITICAL_MARKS",
         "modifiers": 1,
         "description": "",
@@ -15502,7 +15502,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_GREEK",
         "modifiers": 1,
         "description": "",
@@ -15511,7 +15511,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CYRILLIC",
         "modifiers": 1,
         "description": "",
@@ -15520,7 +15520,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ARMENIAN",
         "modifiers": 1,
         "description": "",
@@ -15529,7 +15529,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_HEBREW",
         "modifiers": 1,
         "description": "",
@@ -15538,7 +15538,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ARABIC",
         "modifiers": 1,
         "description": "",
@@ -15547,7 +15547,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SYRIAC",
         "modifiers": 1,
         "description": "",
@@ -15556,7 +15556,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_THAANA",
         "modifiers": 1,
         "description": "",
@@ -15565,7 +15565,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_DEVANAGARI",
         "modifiers": 1,
         "description": "",
@@ -15574,7 +15574,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BENGALI",
         "modifiers": 1,
         "description": "",
@@ -15583,7 +15583,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_GURMUKHI",
         "modifiers": 1,
         "description": "",
@@ -15592,7 +15592,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_GUJARATI",
         "modifiers": 1,
         "description": "",
@@ -15601,7 +15601,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ORIYA",
         "modifiers": 1,
         "description": "",
@@ -15610,7 +15610,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_TAMIL",
         "modifiers": 1,
         "description": "",
@@ -15619,7 +15619,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_TELUGU",
         "modifiers": 1,
         "description": "",
@@ -15628,7 +15628,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_KANNADA",
         "modifiers": 1,
         "description": "",
@@ -15637,7 +15637,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MALAYALAM",
         "modifiers": 1,
         "description": "",
@@ -15646,7 +15646,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SINHALA",
         "modifiers": 1,
         "description": "",
@@ -15655,7 +15655,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_THAI",
         "modifiers": 1,
         "description": "",
@@ -15664,7 +15664,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LAO",
         "modifiers": 1,
         "description": "",
@@ -15673,7 +15673,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_TIBETAN",
         "modifiers": 1,
         "description": "",
@@ -15682,7 +15682,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MYANMAR",
         "modifiers": 1,
         "description": "",
@@ -15691,7 +15691,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_GEORGIAN",
         "modifiers": 1,
         "description": "",
@@ -15700,7 +15700,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_HANGUL_JAMO",
         "modifiers": 1,
         "description": "",
@@ -15709,7 +15709,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ETHIOPIC",
         "modifiers": 1,
         "description": "",
@@ -15718,7 +15718,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CHEROKEE",
         "modifiers": 1,
         "description": "",
@@ -15727,7 +15727,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_UNIFIED_CANADIAN_ABORIGINAL_SYLLABICS",
         "modifiers": 1,
         "description": "",
@@ -15736,7 +15736,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_OGHAM",
         "modifiers": 1,
         "description": "",
@@ -15745,7 +15745,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_RUNIC",
         "modifiers": 1,
         "description": "",
@@ -15754,7 +15754,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_KHMER",
         "modifiers": 1,
         "description": "",
@@ -15763,7 +15763,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MONGOLIAN",
         "modifiers": 1,
         "description": "",
@@ -15772,7 +15772,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LATIN_EXTENDED_ADDITIONAL",
         "modifiers": 1,
         "description": "",
@@ -15781,7 +15781,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_GREEK_EXTENDED",
         "modifiers": 1,
         "description": "",
@@ -15790,7 +15790,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_GENERAL_PUNCTUATION",
         "modifiers": 1,
         "description": "",
@@ -15799,7 +15799,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SUPERSCRIPTS_AND_SUBSCRIPTS",
         "modifiers": 1,
         "description": "",
@@ -15808,7 +15808,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CURRENCY_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -15817,7 +15817,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_COMBINING_MARKS_FOR_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -15826,7 +15826,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LETTERLIKE_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -15835,7 +15835,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_NUMBER_FORMS",
         "modifiers": 1,
         "description": "",
@@ -15844,7 +15844,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ARROWS",
         "modifiers": 1,
         "description": "",
@@ -15853,7 +15853,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MATHEMATICAL_OPERATORS",
         "modifiers": 1,
         "description": "",
@@ -15862,7 +15862,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MISCELLANEOUS_TECHNICAL",
         "modifiers": 1,
         "description": "",
@@ -15871,7 +15871,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CONTROL_PICTURES",
         "modifiers": 1,
         "description": "",
@@ -15880,7 +15880,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_OPTICAL_CHARACTER_RECOGNITION",
         "modifiers": 1,
         "description": "",
@@ -15889,7 +15889,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ENCLOSED_ALPHANUMERICS",
         "modifiers": 1,
         "description": "",
@@ -15898,7 +15898,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BOX_DRAWING",
         "modifiers": 1,
         "description": "",
@@ -15907,7 +15907,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BLOCK_ELEMENTS",
         "modifiers": 1,
         "description": "",
@@ -15916,7 +15916,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_GEOMETRIC_SHAPES",
         "modifiers": 1,
         "description": "",
@@ -15925,7 +15925,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MISCELLANEOUS_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -15934,7 +15934,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_DINGBATS",
         "modifiers": 1,
         "description": "",
@@ -15943,7 +15943,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BRAILLE_PATTERNS",
         "modifiers": 1,
         "description": "",
@@ -15952,7 +15952,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CJK_RADICALS_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -15961,7 +15961,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_KANGXI_RADICALS",
         "modifiers": 1,
         "description": "",
@@ -15970,7 +15970,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_IDEOGRAPHIC_DESCRIPTION_CHARACTERS",
         "modifiers": 1,
         "description": "",
@@ -15979,7 +15979,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CJK_SYMBOLS_AND_PUNCTUATION",
         "modifiers": 1,
         "description": "",
@@ -15988,7 +15988,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_HIRAGANA",
         "modifiers": 1,
         "description": "",
@@ -15997,7 +15997,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_KATAKANA",
         "modifiers": 1,
         "description": "",
@@ -16006,7 +16006,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BOPOMOFO",
         "modifiers": 1,
         "description": "",
@@ -16015,7 +16015,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_HANGUL_COMPATIBILITY_JAMO",
         "modifiers": 1,
         "description": "",
@@ -16024,7 +16024,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_KANBUN",
         "modifiers": 1,
         "description": "",
@@ -16033,7 +16033,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BOPOMOFO_EXTENDED",
         "modifiers": 1,
         "description": "",
@@ -16042,7 +16042,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ENCLOSED_CJK_LETTERS_AND_MONTHS",
         "modifiers": 1,
         "description": "",
@@ -16051,7 +16051,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CJK_COMPATIBILITY",
         "modifiers": 1,
         "description": "",
@@ -16060,7 +16060,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A",
         "modifiers": 1,
         "description": "",
@@ -16069,7 +16069,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CJK_UNIFIED_IDEOGRAPHS",
         "modifiers": 1,
         "description": "",
@@ -16078,7 +16078,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_YI_SYLLABLES",
         "modifiers": 1,
         "description": "",
@@ -16087,7 +16087,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_YI_RADICALS",
         "modifiers": 1,
         "description": "",
@@ -16096,7 +16096,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_HANGUL_SYLLABLES",
         "modifiers": 1,
         "description": "",
@@ -16105,7 +16105,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_HIGH_SURROGATES",
         "modifiers": 1,
         "description": "",
@@ -16114,7 +16114,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_HIGH_PRIVATE_USE_SURROGATES",
         "modifiers": 1,
         "description": "",
@@ -16123,7 +16123,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LOW_SURROGATES",
         "modifiers": 1,
         "description": "",
@@ -16132,7 +16132,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_PRIVATE_USE_AREA",
         "modifiers": 1,
         "description": "",
@@ -16141,7 +16141,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_PRIVATE_USE",
         "modifiers": 1,
         "description": "",
@@ -16150,7 +16150,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CJK_COMPATIBILITY_IDEOGRAPHS",
         "modifiers": 1,
         "description": "",
@@ -16159,7 +16159,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ALPHABETIC_PRESENTATION_FORMS",
         "modifiers": 1,
         "description": "",
@@ -16168,7 +16168,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ARABIC_PRESENTATION_FORMS_A",
         "modifiers": 1,
         "description": "",
@@ -16177,7 +16177,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_COMBINING_HALF_MARKS",
         "modifiers": 1,
         "description": "",
@@ -16186,7 +16186,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CJK_COMPATIBILITY_FORMS",
         "modifiers": 1,
         "description": "",
@@ -16195,7 +16195,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SMALL_FORM_VARIANTS",
         "modifiers": 1,
         "description": "",
@@ -16204,7 +16204,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ARABIC_PRESENTATION_FORMS_B",
         "modifiers": 1,
         "description": "",
@@ -16213,7 +16213,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SPECIALS",
         "modifiers": 1,
         "description": "",
@@ -16222,7 +16222,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_HALFWIDTH_AND_FULLWIDTH_FORMS",
         "modifiers": 1,
         "description": "",
@@ -16231,7 +16231,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_OLD_ITALIC",
         "modifiers": 1,
         "description": "",
@@ -16240,7 +16240,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_GOTHIC",
         "modifiers": 1,
         "description": "",
@@ -16249,7 +16249,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_DESERET",
         "modifiers": 1,
         "description": "",
@@ -16258,7 +16258,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BYZANTINE_MUSICAL_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -16267,7 +16267,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MUSICAL_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -16276,7 +16276,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MATHEMATICAL_ALPHANUMERIC_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -16285,7 +16285,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B",
         "modifiers": 1,
         "description": "",
@@ -16294,7 +16294,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CJK_COMPATIBILITY_IDEOGRAPHS_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -16303,7 +16303,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_TAGS",
         "modifiers": 1,
         "description": "",
@@ -16312,7 +16312,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CYRILLIC_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -16321,7 +16321,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CYRILLIC_SUPPLEMENTARY",
         "modifiers": 1,
         "description": "",
@@ -16330,7 +16330,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_TAGALOG",
         "modifiers": 1,
         "description": "",
@@ -16339,7 +16339,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_HANUNOO",
         "modifiers": 1,
         "description": "",
@@ -16348,7 +16348,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BUHID",
         "modifiers": 1,
         "description": "",
@@ -16357,7 +16357,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_TAGBANWA",
         "modifiers": 1,
         "description": "",
@@ -16366,7 +16366,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MISCELLANEOUS_MATHEMATICAL_SYMBOLS_A",
         "modifiers": 1,
         "description": "",
@@ -16375,7 +16375,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SUPPLEMENTAL_ARROWS_A",
         "modifiers": 1,
         "description": "",
@@ -16384,7 +16384,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SUPPLEMENTAL_ARROWS_B",
         "modifiers": 1,
         "description": "",
@@ -16393,7 +16393,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MISCELLANEOUS_MATHEMATICAL_SYMBOLS_B",
         "modifiers": 1,
         "description": "",
@@ -16402,7 +16402,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SUPPLEMENTAL_MATHEMATICAL_OPERATORS",
         "modifiers": 1,
         "description": "",
@@ -16411,7 +16411,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_KATAKANA_PHONETIC_EXTENSIONS",
         "modifiers": 1,
         "description": "",
@@ -16420,7 +16420,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_VARIATION_SELECTORS",
         "modifiers": 1,
         "description": "",
@@ -16429,7 +16429,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SUPPLEMENTARY_PRIVATE_USE_AREA_A",
         "modifiers": 1,
         "description": "",
@@ -16438,7 +16438,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SUPPLEMENTARY_PRIVATE_USE_AREA_B",
         "modifiers": 1,
         "description": "",
@@ -16447,7 +16447,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LIMBU",
         "modifiers": 1,
         "description": "",
@@ -16456,7 +16456,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_TAI_LE",
         "modifiers": 1,
         "description": "",
@@ -16465,7 +16465,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_KHMER_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -16474,7 +16474,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_PHONETIC_EXTENSIONS",
         "modifiers": 1,
         "description": "",
@@ -16483,7 +16483,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MISCELLANEOUS_SYMBOLS_AND_ARROWS",
         "modifiers": 1,
         "description": "",
@@ -16492,7 +16492,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_YIJING_HEXAGRAM_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -16501,7 +16501,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LINEAR_B_SYLLABARY",
         "modifiers": 1,
         "description": "",
@@ -16510,7 +16510,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LINEAR_B_IDEOGRAMS",
         "modifiers": 1,
         "description": "",
@@ -16519,7 +16519,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_AEGEAN_NUMBERS",
         "modifiers": 1,
         "description": "",
@@ -16528,7 +16528,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_UGARITIC",
         "modifiers": 1,
         "description": "",
@@ -16537,7 +16537,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SHAVIAN",
         "modifiers": 1,
         "description": "",
@@ -16546,7 +16546,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_OSMANYA",
         "modifiers": 1,
         "description": "",
@@ -16555,7 +16555,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CYPRIOT_SYLLABARY",
         "modifiers": 1,
         "description": "",
@@ -16564,7 +16564,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_TAI_XUAN_JING_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -16573,7 +16573,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_VARIATION_SELECTORS_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -16582,7 +16582,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ANCIENT_GREEK_MUSICAL_NOTATION",
         "modifiers": 1,
         "description": "",
@@ -16591,7 +16591,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ANCIENT_GREEK_NUMBERS",
         "modifiers": 1,
         "description": "",
@@ -16600,7 +16600,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ARABIC_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -16609,7 +16609,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BUGINESE",
         "modifiers": 1,
         "description": "",
@@ -16618,7 +16618,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CJK_STROKES",
         "modifiers": 1,
         "description": "",
@@ -16627,7 +16627,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_COMBINING_DIACRITICAL_MARKS_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -16636,7 +16636,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_COPTIC",
         "modifiers": 1,
         "description": "",
@@ -16645,7 +16645,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ETHIOPIC_EXTENDED",
         "modifiers": 1,
         "description": "",
@@ -16654,7 +16654,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ETHIOPIC_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -16663,7 +16663,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_GEORGIAN_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -16672,7 +16672,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_GLAGOLITIC",
         "modifiers": 1,
         "description": "",
@@ -16681,7 +16681,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_KHAROSHTHI",
         "modifiers": 1,
         "description": "",
@@ -16690,7 +16690,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MODIFIER_TONE_LETTERS",
         "modifiers": 1,
         "description": "",
@@ -16699,7 +16699,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_NEW_TAI_LUE",
         "modifiers": 1,
         "description": "",
@@ -16708,7 +16708,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_OLD_PERSIAN",
         "modifiers": 1,
         "description": "",
@@ -16717,7 +16717,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_PHONETIC_EXTENSIONS_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -16726,7 +16726,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SUPPLEMENTAL_PUNCTUATION",
         "modifiers": 1,
         "description": "",
@@ -16735,7 +16735,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SYLOTI_NAGRI",
         "modifiers": 1,
         "description": "",
@@ -16744,7 +16744,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_TIFINAGH",
         "modifiers": 1,
         "description": "",
@@ -16753,7 +16753,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_VERTICAL_FORMS",
         "modifiers": 1,
         "description": "",
@@ -16762,7 +16762,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_NKO",
         "modifiers": 1,
         "description": "",
@@ -16771,7 +16771,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BALINESE",
         "modifiers": 1,
         "description": "",
@@ -16780,7 +16780,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LATIN_EXTENDED_C",
         "modifiers": 1,
         "description": "",
@@ -16789,7 +16789,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LATIN_EXTENDED_D",
         "modifiers": 1,
         "description": "",
@@ -16798,7 +16798,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_PHAGS_PA",
         "modifiers": 1,
         "description": "",
@@ -16807,7 +16807,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_PHOENICIAN",
         "modifiers": 1,
         "description": "",
@@ -16816,7 +16816,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CUNEIFORM",
         "modifiers": 1,
         "description": "",
@@ -16825,7 +16825,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CUNEIFORM_NUMBERS_AND_PUNCTUATION",
         "modifiers": 1,
         "description": "",
@@ -16834,7 +16834,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_COUNTING_ROD_NUMERALS",
         "modifiers": 1,
         "description": "",
@@ -16843,7 +16843,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SUNDANESE",
         "modifiers": 1,
         "description": "",
@@ -16852,7 +16852,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LEPCHA",
         "modifiers": 1,
         "description": "",
@@ -16861,7 +16861,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_OL_CHIKI",
         "modifiers": 1,
         "description": "",
@@ -16870,7 +16870,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CYRILLIC_EXTENDED_A",
         "modifiers": 1,
         "description": "",
@@ -16879,7 +16879,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_VAI",
         "modifiers": 1,
         "description": "",
@@ -16888,7 +16888,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CYRILLIC_EXTENDED_B",
         "modifiers": 1,
         "description": "",
@@ -16897,7 +16897,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SAURASHTRA",
         "modifiers": 1,
         "description": "",
@@ -16906,7 +16906,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_KAYAH_LI",
         "modifiers": 1,
         "description": "",
@@ -16915,7 +16915,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_REJANG",
         "modifiers": 1,
         "description": "",
@@ -16924,7 +16924,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CHAM",
         "modifiers": 1,
         "description": "",
@@ -16933,7 +16933,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ANCIENT_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -16942,7 +16942,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_PHAISTOS_DISC",
         "modifiers": 1,
         "description": "",
@@ -16951,7 +16951,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LYCIAN",
         "modifiers": 1,
         "description": "",
@@ -16960,7 +16960,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CARIAN",
         "modifiers": 1,
         "description": "",
@@ -16969,7 +16969,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LYDIAN",
         "modifiers": 1,
         "description": "",
@@ -16978,7 +16978,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MAHJONG_TILES",
         "modifiers": 1,
         "description": "",
@@ -16987,7 +16987,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_DOMINO_TILES",
         "modifiers": 1,
         "description": "",
@@ -16996,7 +16996,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SAMARITAN",
         "modifiers": 1,
         "description": "",
@@ -17005,7 +17005,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_UNIFIED_CANADIAN_ABORIGINAL_SYLLABICS_EXTENDED",
         "modifiers": 1,
         "description": "",
@@ -17014,7 +17014,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_TAI_THAM",
         "modifiers": 1,
         "description": "",
@@ -17023,7 +17023,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_VEDIC_EXTENSIONS",
         "modifiers": 1,
         "description": "",
@@ -17032,7 +17032,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_LISU",
         "modifiers": 1,
         "description": "",
@@ -17041,7 +17041,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BAMUM",
         "modifiers": 1,
         "description": "",
@@ -17050,7 +17050,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_COMMON_INDIC_NUMBER_FORMS",
         "modifiers": 1,
         "description": "",
@@ -17059,7 +17059,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_DEVANAGARI_EXTENDED",
         "modifiers": 1,
         "description": "",
@@ -17068,7 +17068,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_HANGUL_JAMO_EXTENDED_A",
         "modifiers": 1,
         "description": "",
@@ -17077,7 +17077,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_JAVANESE",
         "modifiers": 1,
         "description": "",
@@ -17086,7 +17086,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MYANMAR_EXTENDED_A",
         "modifiers": 1,
         "description": "",
@@ -17095,7 +17095,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_TAI_VIET",
         "modifiers": 1,
         "description": "",
@@ -17104,7 +17104,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MEETEI_MAYEK",
         "modifiers": 1,
         "description": "",
@@ -17113,7 +17113,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_HANGUL_JAMO_EXTENDED_B",
         "modifiers": 1,
         "description": "",
@@ -17122,7 +17122,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_IMPERIAL_ARAMAIC",
         "modifiers": 1,
         "description": "",
@@ -17131,7 +17131,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_OLD_SOUTH_ARABIAN",
         "modifiers": 1,
         "description": "",
@@ -17140,7 +17140,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_AVESTAN",
         "modifiers": 1,
         "description": "",
@@ -17149,7 +17149,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_INSCRIPTIONAL_PARTHIAN",
         "modifiers": 1,
         "description": "",
@@ -17158,7 +17158,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_INSCRIPTIONAL_PAHLAVI",
         "modifiers": 1,
         "description": "",
@@ -17167,7 +17167,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_OLD_TURKIC",
         "modifiers": 1,
         "description": "",
@@ -17176,7 +17176,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_RUMI_NUMERAL_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -17185,7 +17185,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_KAITHI",
         "modifiers": 1,
         "description": "",
@@ -17194,7 +17194,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_EGYPTIAN_HIEROGLYPHS",
         "modifiers": 1,
         "description": "",
@@ -17203,7 +17203,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ENCLOSED_ALPHANUMERIC_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -17212,7 +17212,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ENCLOSED_IDEOGRAPHIC_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -17221,7 +17221,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_C",
         "modifiers": 1,
         "description": "",
@@ -17230,7 +17230,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MANDAIC",
         "modifiers": 1,
         "description": "",
@@ -17239,7 +17239,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BATAK",
         "modifiers": 1,
         "description": "",
@@ -17248,7 +17248,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ETHIOPIC_EXTENDED_A",
         "modifiers": 1,
         "description": "",
@@ -17257,7 +17257,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BRAHMI",
         "modifiers": 1,
         "description": "",
@@ -17266,7 +17266,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_BAMUM_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -17275,7 +17275,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_KANA_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -17284,7 +17284,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_PLAYING_CARDS",
         "modifiers": 1,
         "description": "",
@@ -17293,7 +17293,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MISCELLANEOUS_SYMBOLS_AND_PICTOGRAPHS",
         "modifiers": 1,
         "description": "",
@@ -17302,7 +17302,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_EMOTICONS",
         "modifiers": 1,
         "description": "",
@@ -17311,7 +17311,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_TRANSPORT_AND_MAP_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -17320,7 +17320,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ALCHEMICAL_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -17329,7 +17329,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CJK_UNIFIED_IDEOGRAPHS_EXTENSION_D",
         "modifiers": 1,
         "description": "",
@@ -17338,7 +17338,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ARABIC_EXTENDED_A",
         "modifiers": 1,
         "description": "",
@@ -17347,7 +17347,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_ARABIC_MATHEMATICAL_ALPHABETIC_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -17356,7 +17356,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_CHAKMA",
         "modifiers": 1,
         "description": "",
@@ -17365,7 +17365,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MEETEI_MAYEK_EXTENSIONS",
         "modifiers": 1,
         "description": "",
@@ -17374,7 +17374,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MEROITIC_CURSIVE",
         "modifiers": 1,
         "description": "",
@@ -17383,7 +17383,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MEROITIC_HIEROGLYPHS",
         "modifiers": 1,
         "description": "",
@@ -17392,7 +17392,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_MIAO",
         "modifiers": 1,
         "description": "",
@@ -17401,7 +17401,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SHARADA",
         "modifiers": 1,
         "description": "",
@@ -17410,7 +17410,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SORA_SOMPENG",
         "modifiers": 1,
         "description": "",
@@ -17419,7 +17419,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_SUNDANESE_SUPPLEMENT",
         "modifiers": 1,
         "description": "",
@@ -17428,7 +17428,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_TAKRI",
         "modifiers": 1,
         "description": "",
@@ -17437,7 +17437,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_COUNT",
         "modifiers": 1,
         "description": "",
@@ -17446,7 +17446,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BLOCK_CODE_INVALID_CODE",
         "modifiers": 1,
         "description": "",
@@ -17455,7 +17455,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BPT_NONE",
         "modifiers": 1,
         "description": "",
@@ -17464,7 +17464,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BPT_OPEN",
         "modifiers": 1,
         "description": "",
@@ -17473,7 +17473,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BPT_CLOSE",
         "modifiers": 1,
         "description": "",
@@ -17482,7 +17482,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BPT_COUNT",
         "modifiers": 1,
         "description": "",
@@ -17491,7 +17491,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "EA_NEUTRAL",
         "modifiers": 1,
         "description": "",
@@ -17500,7 +17500,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "EA_AMBIGUOUS",
         "modifiers": 1,
         "description": "",
@@ -17509,7 +17509,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "EA_HALFWIDTH",
         "modifiers": 1,
         "description": "",
@@ -17518,7 +17518,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "EA_FULLWIDTH",
         "modifiers": 1,
         "description": "",
@@ -17527,7 +17527,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "EA_NARROW",
         "modifiers": 1,
         "description": "",
@@ -17536,7 +17536,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "EA_WIDE",
         "modifiers": 1,
         "description": "",
@@ -17545,7 +17545,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "EA_COUNT",
         "modifiers": 1,
         "description": "",
@@ -17554,7 +17554,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "UNICODE_CHAR_NAME",
         "modifiers": 1,
         "description": "",
@@ -17563,7 +17563,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "UNICODE_10_CHAR_NAME",
         "modifiers": 1,
         "description": "",
@@ -17572,7 +17572,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "EXTENDED_CHAR_NAME",
         "modifiers": 1,
         "description": "",
@@ -17581,7 +17581,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_NAME_ALIAS",
         "modifiers": 1,
         "description": "",
@@ -17590,7 +17590,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_NAME_CHOICE_COUNT",
         "modifiers": 1,
         "description": "",
@@ -17599,7 +17599,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SHORT_PROPERTY_NAME",
         "modifiers": 1,
         "description": "",
@@ -17608,7 +17608,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LONG_PROPERTY_NAME",
         "modifiers": 1,
         "description": "",
@@ -17617,7 +17617,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PROPERTY_NAME_CHOICE_COUNT",
         "modifiers": 1,
         "description": "",
@@ -17626,7 +17626,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_NONE",
         "modifiers": 1,
         "description": "",
@@ -17635,7 +17635,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_CANONICAL",
         "modifiers": 1,
         "description": "",
@@ -17644,7 +17644,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_COMPAT",
         "modifiers": 1,
         "description": "",
@@ -17653,7 +17653,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_CIRCLE",
         "modifiers": 1,
         "description": "",
@@ -17662,7 +17662,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_FINAL",
         "modifiers": 1,
         "description": "",
@@ -17671,7 +17671,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_FONT",
         "modifiers": 1,
         "description": "",
@@ -17680,7 +17680,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_FRACTION",
         "modifiers": 1,
         "description": "",
@@ -17689,7 +17689,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_INITIAL",
         "modifiers": 1,
         "description": "",
@@ -17698,7 +17698,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_ISOLATED",
         "modifiers": 1,
         "description": "",
@@ -17707,7 +17707,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_MEDIAL",
         "modifiers": 1,
         "description": "",
@@ -17716,7 +17716,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_NARROW",
         "modifiers": 1,
         "description": "",
@@ -17725,7 +17725,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_NOBREAK",
         "modifiers": 1,
         "description": "",
@@ -17734,7 +17734,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_SMALL",
         "modifiers": 1,
         "description": "",
@@ -17743,7 +17743,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_SQUARE",
         "modifiers": 1,
         "description": "",
@@ -17752,7 +17752,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_SUB",
         "modifiers": 1,
         "description": "",
@@ -17761,7 +17761,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_SUPER",
         "modifiers": 1,
         "description": "",
@@ -17770,7 +17770,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_VERTICAL",
         "modifiers": 1,
         "description": "",
@@ -17779,7 +17779,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_WIDE",
         "modifiers": 1,
         "description": "",
@@ -17788,7 +17788,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DT_COUNT",
         "modifiers": 1,
         "description": "",
@@ -17797,7 +17797,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JT_NON_JOINING",
         "modifiers": 1,
         "description": "",
@@ -17806,7 +17806,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JT_JOIN_CAUSING",
         "modifiers": 1,
         "description": "",
@@ -17815,7 +17815,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JT_DUAL_JOINING",
         "modifiers": 1,
         "description": "",
@@ -17824,7 +17824,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JT_LEFT_JOINING",
         "modifiers": 1,
         "description": "",
@@ -17833,7 +17833,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JT_RIGHT_JOINING",
         "modifiers": 1,
         "description": "",
@@ -17842,7 +17842,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JT_TRANSPARENT",
         "modifiers": 1,
         "description": "",
@@ -17851,7 +17851,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JT_COUNT",
         "modifiers": 1,
         "description": "",
@@ -17860,7 +17860,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_NO_JOINING_GROUP",
         "modifiers": 1,
         "description": "",
@@ -17869,7 +17869,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_AIN",
         "modifiers": 1,
         "description": "",
@@ -17878,7 +17878,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_ALAPH",
         "modifiers": 1,
         "description": "",
@@ -17887,7 +17887,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_ALEF",
         "modifiers": 1,
         "description": "",
@@ -17896,7 +17896,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_BEH",
         "modifiers": 1,
         "description": "",
@@ -17905,7 +17905,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_BETH",
         "modifiers": 1,
         "description": "",
@@ -17914,7 +17914,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_DAL",
         "modifiers": 1,
         "description": "",
@@ -17923,7 +17923,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_DALATH_RISH",
         "modifiers": 1,
         "description": "",
@@ -17932,7 +17932,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_E",
         "modifiers": 1,
         "description": "",
@@ -17941,7 +17941,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_FEH",
         "modifiers": 1,
         "description": "",
@@ -17950,7 +17950,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_FINAL_SEMKATH",
         "modifiers": 1,
         "description": "",
@@ -17959,7 +17959,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_GAF",
         "modifiers": 1,
         "description": "",
@@ -17968,7 +17968,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_GAMAL",
         "modifiers": 1,
         "description": "",
@@ -17977,7 +17977,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_HAH",
         "modifiers": 1,
         "description": "",
@@ -17986,7 +17986,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_TEH_MARBUTA_GOAL",
         "modifiers": 1,
         "description": "",
@@ -17995,7 +17995,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_HAMZA_ON_HEH_GOAL",
         "modifiers": 1,
         "description": "",
@@ -18004,7 +18004,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_HE",
         "modifiers": 1,
         "description": "",
@@ -18013,7 +18013,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_HEH",
         "modifiers": 1,
         "description": "",
@@ -18022,7 +18022,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_HEH_GOAL",
         "modifiers": 1,
         "description": "",
@@ -18031,7 +18031,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_HETH",
         "modifiers": 1,
         "description": "",
@@ -18040,7 +18040,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_KAF",
         "modifiers": 1,
         "description": "",
@@ -18049,7 +18049,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_KAPH",
         "modifiers": 1,
         "description": "",
@@ -18058,7 +18058,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_KNOTTED_HEH",
         "modifiers": 1,
         "description": "",
@@ -18067,7 +18067,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_LAM",
         "modifiers": 1,
         "description": "",
@@ -18076,7 +18076,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_LAMADH",
         "modifiers": 1,
         "description": "",
@@ -18085,7 +18085,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_MEEM",
         "modifiers": 1,
         "description": "",
@@ -18094,7 +18094,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_MIM",
         "modifiers": 1,
         "description": "",
@@ -18103,7 +18103,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_NOON",
         "modifiers": 1,
         "description": "",
@@ -18112,7 +18112,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_NUN",
         "modifiers": 1,
         "description": "",
@@ -18121,7 +18121,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_PE",
         "modifiers": 1,
         "description": "",
@@ -18130,7 +18130,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_QAF",
         "modifiers": 1,
         "description": "",
@@ -18139,7 +18139,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_QAPH",
         "modifiers": 1,
         "description": "",
@@ -18148,7 +18148,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_REH",
         "modifiers": 1,
         "description": "",
@@ -18157,7 +18157,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_REVERSED_PE",
         "modifiers": 1,
         "description": "",
@@ -18166,7 +18166,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_SAD",
         "modifiers": 1,
         "description": "",
@@ -18175,7 +18175,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_SADHE",
         "modifiers": 1,
         "description": "",
@@ -18184,7 +18184,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_SEEN",
         "modifiers": 1,
         "description": "",
@@ -18193,7 +18193,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_SEMKATH",
         "modifiers": 1,
         "description": "",
@@ -18202,7 +18202,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_SHIN",
         "modifiers": 1,
         "description": "",
@@ -18211,7 +18211,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_SWASH_KAF",
         "modifiers": 1,
         "description": "",
@@ -18220,7 +18220,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_SYRIAC_WAW",
         "modifiers": 1,
         "description": "",
@@ -18229,7 +18229,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_TAH",
         "modifiers": 1,
         "description": "",
@@ -18238,7 +18238,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_TAW",
         "modifiers": 1,
         "description": "",
@@ -18247,7 +18247,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_TEH_MARBUTA",
         "modifiers": 1,
         "description": "",
@@ -18256,7 +18256,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_TETH",
         "modifiers": 1,
         "description": "",
@@ -18265,7 +18265,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_WAW",
         "modifiers": 1,
         "description": "",
@@ -18274,7 +18274,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_YEH",
         "modifiers": 1,
         "description": "",
@@ -18283,7 +18283,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_YEH_BARREE",
         "modifiers": 1,
         "description": "",
@@ -18292,7 +18292,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_YEH_WITH_TAIL",
         "modifiers": 1,
         "description": "",
@@ -18301,7 +18301,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_YUDH",
         "modifiers": 1,
         "description": "",
@@ -18310,7 +18310,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_YUDH_HE",
         "modifiers": 1,
         "description": "",
@@ -18319,7 +18319,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_ZAIN",
         "modifiers": 1,
         "description": "",
@@ -18328,7 +18328,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_FE",
         "modifiers": 1,
         "description": "",
@@ -18337,7 +18337,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_KHAPH",
         "modifiers": 1,
         "description": "",
@@ -18346,7 +18346,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_ZHAIN",
         "modifiers": 1,
         "description": "",
@@ -18355,7 +18355,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_BURUSHASKI_YEH_BARREE",
         "modifiers": 1,
         "description": "",
@@ -18364,7 +18364,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_FARSI_YEH",
         "modifiers": 1,
         "description": "",
@@ -18373,7 +18373,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_NYA",
         "modifiers": 1,
         "description": "",
@@ -18382,7 +18382,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_ROHINGYA_YEH",
         "modifiers": 1,
         "description": "",
@@ -18391,7 +18391,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "JG_COUNT",
         "modifiers": 1,
         "description": "",
@@ -18400,7 +18400,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GCB_OTHER",
         "modifiers": 1,
         "description": "",
@@ -18409,7 +18409,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GCB_CONTROL",
         "modifiers": 1,
         "description": "",
@@ -18418,7 +18418,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GCB_CR",
         "modifiers": 1,
         "description": "",
@@ -18427,7 +18427,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GCB_EXTEND",
         "modifiers": 1,
         "description": "",
@@ -18436,7 +18436,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GCB_L",
         "modifiers": 1,
         "description": "",
@@ -18445,7 +18445,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GCB_LF",
         "modifiers": 1,
         "description": "",
@@ -18454,7 +18454,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GCB_LV",
         "modifiers": 1,
         "description": "",
@@ -18463,7 +18463,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GCB_LVT",
         "modifiers": 1,
         "description": "",
@@ -18472,7 +18472,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GCB_T",
         "modifiers": 1,
         "description": "",
@@ -18481,7 +18481,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GCB_V",
         "modifiers": 1,
         "description": "",
@@ -18490,7 +18490,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GCB_SPACING_MARK",
         "modifiers": 1,
         "description": "",
@@ -18499,7 +18499,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GCB_PREPEND",
         "modifiers": 1,
         "description": "",
@@ -18508,7 +18508,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GCB_REGIONAL_INDICATOR",
         "modifiers": 1,
         "description": "",
@@ -18517,7 +18517,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "GCB_COUNT",
         "modifiers": 1,
         "description": "",
@@ -18526,7 +18526,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_OTHER",
         "modifiers": 1,
         "description": "",
@@ -18535,7 +18535,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_ALETTER",
         "modifiers": 1,
         "description": "",
@@ -18544,7 +18544,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_FORMAT",
         "modifiers": 1,
         "description": "",
@@ -18553,7 +18553,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_KATAKANA",
         "modifiers": 1,
         "description": "",
@@ -18562,7 +18562,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_MIDLETTER",
         "modifiers": 1,
         "description": "",
@@ -18571,7 +18571,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_MIDNUM",
         "modifiers": 1,
         "description": "",
@@ -18580,7 +18580,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_NUMERIC",
         "modifiers": 1,
         "description": "",
@@ -18589,7 +18589,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_EXTENDNUMLET",
         "modifiers": 1,
         "description": "",
@@ -18598,7 +18598,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_CR",
         "modifiers": 1,
         "description": "",
@@ -18607,7 +18607,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_EXTEND",
         "modifiers": 1,
         "description": "",
@@ -18616,7 +18616,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_LF",
         "modifiers": 1,
         "description": "",
@@ -18625,7 +18625,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_MIDNUMLET",
         "modifiers": 1,
         "description": "",
@@ -18634,7 +18634,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_NEWLINE",
         "modifiers": 1,
         "description": "",
@@ -18643,7 +18643,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_REGIONAL_INDICATOR",
         "modifiers": 1,
         "description": "",
@@ -18652,7 +18652,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_HEBREW_LETTER",
         "modifiers": 1,
         "description": "",
@@ -18661,7 +18661,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_SINGLE_QUOTE",
         "modifiers": 1,
         "description": "",
@@ -18670,7 +18670,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_DOUBLE_QUOTE",
         "modifiers": 1,
         "description": "",
@@ -18679,7 +18679,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WB_COUNT",
         "modifiers": 1,
         "description": "",
@@ -18688,7 +18688,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_OTHER",
         "modifiers": 1,
         "description": "",
@@ -18697,7 +18697,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_ATERM",
         "modifiers": 1,
         "description": "",
@@ -18706,7 +18706,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_CLOSE",
         "modifiers": 1,
         "description": "",
@@ -18715,7 +18715,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_FORMAT",
         "modifiers": 1,
         "description": "",
@@ -18724,7 +18724,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_LOWER",
         "modifiers": 1,
         "description": "",
@@ -18733,7 +18733,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_NUMERIC",
         "modifiers": 1,
         "description": "",
@@ -18742,7 +18742,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_OLETTER",
         "modifiers": 1,
         "description": "",
@@ -18751,7 +18751,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_SEP",
         "modifiers": 1,
         "description": "",
@@ -18760,7 +18760,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_SP",
         "modifiers": 1,
         "description": "",
@@ -18769,7 +18769,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_STERM",
         "modifiers": 1,
         "description": "",
@@ -18778,7 +18778,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_UPPER",
         "modifiers": 1,
         "description": "",
@@ -18787,7 +18787,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_CR",
         "modifiers": 1,
         "description": "",
@@ -18796,7 +18796,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_EXTEND",
         "modifiers": 1,
         "description": "",
@@ -18805,7 +18805,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_LF",
         "modifiers": 1,
         "description": "",
@@ -18814,7 +18814,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_SCONTINUE",
         "modifiers": 1,
         "description": "",
@@ -18823,7 +18823,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SB_COUNT",
         "modifiers": 1,
         "description": "",
@@ -18832,7 +18832,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_UNKNOWN",
         "modifiers": 1,
         "description": "",
@@ -18841,7 +18841,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_AMBIGUOUS",
         "modifiers": 1,
         "description": "",
@@ -18850,7 +18850,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_ALPHABETIC",
         "modifiers": 1,
         "description": "",
@@ -18859,7 +18859,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_BREAK_BOTH",
         "modifiers": 1,
         "description": "",
@@ -18868,7 +18868,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_BREAK_AFTER",
         "modifiers": 1,
         "description": "",
@@ -18877,7 +18877,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_BREAK_BEFORE",
         "modifiers": 1,
         "description": "",
@@ -18886,7 +18886,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_MANDATORY_BREAK",
         "modifiers": 1,
         "description": "",
@@ -18895,7 +18895,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_CONTINGENT_BREAK",
         "modifiers": 1,
         "description": "",
@@ -18904,7 +18904,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_CLOSE_PUNCTUATION",
         "modifiers": 1,
         "description": "",
@@ -18913,7 +18913,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_COMBINING_MARK",
         "modifiers": 1,
         "description": "",
@@ -18922,7 +18922,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_CARRIAGE_RETURN",
         "modifiers": 1,
         "description": "",
@@ -18931,7 +18931,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_EXCLAMATION",
         "modifiers": 1,
         "description": "",
@@ -18940,7 +18940,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_GLUE",
         "modifiers": 1,
         "description": "",
@@ -18949,7 +18949,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_HYPHEN",
         "modifiers": 1,
         "description": "",
@@ -18958,7 +18958,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_IDEOGRAPHIC",
         "modifiers": 1,
         "description": "",
@@ -18967,7 +18967,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_INSEPARABLE",
         "modifiers": 1,
         "description": "",
@@ -18976,7 +18976,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_INSEPERABLE",
         "modifiers": 1,
         "description": "",
@@ -18985,7 +18985,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_INFIX_NUMERIC",
         "modifiers": 1,
         "description": "",
@@ -18994,7 +18994,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_LINE_FEED",
         "modifiers": 1,
         "description": "",
@@ -19003,7 +19003,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_NONSTARTER",
         "modifiers": 1,
         "description": "",
@@ -19012,7 +19012,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_NUMERIC",
         "modifiers": 1,
         "description": "",
@@ -19021,7 +19021,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_OPEN_PUNCTUATION",
         "modifiers": 1,
         "description": "",
@@ -19030,7 +19030,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_POSTFIX_NUMERIC",
         "modifiers": 1,
         "description": "",
@@ -19039,7 +19039,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_PREFIX_NUMERIC",
         "modifiers": 1,
         "description": "",
@@ -19048,7 +19048,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_QUOTATION",
         "modifiers": 1,
         "description": "",
@@ -19057,7 +19057,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_COMPLEX_CONTEXT",
         "modifiers": 1,
         "description": "",
@@ -19066,7 +19066,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_SURROGATE",
         "modifiers": 1,
         "description": "",
@@ -19075,7 +19075,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_SPACE",
         "modifiers": 1,
         "description": "",
@@ -19084,7 +19084,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_BREAK_SYMBOLS",
         "modifiers": 1,
         "description": "",
@@ -19093,7 +19093,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_ZWSPACE",
         "modifiers": 1,
         "description": "",
@@ -19102,7 +19102,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_NEXT_LINE",
         "modifiers": 1,
         "description": "",
@@ -19111,7 +19111,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_WORD_JOINER",
         "modifiers": 1,
         "description": "",
@@ -19120,7 +19120,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_H2",
         "modifiers": 1,
         "description": "",
@@ -19129,7 +19129,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_H3",
         "modifiers": 1,
         "description": "",
@@ -19138,7 +19138,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_JL",
         "modifiers": 1,
         "description": "",
@@ -19147,7 +19147,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_JT",
         "modifiers": 1,
         "description": "",
@@ -19156,7 +19156,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_JV",
         "modifiers": 1,
         "description": "",
@@ -19165,7 +19165,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_CLOSE_PARENTHESIS",
         "modifiers": 1,
         "description": "",
@@ -19174,7 +19174,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_CONDITIONAL_JAPANESE_STARTER",
         "modifiers": 1,
         "description": "",
@@ -19183,7 +19183,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_HEBREW_LETTER",
         "modifiers": 1,
         "description": "",
@@ -19192,7 +19192,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_REGIONAL_INDICATOR",
         "modifiers": 1,
         "description": "",
@@ -19201,7 +19201,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LB_COUNT",
         "modifiers": 1,
         "description": "",
@@ -19210,7 +19210,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "NT_NONE",
         "modifiers": 1,
         "description": "",
@@ -19219,7 +19219,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "NT_DECIMAL",
         "modifiers": 1,
         "description": "",
@@ -19228,7 +19228,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "NT_DIGIT",
         "modifiers": 1,
         "description": "",
@@ -19237,7 +19237,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "NT_NUMERIC",
         "modifiers": 1,
         "description": "",
@@ -19246,7 +19246,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "NT_COUNT",
         "modifiers": 1,
         "description": "",
@@ -19255,7 +19255,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "HST_NOT_APPLICABLE",
         "modifiers": 1,
         "description": "",
@@ -19264,7 +19264,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "HST_LEADING_JAMO",
         "modifiers": 1,
         "description": "",
@@ -19273,7 +19273,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "HST_VOWEL_JAMO",
         "modifiers": 1,
         "description": "",
@@ -19282,7 +19282,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "HST_TRAILING_JAMO",
         "modifiers": 1,
         "description": "",
@@ -19291,7 +19291,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "HST_LV_SYLLABLE",
         "modifiers": 1,
         "description": "",
@@ -19300,7 +19300,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "HST_LVT_SYLLABLE",
         "modifiers": 1,
         "description": "",
@@ -19309,7 +19309,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "HST_COUNT",
         "modifiers": 1,
         "description": "",
@@ -20703,7 +20703,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CURRENT_AS_PATHNAME",
         "modifiers": 1,
         "description": "",
@@ -20712,7 +20712,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CURRENT_AS_FILEINFO",
         "modifiers": 1,
         "description": "",
@@ -20721,7 +20721,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CURRENT_AS_SELF",
         "modifiers": 1,
         "description": "",
@@ -20730,7 +20730,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CURRENT_MODE_MASK",
         "modifiers": 1,
         "description": "",
@@ -20739,7 +20739,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "KEY_AS_PATHNAME",
         "modifiers": 1,
         "description": "",
@@ -20748,7 +20748,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "KEY_AS_FILENAME",
         "modifiers": 1,
         "description": "",
@@ -20757,7 +20757,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FOLLOW_SYMLINKS",
         "modifiers": 1,
         "description": "",
@@ -20766,7 +20766,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "KEY_MODE_MASK",
         "modifiers": 1,
         "description": "",
@@ -20775,7 +20775,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "NEW_CURRENT_AND_KEY",
         "modifiers": 1,
         "description": "",
@@ -20784,7 +20784,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SKIP_DOTS",
         "modifiers": 1,
         "description": "",
@@ -20793,7 +20793,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "UNIX_PATHS",
         "modifiers": 1,
         "description": "",
@@ -23558,7 +23558,7 @@
     "associated": [],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "NONE",
         "modifiers": 1,
         "description": "",
@@ -23567,7 +23567,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ELEMENT",
         "modifiers": 1,
         "description": "",
@@ -23576,7 +23576,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ATTRIBUTE",
         "modifiers": 1,
         "description": "",
@@ -23585,7 +23585,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "TEXT",
         "modifiers": 1,
         "description": "",
@@ -23594,7 +23594,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CDATA",
         "modifiers": 1,
         "description": "",
@@ -23603,7 +23603,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ENTITY_REF",
         "modifiers": 1,
         "description": "",
@@ -23612,7 +23612,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ENTITY",
         "modifiers": 1,
         "description": "",
@@ -23621,7 +23621,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PI",
         "modifiers": 1,
         "description": "",
@@ -23630,7 +23630,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "COMMENT",
         "modifiers": 1,
         "description": "",
@@ -23639,7 +23639,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DOC",
         "modifiers": 1,
         "description": "",
@@ -23648,7 +23648,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DOC_TYPE",
         "modifiers": 1,
         "description": "",
@@ -23657,7 +23657,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DOC_FRAGMENT",
         "modifiers": 1,
         "description": "",
@@ -23666,7 +23666,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "NOTATION",
         "modifiers": 1,
         "description": "",
@@ -23675,7 +23675,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WHITESPACE",
         "modifiers": 1,
         "description": "",
@@ -23684,7 +23684,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SIGNIFICANT_WHITESPACE",
         "modifiers": 1,
         "description": "",
@@ -23693,7 +23693,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "END_ELEMENT",
         "modifiers": 1,
         "description": "",
@@ -23702,7 +23702,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "END_ENTITY",
         "modifiers": 1,
         "description": "",
@@ -23711,7 +23711,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "XML_DECLARATION",
         "modifiers": 1,
         "description": "",
@@ -23720,7 +23720,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LOADDTD",
         "modifiers": 1,
         "description": "",
@@ -23729,7 +23729,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DEFAULTATTRS",
         "modifiers": 1,
         "description": "",
@@ -23738,7 +23738,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "VALIDATE",
         "modifiers": 1,
         "description": "",
@@ -23747,7 +23747,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SUBST_ENTITIES",
         "modifiers": 1,
         "description": "",
@@ -24498,7 +24498,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ATOM",
         "modifiers": 1,
         "description": "",
@@ -24507,7 +24507,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "COOKIE",
         "modifiers": 1,
         "description": "",
@@ -24516,7 +24516,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ISO8601",
         "modifiers": 1,
         "description": "",
@@ -24525,7 +24525,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "RFC822",
         "modifiers": 1,
         "description": "",
@@ -24534,7 +24534,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "RFC850",
         "modifiers": 1,
         "description": "",
@@ -24543,7 +24543,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "RFC1036",
         "modifiers": 1,
         "description": "",
@@ -24552,7 +24552,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "RFC1123",
         "modifiers": 1,
         "description": "",
@@ -24561,7 +24561,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "RFC2822",
         "modifiers": 1,
         "description": "",
@@ -24570,7 +24570,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "RFC3339",
         "modifiers": 1,
         "description": "",
@@ -24579,7 +24579,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "RSS",
         "modifiers": 1,
         "description": "",
@@ -24588,7 +24588,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "W3C",
         "modifiers": 1,
         "description": "",
@@ -26964,7 +26964,7 @@
     "associated": [],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SINGLE_SCRIPT_CONFUSABLE",
         "modifiers": 1,
         "description": "",
@@ -26973,7 +26973,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "MIXED_SCRIPT_CONFUSABLE",
         "modifiers": 1,
         "description": "",
@@ -26982,7 +26982,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WHOLE_SCRIPT_CONFUSABLE",
         "modifiers": 1,
         "description": "",
@@ -26991,7 +26991,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ANY_CASE",
         "modifiers": 1,
         "description": "",
@@ -27000,7 +27000,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SINGLE_SCRIPT",
         "modifiers": 1,
         "description": "",
@@ -27009,7 +27009,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "INVISIBLE",
         "modifiers": 1,
         "description": "",
@@ -27018,7 +27018,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHAR_LIMIT",
         "modifiers": 1,
         "description": "",
@@ -27156,7 +27156,7 @@
     "description": "",
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DISPLAY_SHORT",
         "modifiers": 1,
         "description": "",
@@ -27165,7 +27165,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DISPLAY_LONG",
         "modifiers": 1,
         "description": "",
@@ -27542,7 +27542,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CALL_TOSTRING",
         "modifiers": 1,
         "description": "",
@@ -27551,7 +27551,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CATCH_GET_CHILD",
         "modifiers": 1,
         "description": "",
@@ -27560,7 +27560,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "TOSTRING_USE_KEY",
         "modifiers": 1,
         "description": "",
@@ -27569,7 +27569,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "TOSTRING_USE_CURRENT",
         "modifiers": 1,
         "description": "",
@@ -27578,7 +27578,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "TOSTRING_USE_INNER",
         "modifiers": 1,
         "description": "",
@@ -27587,7 +27587,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FULL_CACHE",
         "modifiers": 1,
         "description": "",
@@ -27917,7 +27917,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_DEPRECATED",
         "modifiers": 1,
         "description": "",
@@ -30775,7 +30775,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "EXCLUDE_START_DATE",
         "modifiers": 1,
         "description": "",
@@ -32063,7 +32063,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_IMPLICIT_ABSTRACT",
         "modifiers": 1,
         "description": "",
@@ -32072,7 +32072,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_EXPLICIT_ABSTRACT",
         "modifiers": 1,
         "description": "",
@@ -32081,7 +32081,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_FINAL",
         "modifiers": 1,
         "description": "",
@@ -32704,7 +32704,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_STATIC",
         "modifiers": 1,
         "description": "",
@@ -32713,7 +32713,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_PUBLIC",
         "modifiers": 1,
         "description": "",
@@ -32722,7 +32722,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_PROTECTED",
         "modifiers": 1,
         "description": "",
@@ -32731,7 +32731,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_PRIVATE",
         "modifiers": 1,
         "description": "",
@@ -32997,7 +32997,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_STATIC",
         "modifiers": 1,
         "description": "",
@@ -33006,7 +33006,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_PUBLIC",
         "modifiers": 1,
         "description": "",
@@ -33015,7 +33015,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_PROTECTED",
         "modifiers": 1,
         "description": "",
@@ -33024,7 +33024,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_PRIVATE",
         "modifiers": 1,
         "description": "",
@@ -33033,7 +33033,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_ABSTRACT",
         "modifiers": 1,
         "description": "",
@@ -33042,7 +33042,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IS_FINAL",
         "modifiers": 1,
         "description": "",
@@ -33792,7 +33792,7 @@
     "associated": [],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "AFRICA",
         "modifiers": 1,
         "description": "",
@@ -33801,7 +33801,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "AMERICA",
         "modifiers": 1,
         "description": "",
@@ -33810,7 +33810,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ANTARCTICA",
         "modifiers": 1,
         "description": "",
@@ -33819,7 +33819,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ARCTIC",
         "modifiers": 1,
         "description": "",
@@ -33828,7 +33828,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ASIA",
         "modifiers": 1,
         "description": "",
@@ -33837,7 +33837,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ATLANTIC",
         "modifiers": 1,
         "description": "",
@@ -33846,7 +33846,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "AUSTRALIA",
         "modifiers": 1,
         "description": "",
@@ -33855,7 +33855,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "EUROPE",
         "modifiers": 1,
         "description": "",
@@ -33864,7 +33864,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "INDIAN",
         "modifiers": 1,
         "description": "",
@@ -33873,7 +33873,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PACIFIC",
         "modifiers": 1,
         "description": "",
@@ -33882,7 +33882,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "UTC",
         "modifiers": 1,
         "description": "",
@@ -33891,7 +33891,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ALL",
         "modifiers": 1,
         "description": "",
@@ -33900,7 +33900,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ALL_WITH_BC",
         "modifiers": 1,
         "description": "",
@@ -33909,7 +33909,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PER_COUNTRY",
         "modifiers": 1,
         "description": "",
@@ -34142,7 +34142,7 @@
     "description": "",
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_ERA",
         "modifiers": 1,
         "description": "",
@@ -34151,7 +34151,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_YEAR",
         "modifiers": 1,
         "description": "",
@@ -34160,7 +34160,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_MONTH",
         "modifiers": 1,
         "description": "",
@@ -34169,7 +34169,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_WEEK_OF_YEAR",
         "modifiers": 1,
         "description": "",
@@ -34178,7 +34178,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_WEEK_OF_MONTH",
         "modifiers": 1,
         "description": "",
@@ -34187,7 +34187,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_DATE",
         "modifiers": 1,
         "description": "",
@@ -34196,7 +34196,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_DAY_OF_YEAR",
         "modifiers": 1,
         "description": "",
@@ -34205,7 +34205,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_DAY_OF_WEEK",
         "modifiers": 1,
         "description": "",
@@ -34214,7 +34214,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_DAY_OF_WEEK_IN_MONTH",
         "modifiers": 1,
         "description": "",
@@ -34223,7 +34223,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_AM_PM",
         "modifiers": 1,
         "description": "",
@@ -34232,7 +34232,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_HOUR",
         "modifiers": 1,
         "description": "",
@@ -34241,7 +34241,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_HOUR_OF_DAY",
         "modifiers": 1,
         "description": "",
@@ -34250,7 +34250,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_MINUTE",
         "modifiers": 1,
         "description": "",
@@ -34259,7 +34259,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_SECOND",
         "modifiers": 1,
         "description": "",
@@ -34268,7 +34268,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_MILLISECOND",
         "modifiers": 1,
         "description": "",
@@ -34277,7 +34277,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_ZONE_OFFSET",
         "modifiers": 1,
         "description": "",
@@ -34286,7 +34286,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_DST_OFFSET",
         "modifiers": 1,
         "description": "",
@@ -34295,7 +34295,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_YEAR_WOY",
         "modifiers": 1,
         "description": "",
@@ -34304,7 +34304,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_DOW_LOCAL",
         "modifiers": 1,
         "description": "",
@@ -34313,7 +34313,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_EXTENDED_YEAR",
         "modifiers": 1,
         "description": "",
@@ -34322,7 +34322,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_JULIAN_DAY",
         "modifiers": 1,
         "description": "",
@@ -34331,7 +34331,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_MILLISECONDS_IN_DAY",
         "modifiers": 1,
         "description": "",
@@ -34340,7 +34340,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_IS_LEAP_MONTH",
         "modifiers": 1,
         "description": "",
@@ -34349,7 +34349,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_FIELD_COUNT",
         "modifiers": 1,
         "description": "",
@@ -34358,7 +34358,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "FIELD_DAY_OF_MONTH",
         "modifiers": 1,
         "description": "",
@@ -34367,7 +34367,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DOW_SUNDAY",
         "modifiers": 1,
         "description": "",
@@ -34376,7 +34376,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DOW_MONDAY",
         "modifiers": 1,
         "description": "",
@@ -34385,7 +34385,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DOW_TUESDAY",
         "modifiers": 1,
         "description": "",
@@ -34394,7 +34394,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DOW_WEDNESDAY",
         "modifiers": 1,
         "description": "",
@@ -34403,7 +34403,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DOW_THURSDAY",
         "modifiers": 1,
         "description": "",
@@ -34412,7 +34412,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DOW_FRIDAY",
         "modifiers": 1,
         "description": "",
@@ -34421,7 +34421,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DOW_SATURDAY",
         "modifiers": 1,
         "description": "",
@@ -34430,7 +34430,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DOW_TYPE_WEEKDAY",
         "modifiers": 1,
         "description": "",
@@ -34439,7 +34439,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DOW_TYPE_WEEKEND",
         "modifiers": 1,
         "description": "",
@@ -34448,7 +34448,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DOW_TYPE_WEEKEND_OFFSET",
         "modifiers": 1,
         "description": "",
@@ -34457,7 +34457,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DOW_TYPE_WEEKEND_CEASE",
         "modifiers": 1,
         "description": "",
@@ -34466,7 +34466,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WALLTIME_FIRST",
         "modifiers": 1,
         "description": "",
@@ -34475,7 +34475,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WALLTIME_LAST",
         "modifiers": 1,
         "description": "",
@@ -34484,7 +34484,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "WALLTIME_NEXT_VALID",
         "modifiers": 1,
         "description": "",
@@ -35367,7 +35367,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CHILD_ARRAYS_ONLY",
         "modifiers": 1,
         "description": "",
@@ -38233,7 +38233,7 @@
     "description": "",
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "REASON_UNASSIGNED",
         "modifiers": 1,
         "description": "",
@@ -38242,7 +38242,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "REASON_ILLEGAL",
         "modifiers": 1,
         "description": "",
@@ -38251,7 +38251,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "REASON_IRREGULAR",
         "modifiers": 1,
         "description": "",
@@ -38260,7 +38260,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "REASON_RESET",
         "modifiers": 1,
         "description": "",
@@ -38269,7 +38269,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "REASON_CLOSE",
         "modifiers": 1,
         "description": "",
@@ -38278,7 +38278,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "REASON_CLONE",
         "modifiers": 1,
         "description": "",
@@ -38287,7 +38287,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "UNSUPPORTED_CONVERTER",
         "modifiers": 1,
         "description": "",
@@ -38296,7 +38296,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SBCS",
         "modifiers": 1,
         "description": "",
@@ -38305,7 +38305,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "DBCS",
         "modifiers": 1,
         "description": "",
@@ -38314,7 +38314,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "MBCS",
         "modifiers": 1,
         "description": "",
@@ -38323,7 +38323,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LATIN_1",
         "modifiers": 1,
         "description": "",
@@ -38332,7 +38332,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "UTF8",
         "modifiers": 1,
         "description": "",
@@ -38341,7 +38341,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "UTF16_BigEndian",
         "modifiers": 1,
         "description": "",
@@ -38350,7 +38350,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "UTF16_LittleEndian",
         "modifiers": 1,
         "description": "",
@@ -38359,7 +38359,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "UTF32_BigEndian",
         "modifiers": 1,
         "description": "",
@@ -38368,7 +38368,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "UTF32_LittleEndian",
         "modifiers": 1,
         "description": "",
@@ -38377,7 +38377,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "EBCDIC_STATEFUL",
         "modifiers": 1,
         "description": "",
@@ -38386,7 +38386,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ISO_2022",
         "modifiers": 1,
         "description": "",
@@ -38395,7 +38395,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LMBCS_1",
         "modifiers": 1,
         "description": "",
@@ -38404,7 +38404,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LMBCS_2",
         "modifiers": 1,
         "description": "",
@@ -38413,7 +38413,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LMBCS_3",
         "modifiers": 1,
         "description": "",
@@ -38422,7 +38422,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LMBCS_4",
         "modifiers": 1,
         "description": "",
@@ -38431,7 +38431,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LMBCS_5",
         "modifiers": 1,
         "description": "",
@@ -38440,7 +38440,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LMBCS_6",
         "modifiers": 1,
         "description": "",
@@ -38449,7 +38449,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LMBCS_8",
         "modifiers": 1,
         "description": "",
@@ -38458,7 +38458,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LMBCS_11",
         "modifiers": 1,
         "description": "",
@@ -38467,7 +38467,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LMBCS_16",
         "modifiers": 1,
         "description": "",
@@ -38476,7 +38476,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LMBCS_17",
         "modifiers": 1,
         "description": "",
@@ -38485,7 +38485,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LMBCS_18",
         "modifiers": 1,
         "description": "",
@@ -38494,7 +38494,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LMBCS_19",
         "modifiers": 1,
         "description": "",
@@ -38503,7 +38503,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "LMBCS_LAST",
         "modifiers": 1,
         "description": "",
@@ -38512,7 +38512,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "HZ",
         "modifiers": 1,
         "description": "",
@@ -38521,7 +38521,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "SCSU",
         "modifiers": 1,
         "description": "",
@@ -38530,7 +38530,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ISCII",
         "modifiers": 1,
         "description": "",
@@ -38539,7 +38539,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "US_ASCII",
         "modifiers": 1,
         "description": "",
@@ -38548,7 +38548,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "UTF7",
         "modifiers": 1,
         "description": "",
@@ -38557,7 +38557,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BOCU1",
         "modifiers": 1,
         "description": "",
@@ -38566,7 +38566,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "UTF16",
         "modifiers": 1,
         "description": "",
@@ -38575,7 +38575,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "UTF32",
         "modifiers": 1,
         "description": "",
@@ -38584,7 +38584,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "CESU8",
         "modifiers": 1,
         "description": "",
@@ -38593,7 +38593,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "IMAP_MAILBOX",
         "modifiers": 1,
         "description": "",
@@ -40010,7 +40010,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BYPASS_CURRENT",
         "modifiers": 1,
         "description": "",
@@ -40019,7 +40019,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "BYPASS_KEY",
         "modifiers": 1,
         "description": "",
@@ -40028,7 +40028,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PREFIX_LEFT",
         "modifiers": 1,
         "description": "",
@@ -40037,7 +40037,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PREFIX_MID_HAS_NEXT",
         "modifiers": 1,
         "description": "",
@@ -40046,7 +40046,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PREFIX_MID_LAST",
         "modifiers": 1,
         "description": "",
@@ -40055,7 +40055,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PREFIX_END_HAS_NEXT",
         "modifiers": 1,
         "description": "",
@@ -40064,7 +40064,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PREFIX_END_LAST",
         "modifiers": 1,
         "description": "",
@@ -40073,7 +40073,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "PREFIX_RIGHT",
         "modifiers": 1,
         "description": "",
@@ -43863,7 +43863,7 @@
     ],
     "children": [
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "STD_PROP_LIST",
         "modifiers": 1,
         "description": "",
@@ -43872,7 +43872,7 @@
         }
       },
       {
-        "kind": 8,
+        "kind": 1024,
         "name": "ARRAY_AS_PROPS",
         "modifiers": 1,
         "description": "",
