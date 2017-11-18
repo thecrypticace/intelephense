@@ -301,6 +301,17 @@ class Foo {
 }
 `;
 
+var instanceOfSrc = 
+`<?php
+class Foo {
+    function fn(){}
+}
+$var;
+if($var instanceof Foo) {
+    $var->fn();
+}
+`;
+
 function setup(src: string | string[]) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -922,6 +933,21 @@ describe('CompletionProvider', () => {
             var completions = completionProvider.provideCompletions('test', { line: 5, character: 9 });
             //console.log(JSON.stringify(completions, null, 4));
             assert.equal(completions.items[0].label, 'Bar');
+        });
+
+    });
+
+    describe('instanceof', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(instanceOfSrc);
+        });
+
+        it('members', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 6, character: 11 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.equal(completions.items[0].label, 'fn');
         });
 
     });

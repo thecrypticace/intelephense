@@ -9,6 +9,7 @@
 * Crash when no storagePath available
 * References not found after first call to reference provider.
 * Incorrect symbol kind for built in class constants causing completion crash.
+* Fix member completions inside instanceof type guard.
 
 ## [0.8.1] - 2017-11-13
 #### Fixed

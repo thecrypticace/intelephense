@@ -361,10 +361,6 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
                 this._transformStack.push(new RelativeScopeTransform(name, this.doc.nodeLocation(node)));
                 break;
 
-            case PhraseType.InstanceOfExpression:
-                this._transformStack.push(new InstanceOfExpressionTransform());
-                break;
-
             case PhraseType.TernaryExpression:
                 if (parentTransform) {
                     this._transformStack.push(new TernaryExpressionTransform());
@@ -1188,7 +1184,7 @@ class InstanceOfExpressionTransform implements TypeNodeTransform, VariableNodeTr
                     this._varName = ref.name;
                 }
             }
-        } else if (transform.phraseType === PhraseType.InstanceOfExpression) {
+        } else if (transform.phraseType === PhraseType.InstanceofTypeDesignator) {
             this._varType = (<TypeDesignatorTransform>transform).type;
         }
 
