@@ -312,6 +312,20 @@ if($var instanceof Foo) {
 }
 `;
 
+var declBodySrc1 =
+`<?php
+class Foo {
+    p
+}
+`;
+
+var declBodySrc2 =
+`<?php
+class Foo {
+    public f 
+}
+`;
+
 function setup(src: string | string[]) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -950,6 +964,55 @@ describe('CompletionProvider', () => {
             assert.equal(completions.items[0].label, 'fn');
         });
 
+    });
+
+    describe('class decl body', () => {
+        
+        it('visibility mod', ()=>{
+            let completionProvider = setup(declBodySrc1);
+            let expected = <lsp.CompletionItem[]>[
+                    {
+                        label: "public",
+                        kind: 14
+                    },
+                    {
+                        label: "private",
+                        kind: 14
+                    },
+                    {
+                        label: "protected",
+                        kind: 14
+                    },
+                    {
+                        label: "implements",
+                        kind: 14
+                    }
+                ];
+    
+            var completions = completionProvider.provideCompletions('test', { line: 2, character: 5 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.deepEqual(completions.items, expected);
+
+        });
+
+        it('f', ()=>{
+            let completionProvider = setup(declBodySrc2);
+            let expected = <lsp.CompletionItem[]>[
+                    {
+                        label:"final",
+                        kind:14
+                    },
+                    {
+                        label: "function",
+                        kind: 14
+                    }
+                ];
+    
+            var completions = completionProvider.provideCompletions('test', { line: 2, character: 12 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.deepEqual(completions.items, expected);
+
+        });
     });
 
 });

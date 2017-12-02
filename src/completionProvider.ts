@@ -1312,7 +1312,7 @@ class DeclarationBodyCompletion implements CompletionStrategy {
 
     private static _phraseTypes = [
         PhraseType.ClassDeclarationBody, PhraseType.InterfaceDeclarationBody, PhraseType.TraitDeclarationBody,
-        PhraseType.ErrorClassMemberDeclaration
+        PhraseType.ErrorClassMemberDeclaration, PhraseType.Error
     ];
 
     private static _keywords = [
