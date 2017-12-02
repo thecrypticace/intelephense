@@ -148,9 +148,13 @@ export class ReferenceReader implements TreeVisitor<Phrase | Token> {
 
             case PhraseType.NamespaceUseClause:
             case PhraseType.NamespaceUseGroupClause:
-                this.nameResolver.rules.push(this._symbols.shift());
-                this._transformStack.push(new NamespaceUseClauseTransform((<Phrase>node).phraseType));
-                break;
+                {
+                    if(this._symbols.length && (this._symbols[0].modifiers & SymbolModifier.Use) > 0) {
+                        this.nameResolver.rules.push(this._symbols.shift());
+                    }
+                    this._transformStack.push(new NamespaceUseClauseTransform((<Phrase>node).phraseType));
+                    break;
+                }
 
             case PhraseType.FunctionDeclaration:
                 this._transformStack.push(null);

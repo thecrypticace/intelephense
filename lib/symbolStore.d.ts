@@ -72,7 +72,7 @@ export declare class SymbolStore {
     private _classInterfaceTraitFilter(s);
     private _indexSymbols(root);
     /**
-     * No vars, params or symbols with use modifier or private modifier
+     * No vars, params or symbols with use modifier
      * @param s
      */
     private _indexFilter(s);
