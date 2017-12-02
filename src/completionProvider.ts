@@ -387,7 +387,7 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
         ) {
             item.insertText = s.name;
 
-        } else if (this.config.addUseDeclaration && notFqn !== s.name && !useDeclarationHelper.findUseSymbolByName(notFqn)) {
+        } else if (this.config.addUseDeclaration && notFqn !== s.name && !useDeclarationHelper.findUseSymbolByName(notFqn) && namespaceName !== PhpSymbol.namespace(s.name)) {
             item.insertText = notFqn;
             item.additionalTextEdits = [useDeclarationHelper.insertDeclarationTextEdit(s)];
 

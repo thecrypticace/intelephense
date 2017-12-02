@@ -176,6 +176,15 @@ export namespace PhpSymbol {
         return text.slice(pos);
     }
 
+    export function namespace(fqn:string) {
+        if(!fqn) {
+            return '';
+        }
+
+        let pos = fqn.lastIndexOf('\\');
+        return pos < 0 ? '' : fqn.slice(0, pos);
+    }
+
     /**
      * Shallow clone
      * @param s 
