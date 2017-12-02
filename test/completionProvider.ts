@@ -703,7 +703,7 @@ describe('CompletionProvider', () => {
             let completionProvider = setup(prefixSrc);
             var completions = completionProvider.provideCompletions('test', { line: 3, character: 3 });
             //console.log(JSON.stringify(completions, null, 4));
-            assert.equal(completions.items[0].insertText, '\\barFn($0)');
+            assert.equal(completions.items[0].insertText, '\\barFn()');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Function);
         });
 
@@ -712,7 +712,7 @@ describe('CompletionProvider', () => {
             completionProvider.config = { backslashPrefix: false, maxItems: 100, addUseDeclaration: false };
             var completions = completionProvider.provideCompletions('test', { line: 3, character: 3 });
             //console.log(JSON.stringify(completions, null, 4));
-            assert.equal(completions.items[0].insertText, 'barFn($0)');
+            assert.equal(completions.items[0].insertText, 'barFn()');
             assert.equal(completions.items[0].kind, lsp.CompletionItemKind.Function);
         });
 

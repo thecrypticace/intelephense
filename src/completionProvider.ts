@@ -95,9 +95,14 @@ function toMethodCompletionItem(s: PhpSymbol) {
         item.sortText = 'zzz';
     }
 
-    item.insertText = item.label + '($0)';
-    item.insertTextFormat = lsp.InsertTextFormat.Snippet;
-    item.command = triggerParameterHintsCommand;
+    if(PhpSymbol.hasParameters(s)) {
+        item.insertText = item.label + '($0)';
+        item.insertTextFormat = lsp.InsertTextFormat.Snippet;
+        item.command = triggerParameterHintsCommand;
+    } else {
+        item.insertText = item.label + '()';
+    }
+    
 
     return item;
 }
@@ -346,9 +351,14 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
             case SymbolKind.Function:
                 item.kind = lsp.CompletionItemKind.Function;
                 item.detail = PhpSymbol.signatureString(s);
-                item.insertText += '($0)';
-                item.insertTextFormat = lsp.InsertTextFormat.Snippet;
-                item.command = triggerParameterHintsCommand;
+                if(PhpSymbol.hasParameters(s)) {
+                    item.insertText += '($0)';
+                    item.insertTextFormat = lsp.InsertTextFormat.Snippet;
+                    item.command = triggerParameterHintsCommand;
+                } else {
+                    item.insertText += '()';
+                }
+                
                 break;
 
             case SymbolKind.Namespace:
