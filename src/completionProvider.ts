@@ -665,7 +665,7 @@ class NameCompletion extends AbstractNameCompletion {
         }]
     }
 
-    private static _extendsRegex = /\b(?:class|interface)\s+[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*\s+[a-z]+$/;
+    private static _extendsOrImplementsRegexRegex = /\b(?:class|interface)\s+[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*\s+[a-z]+$/;
     private static _implementsRegex = /\bclass\s+[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*(?:\s+extends\s+[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*)?\s+[a-z]+$/;
 
     canSuggest(traverser: ParseTreeTraverser) {
@@ -687,8 +687,11 @@ class NameCompletion extends AbstractNameCompletion {
         //this strategy may get called during parse errors on class/interface declaration
         //when wanting to use extends/implements.
         //suppress name suggestions in this case
-        if (lineSubstring.match(NameCompletion._extendsRegex)) {
-            return lsp.CompletionList.create([{ kind: lsp.CompletionItemKind.Keyword, label: 'extends' }]);
+        if (lineSubstring.match(NameCompletion._extendsOrImplementsRegexRegex)) {
+            return lsp.CompletionList.create([
+                { kind: lsp.CompletionItemKind.Keyword, label: 'extends' },
+                { kind: lsp.CompletionItemKind.Keyword, label: 'implements' }
+            ]);
         }
 
         if (lineSubstring.match(NameCompletion._implementsRegex)) {

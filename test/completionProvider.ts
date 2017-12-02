@@ -326,6 +326,11 @@ class Foo {
 }
 `;
 
+var extendsImplementsSrc =
+`<?php
+class Foo i
+`;
+
 function setup(src: string | string[]) {
     let symbolStore = new SymbolStore();
     let parsedDocumentStore = new ParsedDocumentStore();
@@ -1013,6 +1018,32 @@ describe('CompletionProvider', () => {
             assert.deepEqual(completions.items, expected);
 
         });
+    });
+
+    describe('extends implements', () => {
+
+        let completionProvider: CompletionProvider;
+        before(function () {
+            completionProvider = setup(extendsImplementsSrc);
+        });
+
+        let expected = <lsp.CompletionItem[]>[
+            {
+                "kind": 14,
+                "label": "extends"
+            },
+            {
+                "kind": 14,
+                "label": "implements"
+            }
+        ];
+
+        it('completions', function () {
+            var completions = completionProvider.provideCompletions('test', { line: 1, character: 11 });
+            //console.log(JSON.stringify(completions, null, 4));
+            assert.deepEqual(completions.items, expected);
+        });
+
     });
 
 });
