@@ -8,7 +8,7 @@ import { ParsedDocumentStore } from './parsedDocument';
 import { SymbolStore } from './symbolStore';
 import { SymbolKind, PhpSymbol, SymbolModifier } from './symbol';
 import { ReferenceStore } from './reference';
-import { Position, DocumentHighlight } from 'vscode-languageserver-types';
+import { Position, DocumentHighlight, DocumentHighlightKind } from 'vscode-languageserver-types';
 import { MemberMergeStrategy } from './typeAggregate';
 
 export class HighlightProvider {
@@ -37,7 +37,7 @@ export class HighlightProvider {
         return table.references((r) => {
             return (r.kind === ref.kind || ((ref.kind & kindMask) > 0 && (r.kind & kindMask) > 0)) && ref.name === r.name;
         }).map((r) => {
-            return DocumentHighlight.create(r.location.range);
+            return DocumentHighlight.create(r.location.range, DocumentHighlightKind.Read);
         });
 
     }
