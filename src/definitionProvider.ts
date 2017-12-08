@@ -13,7 +13,7 @@ import { TypeString } from './typeString';
 import { Phrase, PhraseType, Token, TokenType } from 'php7parser';
 import { TreeTraverser } from './types';
 import { MemberMergeStrategy } from './typeAggregate';
-import { ReferenceStore } from './reference';
+import { ReferenceStore, Reference } from './reference';
 
 export class DefinitionProvider {
 
@@ -35,6 +35,12 @@ export class DefinitionProvider {
         }
 
         let symbols = this.symbolStore.findSymbolsByReference(ref, MemberMergeStrategy.Override);
+
+        if(ref.kind === SymbolKind.Constructor && symbols.length < 1) {
+            //fallback to class
+            symbols = this.symbolStore.findSymbolsByReference(Reference.create(SymbolKind.Class, ref.name, ref.location), MemberMergeStrategy.Override);
+        }
+
         let locations: Location[] = [];
         let s: PhpSymbol;
         let loc: Location;
