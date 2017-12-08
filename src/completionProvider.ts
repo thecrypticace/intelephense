@@ -93,6 +93,9 @@ function toMethodCompletionItem(s: PhpSymbol) {
     if (s.name.slice(0, 2) === '__') {
         //sort magic methods last
         item.sortText = 'zzz';
+    } else {
+        //all items must have sortText for comparison to occur in vscode
+        item.sortText = item.label;
     }
 
     if(PhpSymbol.hasParameters(s)) {

@@ -58,6 +58,7 @@ export declare namespace PhpSymbol {
     function signatureString(s: PhpSymbol): string;
     function hasParameters(s: PhpSymbol): boolean;
     function notFqn(text: string): string;
+    function namespace(fqn: string): string;
     /**
      * Shallow clone
      * @param s
