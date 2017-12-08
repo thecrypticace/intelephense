@@ -13,7 +13,7 @@ export namespace PhpDocParser {
     const paramOrPropertyPattern = /^(@param|@property|@property-read|@property-write)\s+(\S+)\s+(\$\S+)\s*([^]*)$/;
     const varPattern = /^(@var)\s+(\S+)(?:\s+(\$\S+))?\s*([^]*)$/;
     const returnPattern = /^(@return)\s+(\S+)\s*([^]*)$/;
-    const methodPattern = /^(@method)\s+(?:(\S+)\s+)?(\S+)\(\s*([^)]*)\s*\)\s*([^]*)$/;
+    const methodPattern = /^(@method)\s+(?:(static)\s+)?(?:(\S+)\s+)?(\S+)\(\s*([^)]*)\s*\)\s*([^]*)$/;
 
     export function parse(input: string) {
 
@@ -77,7 +77,7 @@ export namespace PhpDocParser {
                 return null;
             case '@met':
                 if((match = text.match(methodPattern))){
-                    return methodTag(match[1], match[2], match[3], methodParameters(match[4]), match[5]);
+                    return methodTag(match[1], match[2], match[3], match[4], methodParameters(match[5]), match[6]);
                 }
                 return null;
             default:
@@ -96,10 +96,11 @@ export namespace PhpDocParser {
         };
     }
 
-    function methodTag(tagName: string, returnTypeString: string, name: string,
+    function methodTag(tagName: string, visibility:string, returnTypeString: string, name: string,
         parameters: MethodTagParam[], description: string) {
         return {
             tagName: tagName,
+            isStatic: visibility === 'static',
             typeString: returnTypeString ? returnTypeString : 'void',
             name: name,
             parameters: parameters,
@@ -155,7 +156,8 @@ export interface Tag {
     name: string;
     description: string;
     typeString: string,
-    parameters?: MethodTagParam[]
+    parameters?: MethodTagParam[];
+    isStatic?:boolean;
 }
 
 export class PhpDoc {

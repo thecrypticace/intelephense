@@ -11,6 +11,7 @@ export interface Tag {
     description: string;
     typeString: string;
     parameters?: MethodTagParam[];
+    isStatic?: boolean;
 }
 export declare class PhpDoc {
     text: string;

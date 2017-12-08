@@ -1617,6 +1617,10 @@ export namespace SymbolReader {
         s.doc = PhpSymbolDoc.create(tag.description, TypeString.nameResolve(tag.typeString, nameResolver));
         s.children = [];
 
+        if(tag.isStatic) {
+            s.modifiers |= SymbolModifier.Static;
+        }
+
         if (!tag.parameters) {
             return s;
         }

@@ -42,6 +42,7 @@ describe('PhpDocParser', function () {
 
             let expectedMethod = <Tag>{
                 tagName: '@method',
+                isStatic: false,
                 typeString:'float',
                 name:'fn',
                 description:'Method description',
@@ -135,6 +136,7 @@ describe('PhpDocParser', function () {
             let expected = [
                     {
                         tagName: "@method",
+                        isStatic: false,
                         typeString: "ActiveQuery",
                         name: "hasOne",
                         parameters: [
@@ -153,6 +155,29 @@ describe('PhpDocParser', function () {
             //console.log(JSON.stringify(phpDoc, null, 4));
             assert.deepEqual(phpDoc.methodTags, expected);
 
+        });
+
+        it('@method static', function () {
+
+            let text = `/** @method static string fn(int p) description */`;
+            let phpDoc = PhpDocParser.parse(text);
+            let expected = <Tag[]>[
+                {
+                    "tagName": "@method",
+                    "isStatic": true,
+                    "typeString": "string",
+                    "name": "fn",
+                    "parameters": [
+                        {
+                            "typeString": "int",
+                            "name": "p"
+                        }
+                    ],
+                    "description": "description"
+                }
+            ];
+            //console.log(JSON.stringify(phpDoc.methodTags, null, 4));
+            assert.deepEqual(phpDoc.methodTags, expected);
         });
 
 

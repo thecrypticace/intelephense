@@ -18,6 +18,7 @@ export declare class TypeAggregate {
     isBaseClass(name: string): boolean;
     isAssociated(name: string): boolean;
     associated(filter?: Predicate<PhpSymbol>): PhpSymbol[];
+    firstMember(predicate: Predicate<PhpSymbol>): PhpSymbol;
     members(mergeStrategy: MemberMergeStrategy, predicate?: Predicate<PhpSymbol>): PhpSymbol[];
     private _resolveThisAndStaticReturnType(members, name);
     /**
@@ -31,5 +32,7 @@ export declare class TypeAggregate {
     private _mergeMembers(symbols, strategy);
     private hasInheritdoc(description);
     private _getAssociated();
+    private _symbolsAssociatedReduce(accum, current);
+    private _associatedIterator();
     static create(symbolStore: SymbolStore, fqn: string): TypeAggregate;
 }
