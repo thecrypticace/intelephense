@@ -496,12 +496,20 @@ class ClassTypeDesignatorCompletion extends AbstractNameCompletion {
     protected _toCompletionItem(s: PhpSymbol, namespaceName: string, namePhraseType: PhraseType, useDeclarationHelper: UseDeclarationHelper) {
 
         let item = super._toCompletionItem(s, namespaceName, namePhraseType, useDeclarationHelper);
+        let aggregate = new TypeAggregate(this.symbolStore, s);
+        let constructor = aggregate.firstMember(this._isConstructor);
         item.kind = lsp.CompletionItemKind.Constructor;
-        item.insertText += '($0)';
-        item.insertTextFormat = lsp.InsertTextFormat.Snippet;
-        item.command = triggerParameterHintsCommand;
+        if(constructor && PhpSymbol.hasParameters(constructor)){
+            item.insertText += '($0)';
+            item.insertTextFormat = lsp.InsertTextFormat.Snippet;
+            item.command = triggerParameterHintsCommand;
+        }
         return item;
 
+    }
+
+    private _isConstructor(s:PhpSymbol) {
+        return s.kind === SymbolKind.Constructor;
     }
 
     private _isQualifiedName(node: Phrase | Token) {

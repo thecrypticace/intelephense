@@ -63,6 +63,15 @@ export class TypeAggregate {
         return filter ? util.filter(assoc, filter) : assoc;
     }
 
+    firstMember(predicate:Predicate<PhpSymbol>) {
+        for(let s of this._associatedIterator()) {
+            if(predicate(s)) {
+                return s;
+            }
+        }
+        return undefined;
+    }
+
     members(mergeStrategy: MemberMergeStrategy, predicate?: Predicate<PhpSymbol>) {
 
         let associated = this._getAssociated().slice(0);
@@ -221,30 +230,33 @@ export class TypeAggregate {
             return this._associated;
         }
 
+        return this._associated = Array.from(this._associatedIterator());
+
+    }
+
+    private _symbolsAssociatedReduce(accum:PhpSymbol[], current:PhpSymbol) {
+        if(current.associated) {
+            Array.prototype.push.apply(accum, current.associated);
+        }
+        return accum;
+    }
+
+    private *_associatedIterator() {
+
         let associated = new Set<PhpSymbol>();
         let symbols:PhpSymbol[];
         let queue: PhpSymbol[] = [];
         let stub: PhpSymbol;
-
-        let symbolAssociatedReduceFn = (accum:PhpSymbol[], current:PhpSymbol) => {
-            if(current.associated) {
-                Array.prototype.push.apply(accum, current.associated);
-            }
-            return accum;
-        }
+        let s:PhpSymbol;
         
         if(Array.isArray(this._symbol)) {
-            Array.prototype.push.apply(queue, this._symbol.reduce(symbolAssociatedReduceFn, []));
+            Array.prototype.push.apply(queue, this._symbol.reduce(this._symbolsAssociatedReduce, []));
         } else if(this._symbol.associated) {
             Array.prototype.push.apply(queue, this._symbol.associated);
         }
 
         let filterFn = (x:PhpSymbol) => {
             return PhpSymbol.isClassLike(x) && !associated.has(x);
-        }
-
-        let addToSetFn = (x:PhpSymbol) => {
-            associated.add(x);
         }
 
         while ((stub = queue.shift())) {
@@ -254,11 +266,15 @@ export class TypeAggregate {
             }
 
             symbols = this.symbolStore.find(stub.name, filterFn);
-            symbols.forEach(addToSetFn);
-            Array.prototype.push.apply(queue, symbols.reduce(symbolAssociatedReduceFn, []));
+            for(let n = 0; n < symbols.length; ++n) {
+                s = symbols[n];
+                associated.add(s);
+                if(s.associated) {
+                    Array.prototype.push.apply(queue, s.associated);
+                }
+                yield s;
+            }
         }
-
-        return this._associated = Array.from(associated);
 
     }
 
