@@ -342,7 +342,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             case TokenType.OpenParenthesis:
                 if (this._shouldOpenParenthesisHaveNoSpaceBefore(parent, previousNonWsToken)) {
                     rule = FormatVisitor.noSpaceBefore;
-                } else {
+                } else if(!rule) {
                     rule = FormatVisitor.singleSpaceBefore;
                 }
                 break;
