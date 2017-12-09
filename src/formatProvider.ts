@@ -430,10 +430,10 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             if (text !== lcText) {
                 this._edits.push(lsp.TextEdit.replace(this.doc.tokenRange(<Token>node), lcText));
             }
-        } else if((<Token>node).tokenType === TokenType.Name) {
+        } else if(this._isTrueFalseNull(<Token>node, spine)) {
             let text = this.doc.tokenText(<Token>node);
             let lcText = text.toLowerCase();
-            if ((lcText === 'true' || lcText === 'false' || lcText === 'null') && text !== lcText) {
+            if (text !== lcText) {
                 this._edits.push(lsp.TextEdit.replace(this.doc.tokenRange(<Token>node), lcText));
             }
         }
@@ -664,6 +664,17 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             this._active = false;
         }
 
+    }
+
+    private _isTrueFalseNull(node:Token, spine:(Phrase|Token)[]) {
+        let parent = spine.length ? spine[spine.length - 1] : undefined;
+        let greatGrandParent = spine.length > 2 ? spine[spine.length - 3] : undefined;
+        const keywords = ['true', 'false', 'null'];
+        return ParsedDocument.isToken(node, [TokenType.Name]) && 
+            ParsedDocument.isPhrase(parent, [PhraseType.NamespaceName]) &&
+            (<Phrase>parent).children.length === 1 &&
+            ParsedDocument.isPhrase(greatGrandParent, [PhraseType.ConstantAccessExpression]) &&
+            keywords.indexOf(this.doc.tokenText(node).toLowerCase()) > -1;
     }
 
     private _formatDocBlock(node: Token) {
