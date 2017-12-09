@@ -1326,7 +1326,7 @@ class DeclarationBodyCompletion implements CompletionStrategy {
 
     private static _phraseTypes = [
         PhraseType.ClassDeclarationBody, PhraseType.InterfaceDeclarationBody, PhraseType.TraitDeclarationBody,
-        PhraseType.ErrorClassMemberDeclaration, PhraseType.Error
+        PhraseType.ErrorClassMemberDeclaration
     ];
 
     private static _keywords = [
@@ -1334,7 +1334,8 @@ class DeclarationBodyCompletion implements CompletionStrategy {
     ];
 
     canSuggest(traverser: ParseTreeTraverser) {
-        return ParsedDocument.isPhrase(traverser.parent(), DeclarationBodyCompletion._phraseTypes);
+        return ParsedDocument.isPhrase(traverser.parent(), DeclarationBodyCompletion._phraseTypes) ||
+            (ParsedDocument.isPhrase(traverser.node, [PhraseType.Error]) &&  ParsedDocument.isPhrase(traverser.parent(), DeclarationBodyCompletion._phraseTypes));
     }
 
     completions(traverser: ParseTreeTraverser, word: string) {
