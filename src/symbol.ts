@@ -147,7 +147,8 @@ export namespace PhpSymbol {
             parts.push(param.name);
 
             if (param.value) {
-                paramStrings.push(` [${parts.join(' ')}`);
+                let space = n ? ' ' : '';
+                paramStrings.push(`${space}[${parts.join(' ')}`);
                 closeBrackets += ']';
             } else {
                 paramStrings.push(parts.join(' '));
