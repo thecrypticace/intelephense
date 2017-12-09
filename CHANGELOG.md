@@ -1,5 +1,20 @@
 # Change Log
 
+## [0.8.3] - 2017-12-09
+#### Added
+* @method static support
+
+#### Changed
+* Dont use snippet or trigger param hints in completion if function/method/constructor has no params
+* Use DocumentHighlightKind.read for highlights
+* Make private members workspace searchable
+
+#### Fixed
+* Various PSR2 formatting fixes
+* Various keyword completions in class header and body
+* Completion item sortText
+* Crash relating to anon functions used without assignment
+
 ## [0.8.2] - 2017-11-18
 #### Added
 * Completions for trait names in use trait clauses.
