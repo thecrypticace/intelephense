@@ -291,7 +291,9 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 break;
 
             case TokenType.OpenBrace:
-                if(!rule) {
+                if(previousNonWsToken && previousNonWsToken.tokenType === TokenType.Dollar) {
+                    rule = FormatVisitor.noSpaceBefore;
+                } else if(!rule) {
                     rule = FormatVisitor.singleSpaceBefore;
                 }
                 break;
