@@ -83,7 +83,7 @@ function toMethodCompletionItem(s: PhpSymbol) {
     let item = <lsp.CompletionItem>{
         kind: lsp.CompletionItemKind.Method,
         label: s.name,
-        detail: PhpSymbol.signatureString(s)
+        detail: s.name + PhpSymbol.signatureString(s)
     };
 
     if (s.doc && s.doc.description) {
@@ -353,7 +353,7 @@ abstract class AbstractNameCompletion implements CompletionStrategy {
 
             case SymbolKind.Function:
                 item.kind = lsp.CompletionItemKind.Function;
-                item.detail = PhpSymbol.signatureString(s);
+                item.detail = s.name + PhpSymbol.signatureString(s);
                 if(PhpSymbol.hasParameters(s)) {
                     item.insertText += '($0)';
                     item.insertTextFormat = lsp.InsertTextFormat.Snippet;
