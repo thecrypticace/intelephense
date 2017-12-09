@@ -112,6 +112,13 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
     private _endOffset = -1;
     private _active = true;
 
+    private static memberAccessExprTypes = [
+        PhraseType.MethodCallExpression, PhraseType.PropertyAccessExpression, 
+        PhraseType.ScopedCallExpression, PhraseType.ClassConstantAccessExpression, PhraseType.ScopedPropertyAccessExpression
+    ];
+
+    private _decrementOnTheseNodes:Phrase[];
+
     firstToken: Token;
     last3Tokens: Token[];
     OpenTagCount = 0;
@@ -131,6 +138,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             this._active = false;
         }
         this.last3Tokens = [];
+        this._decrementOnTheseNodes = [];
     }
 
     get edits() {
@@ -338,7 +346,22 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
             case TokenType.Arrow:
             case TokenType.ColonColon:
-                rule = FormatVisitor.noSpaceOrNewlineIndentPlusOneBefore;
+                if(previous && previous.tokenType === TokenType.Whitespace && FormatVisitor.countNewlines(this.doc.tokenText(previous)) > 0) {
+                    //get the outer member access expr
+                    let outerExpr = parent;
+                    for(let n = spine.length - 2; n >= 0; --n) {
+                        if(ParsedDocument.isPhrase(spine[n], FormatVisitor.memberAccessExprTypes)) {
+                            outerExpr = spine[n] as Phrase;
+                        } else {
+                            break;
+                        }
+                    }
+                    if(!this._decrementOnTheseNodes.find((x)=>{ return x === outerExpr})) {
+                        this._decrementOnTheseNodes.push(outerExpr);
+                        this._incrementIndent();
+                    }
+                }
+                rule = FormatVisitor.noSpaceOrNewlineIndentBefore;
                 break;
 
             case TokenType.OpenParenthesis:
@@ -421,6 +444,12 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
     postorder(node: Phrase | Token, spine: (Phrase | Token)[]) {
 
         let parent = spine[spine.length - 1] as Phrase;
+
+        let decrementOnNode = this._decrementOnTheseNodes.length ? this._decrementOnTheseNodes[this._decrementOnTheseNodes.length - 1] : undefined;
+        if(decrementOnNode === node) {
+            this._decrementIndent();
+            this._decrementOnTheseNodes.pop();
+        }
 
         switch ((<Phrase>node).phraseType) {
             case PhraseType.CaseStatement:
@@ -606,7 +635,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
             case TokenType.Arrow:
             case TokenType.ColonColon:
-                this._nextFormatRule = FormatVisitor.noSpaceOrNewlineIndentPlusOneBefore;
+                this._nextFormatRule = FormatVisitor.noSpaceBefore;
                 break;
 
             case TokenType.OpenTag:

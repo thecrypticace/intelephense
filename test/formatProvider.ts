@@ -95,6 +95,18 @@ $var = \${$var};
 
 `;
 
+let memberAccessWithArrayArgSrc = 
+`<?php
+$objPHPExcel->getActiveSheet()
+    ->getStyle('A3:E3')
+    ->applyFromArray(
+        array(
+            'font' => 'bold'
+        )
+    );
+
+`;
+
 describe('provideDocumentFormattingEdits', ()=>{
 
 
@@ -287,6 +299,13 @@ describe('provideDocumentFormattingEdits', ()=>{
 
     it('encaps expr', ()=>{
         let provider = setup(encapsExprSrc);
+        let edits = provider.provideDocumentFormattingEdits({uri: 'test'}, {tabSize:4, insertSpaces:true});
+        //console.log(JSON.stringify(edits, null, 4));
+        assert.isEmpty(edits);
+    });
+
+    it('member access with array args', ()=>{
+        let provider = setup(memberAccessWithArrayArgSrc);
         let edits = provider.provideDocumentFormattingEdits({uri: 'test'}, {tabSize:4, insertSpaces:true});
         //console.log(JSON.stringify(edits, null, 4));
         assert.isEmpty(edits);
