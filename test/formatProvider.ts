@@ -288,7 +288,7 @@ describe('provideDocumentFormattingEdits', ()=>{
     it('encaps expr', ()=>{
         let provider = setup(encapsExprSrc);
         let edits = provider.provideDocumentFormattingEdits({uri: 'test'}, {tabSize:4, insertSpaces:true});
-        console.log(JSON.stringify(edits, null, 4));
+        //console.log(JSON.stringify(edits, null, 4));
         assert.isEmpty(edits);
     });
 
