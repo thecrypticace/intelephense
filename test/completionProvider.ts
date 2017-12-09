@@ -672,13 +672,8 @@ describe('CompletionProvider', () => {
                 {
                     "kind": 4,
                     "label": "Fuz",
-                    "insertText": "Fuz($0)",
+                    "insertText": "Fuz",
                     "detail": "Foo\\Bar",
-                    "insertTextFormat": 2,
-                    "command": {
-                        "title": "Trigger Parameter Hints",
-                        "command": "editor.action.triggerParameterHints"
-                    }
                 }
             ],
             "isIncomplete": false
