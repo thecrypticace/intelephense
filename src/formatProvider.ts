@@ -405,6 +405,12 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
             if (text !== lcText) {
                 this._edits.push(lsp.TextEdit.replace(this.doc.tokenRange(<Token>node), lcText));
             }
+        } else if((<Token>node).tokenType === TokenType.Name) {
+            let text = this.doc.tokenText(<Token>node);
+            let lcText = text.toLowerCase();
+            if ((lcText === 'true' || lcText === 'false' || lcText === 'null') && text !== lcText) {
+                this._edits.push(lsp.TextEdit.replace(this.doc.tokenRange(<Token>node), lcText));
+            }
         }
 
         return false;
