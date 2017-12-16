@@ -213,6 +213,13 @@ export class CompletionProvider {
 
         let traverser = new ParseTreeTraverser(doc, table, refTable);
         traverser.position(position);
+
+        //return early if not in <?php ?>
+        let t = traverser.node as Token;
+        if(!t || t.tokenType === TokenType.Text) {
+            return noCompletionResponse;
+        }
+
         let offset = doc.offsetAtPosition(position);
         let word = doc.wordAtOffset(offset);
         let strategy: CompletionStrategy = null;
