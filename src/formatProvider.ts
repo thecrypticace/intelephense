@@ -111,6 +111,7 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
     private _startOffset = -1;
     private _endOffset = -1;
     private _active = true;
+    private _lastParameterListWasMultiLine = false;
 
     private static memberAccessExprTypes = [
         PhraseType.MethodCallExpression, PhraseType.PropertyAccessExpression, 
@@ -153,11 +154,24 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
 
             //newline indent before {
             case PhraseType.FunctionDeclarationBody:
-                if (parent.phraseType === PhraseType.AnonymousFunctionCreationExpression) {
-                    return true;
+                if (parent.phraseType === PhraseType.AnonymousFunctionCreationExpression || this._lastParameterListWasMultiLine) {
+                    this._nextFormatRule = FormatVisitor.singleSpaceBefore;
+                    this._lastParameterListWasMultiLine = false;
+                } else {
+                    this._nextFormatRule = FormatVisitor.newlineIndentBefore;
                 }
-            // fall through
+                return true;
+
             case PhraseType.MethodDeclarationBody:
+                if(this._lastParameterListWasMultiLine) {
+                    this._nextFormatRule = FormatVisitor.singleSpaceBefore;
+                    this._lastParameterListWasMultiLine = false;
+                } else {
+                    this._nextFormatRule = FormatVisitor.newlineIndentBefore;
+                }
+
+                return true;
+
             case PhraseType.ClassDeclarationBody:
             case PhraseType.TraitDeclarationBody:
             case PhraseType.InterfaceDeclarationBody:
@@ -475,6 +489,9 @@ class FormatVisitor implements TreeVisitor<Phrase | Token> {
                 if (this._isMultilineCommaDelimitedListStack.pop()) {
                     this._nextFormatRule = FormatVisitor.newlineIndentBefore;
                     this._decrementIndent();
+                    if((<Phrase>node).phraseType === PhraseType.ParameterDeclarationList) {
+                        this._lastParameterListWasMultiLine = true;
+                    }
                 }
                 return;
 

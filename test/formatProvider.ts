@@ -107,6 +107,18 @@ $objPHPExcel->getActiveSheet()
 
 `;
 
+let multilineParamFnOpeningBraceSrc =
+`<?php
+function fn(
+    $p1,
+    $p2
+)
+{
+
+}
+
+`;
+
 describe('provideDocumentFormattingEdits', ()=>{
 
 
@@ -309,6 +321,28 @@ describe('provideDocumentFormattingEdits', ()=>{
         let edits = provider.provideDocumentFormattingEdits({uri: 'test'}, {tabSize:4, insertSpaces:true});
         //console.log(JSON.stringify(edits, null, 4));
         assert.isEmpty(edits);
+    });
+
+    it('multi line param fn opening brace', ()=>{
+        let provider = setup(multilineParamFnOpeningBraceSrc);
+        let edits = provider.provideDocumentFormattingEdits({uri: 'test'}, {tabSize:4, insertSpaces:true});
+        let expected = [
+            {
+                "range": {
+                    "start": {
+                        "line": 4,
+                        "character": 1
+                    },
+                    "end": {
+                        "line": 5,
+                        "character": 0
+                    }
+                },
+                "newText": " "
+            }
+        ];
+        //console.log(JSON.stringify(edits, null, 4));
+        assert.deepEqual(edits, expected);
     });
 
 });
