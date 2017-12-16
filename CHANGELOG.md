@@ -15,6 +15,7 @@
 * Various keyword completions in class header and body
 * Completion item sortText
 * Crash relating to anon functions used without assignment
+* Import symbol edits existing use decl
 
 ## [0.8.2] - 2017-11-18
 #### Added
