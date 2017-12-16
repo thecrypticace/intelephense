@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.8.3] - 2017-12-09
+## [0.8.3] - 2017-12-16
 #### Added
 * @method static support
 
@@ -8,6 +8,7 @@
 * Dont use snippet or trigger param hints in completion if function/method/constructor has no params
 * Use DocumentHighlightKind.read for highlights
 * Make private members workspace searchable
+* Allow utf8 names
 
 #### Fixed
 * Various PSR2 formatting fixes
