@@ -119,6 +119,13 @@ function fn(
 
 `;
 
+let allowNewlinesAfterOpenTagsrc = 
+`<?php
+
+echo 'hi';
+
+`;
+
 describe('provideDocumentFormattingEdits', ()=>{
 
 
@@ -343,6 +350,13 @@ describe('provideDocumentFormattingEdits', ()=>{
         ];
         //console.log(JSON.stringify(edits, null, 4));
         assert.deepEqual(edits, expected);
+    });
+
+    it('allow newlines after open tag', ()=>{
+        let provider = setup(allowNewlinesAfterOpenTagsrc);
+        let edits = provider.provideDocumentFormattingEdits({uri: 'test'}, {tabSize:4, insertSpaces:true});
+        //console.log(JSON.stringify(edits, null, 4));
+        assert.isEmpty(edits);
     });
 
 });
