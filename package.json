@@ -1,7 +1,7 @@
 {
   "name": "intelephense",
   "version": "0.8.3",
-  "description": "PHP Static Code Analysis",
+  "description": "Intellisense for PHP",
   "main": "./lib/intelephense.js",
   "types": "./lib/intelephense.d.ts",
   "scripts": {
@@ -23,7 +23,7 @@
   "bugs": {
     "url": "https://github.com/bmewburn/intelephense/issues"
   },
-  "homepage": "https://github.com/bmewburn/intelephense",
+  "homepage": "http://intelephense.net/",
   "repository": {
     "type": "git",
     "url": "https://github.com/bmewburn/intelephense.git"
